@@ -10,7 +10,7 @@ A collection of conxtexpr tools for diverting non-operating boilerplate abstract
 | `array.h` | A constexpr constructable homogeneous array that does not explicitly require the size for construction. Functionality extends from `CX::Tuple`. |
 
 ## Examples: (wip)
-####[`CX::Tuple`](https://github.com/Matthewacon/CX/blob/master/include/conway.h):
+#### [`CX::Tuple`](https://github.com/Matthewacon/CX/blob/master/include/conway.h):
 ```cpp
 #include "tuple.h"
 

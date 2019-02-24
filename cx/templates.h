@@ -1,5 +1,37 @@
 #pragma once
 
+#define DEFINE_MEMBER_DETECTOR(member)\
+namespace CX {\
+ template<typename T, typename V = bool>\
+ class Has##member : public std::false_type {};\
+ template<typename T>\
+ class Has##member<T,\
+  typename std::enable_if<\
+  !std::is_same<decltype(std::declval<T>().member), void>::value,\
+  bool\
+  >::type\
+ > : public std::true_type {};\
+}
+
+#define HAS_MEMBER(C, member) CX::Has##member<C>::value
+
+//TODO implement using c++17 sfinae
+#define DEFINE_FUNCTION_DETECTOR(NAME)\
+namespace CX {\
+ template<typename T>\
+ class Has##NAME##Function {\
+ private:\
+  using TrueType = char[1];\
+  using FalseType = char[2];\
+  template<typename T1> static constexpr TrueType& check(decltype(&T1::NAME));\
+  template<typename T1> static constexpr FalseType& check(...);\
+ public:\
+  inline static constexpr bool value = sizeof(check<T>(0)) == sizeof(TrueType);\
+ };\
+}
+
+#define HAS_FUNCTION(CLASS, NAME) CX::Has##NAME##Function<CLASS>::value
+
 namespace CX {
  //TODO for all template related tools, add parameter separation for construction
 //Produces the type at 'N' in the vararg list 'T, (TS...)'
@@ -187,5 +219,12 @@ namespace CX {
   using type = typename Decompose<T>::type;
   inline static constexpr auto recursion_depth = Decompose<T>::recursion_depth + 1U;
   inline static constexpr bool is_homogeneous = _Decompose<Target, T>::value;
+ };
+
+ //TODO is there way to make this sfinae compatible?
+ template<typename T, typename... Args>
+ class AssertConstructorPresence {
+ public:
+  friend T T::T(Args...);
  };
 }

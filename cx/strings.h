@@ -39,4 +39,17 @@ namespace CX {
    return StringConcatenator<S1, S2, 0>::data;
   }
  }
+
+ //TODO
+ template<const char* S1, const char S2>
+ constexpr const char* split() noexcept {
+  return nullptr;
+ }
+
+ //TODO implement all specifiers from printf
+ //Only supports %s
+ template<const char* Format, const char*... SS>
+ constexpr const char* format() noexcept {
+  return nullptr;
+ }
 }

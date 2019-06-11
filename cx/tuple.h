@@ -24,7 +24,7 @@ namespace CX {
  public:
   const T t;
 
-  explicit constexpr Tuple(T t, TS... ts) : Tuple<TS...>::Tuple(ts...), t(t) {}
+  constexpr Tuple(T t, TS... ts) : Tuple<TS...>::Tuple{ts...}, t(t) {}
 
   template<unsigned int N>
   constexpr typename TemplateTypeIterator<N, T, TS...>::type get() const {
@@ -37,9 +37,17 @@ namespace CX {
 
   template<typename I, unsigned int N = length() - 1>
   constexpr void reverseIterate() const {
-   I::callback(get<N>());
+   I::process(get<N>());
    if constexpr(N != 0) {
     reverseIterate<I, N - 1>();
+   }
+  }
+
+  template<template<typename> typename I, unsigned int N = length() - 1>
+  constexpr void specializeReverseIterate() const {
+   I<typename TemplateTypeIterator<N, T, TS...>::type>::process(get<N>());
+   if constexpr(N != 0) {
+    specializeReverseIterate<I, N - 1>();
    }
   }
 
@@ -48,6 +56,14 @@ namespace CX {
    I::process(get<N>());
    if constexpr(N != length() - 1) {
     iterate<I, N + 1>();
+   }
+  }
+
+  template<template<typename> typename I, unsigned int N = 0>
+  constexpr void specializeIterate() const {
+   I<typename TemplateTypeIterator<N, T, TS...>::type>::process(get<N>());
+   if constexpr(N != length() - 1) {
+    specializeIterate<I, N + 1>();
    }
   }
  };

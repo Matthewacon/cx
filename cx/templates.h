@@ -1,5 +1,7 @@
 #pragma once
 
+#include <type_traits>
+
 #define DEFINE_MEMBER_DETECTOR(member)\
 namespace CX {\
  template<typename T, typename V = bool>\

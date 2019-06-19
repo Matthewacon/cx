@@ -108,7 +108,7 @@ namespace CX {
   using type = Target<T, TS...>;
  };
 
- //Similar to TemplateTypeArgAssembler, but for use with non-type template arguments
+ //Similar to TemplateTypeArgAssembler, but for use with non-type integral template arguments
  template<unsigned int Start, unsigned int End, template<auto...> typename Target, auto T, auto... TS>
  class TemplateAutoAssembler {
  public:
@@ -150,50 +150,51 @@ namespace CX {
 
  //SFINAE Utilities
  template<auto Match, auto Arg, typename Success, typename Failure>
- struct select_if_match_T {
+ class select_if_match_T {
  public:
   using type = Failure;
  };
 
  template<auto Match, typename Success, typename Failure>
- struct select_if_match_T<Match, Match, Success, Failure> {
+ class select_if_match_T<Match, Match, Success, Failure> {
  public:
   using type = Success;
  };
 
  template<auto Match, auto Arg, auto Success, auto Failure>
- struct select_if_match_A {
+ class select_if_match_A {
  public:
-  inline static const auto result = Failure;
+  inline static constexpr const auto result = Failure;
  };
 
  template<auto Match, auto Success, auto Failure>
- struct select_if_match_A<Match, Match, Success, Failure> {
+ class select_if_match_A<Match, Match, Success, Failure> {
  public:
-  inline static const auto result = Success;
+  inline static constexpr const auto result = Success;
  };
 
- template<auto Match, auto Arg, typename Success, typename Failure>
- class select_if_match_M {
+ template<bool, typename Success, typename Failure>
+ class select_if_true: public std::false_type {
  public:
   using type = Failure;
  };
 
- template<auto Match, typename Success, typename Failure>
- class select_if_match_M<Match, Match, Success, Failure> {
+ template<typename Success, typename Failure>
+ class select_if_true<true, Success, Failure>: public std::true_type {
  public:
   using type = Success;
  };
 
- //Check whether or not a type is specialized (sizeof cannot be used on incomplete types)
- template <class T, unsigned int = sizeof(T)>
- std::true_type check_specialized(T *);
+// //Check whether or not a type is specialized (sizeof cannot be used on incomplete types)
+// template<typename T, unsigned int = sizeof(T)>
+// std::true_type check_specialized(T *);
+//
+// std::false_type check_specialized(...);
+//
+// template<typename T>
+// using is_specialized = decltype(check_specialized(std::declval<T *>()));
 
- std::false_type check_specialized(...);
-
- template<typename T>
- using is_specialized = decltype(check_specialized(std::declval<T *>()));
-
+ //TODO give this idiom a proper name
  //Similar to std::is_same<typename, typename>, but enables comparisons between partially specialized or unspecialized templates
  template<template<typename...> typename T1, template<typename...> typename T2>
  class IsSame : public std::false_type {};
@@ -201,6 +202,22 @@ namespace CX {
  template<template<typename...> typename T>
  class IsSame<T, T> : public std::true_type {};
 
+ template<typename...>
+ class MatchAny;
+
+ template<typename T1, typename T2, typename... TS>
+ class MatchAny<T1, T2, TS...> {
+ public:
+  inline static constexpr const bool value = std::is_same<T1, T2>::value || MatchAny<T2, TS...>::value;
+ };
+
+ template<typename T1, typename T2>
+ class MatchAny<T1, T2> {
+ public:
+  inline static constexpr const auto value = std::is_same<T1, T2>::value;
+ };
+
+ //TODO move to indirection.h
  //Deconstructs recursive templates
  template<typename T>
  class Decompose {
@@ -219,14 +236,7 @@ namespace CX {
  class Decompose<Target<T, Args...>> {
  public:
   using type = typename Decompose<T>::type;
-  inline static constexpr auto recursion_depth = Decompose<T>::recursion_depth + 1U;
-  inline static constexpr bool is_homogeneous = _Decompose<Target, T>::value;
- };
-
- //TODO is there way to make this sfinae compatible?
- template<typename T, typename... Args>
- class AssertConstructorPresence {
- public:
-  friend T T::T(Args...);
+  inline static constexpr const auto recursion_depth = Decompose<T>::recursion_depth + 1U;
+  inline static constexpr const bool is_homogeneous = _Decompose<Target, T>::value;
  };
 }

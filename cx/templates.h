@@ -36,7 +36,7 @@ namespace CX {\
 
 namespace CX {
  //TODO for all template related tools, add parameter separation for construction
-//Produces the type at 'N' in the vararg list 'T, (TS...)'
+ //Produces the type at 'N' in the vararg list 'T, (TS...)'
  template<unsigned int N, typename T, typename... TS>
  class TemplateTypeIterator {
  public:
@@ -215,28 +215,5 @@ namespace CX {
  class MatchAny<T1, T2> {
  public:
   inline static constexpr const auto value = std::is_same<T1, T2>::value;
- };
-
- //TODO move to indirection.h
- //Deconstructs recursive templates
- template<typename T>
- class Decompose {
- public:
-  using type = T;
-  inline static constexpr auto recursion_depth = 0U;
- };
-
- template<template<typename...> typename Target1, typename Target2>
- class _Decompose : public std::false_type {};
-
- template<template<typename...> typename Target1, template<typename...> typename Target2, typename T, typename... Args>
- class _Decompose<Target1, Target2<T, Args...>> : public IsSame<Target1, Target2> {};
-
- template<template<typename...> typename Target, typename T, typename... Args>
- class Decompose<Target<T, Args...>> {
- public:
-  using type = typename Decompose<T>::type;
-  inline static constexpr const auto recursion_depth = Decompose<T>::recursion_depth + 1U;
-  inline static constexpr const bool is_homogeneous = _Decompose<Target, T>::value;
  };
 }

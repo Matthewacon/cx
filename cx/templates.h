@@ -216,4 +216,15 @@ namespace CX {
  public:
   inline static constexpr const auto value = std::is_same<T1, T2>::value;
  };
+
+ namespace Internal {
+  template<typename T1, typename T2, typename = void>
+  struct _IsCastable : false_type {};
+
+  template<typename T1, typename T2>
+  struct _IsCastable<T1, T2, decltype((T1)std::declval<T2>())> : true_type {};
+ }
+
+ template<typename T1, typename T2>
+ using IsCastable = Internal::_IsCastable<T1, T2, void>;
 }

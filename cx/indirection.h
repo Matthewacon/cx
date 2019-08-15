@@ -1,5 +1,7 @@
 #pragma once
 
+#include "templates.h"
+
 namespace CX {
  //Will strip the pointers, references and const qualifications off of a type argument, to reveal the component type
  //TODO if anybody asks for individual counters for reference and pointer type qualifications, implement it

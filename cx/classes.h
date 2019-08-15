@@ -60,16 +60,27 @@ namespace CX {
   using type = typename deducer::template type<Prefix...>;
  };
 
- //Detection idioms for constructor presence
+ struct true_type {
+  static constexpr const auto value = true;
+ };
+
+ struct false_type {
+  static constexpr const auto value = false;
+ };
+
+ template<typename T>
+ using void_t = void;
+
+//Detection idioms for constructor presence
  namespace Internal {
   //Negative idiom specialization
   template<typename Target, typename = void, typename... Args>
-  class HasConstructor: public std::false_type {};
+  class HasConstructor: public false_type {};
 
   //Positive idiom specialization
   template<typename Target, typename... Args>
-  class HasConstructor<Target, std::void_t<decltype(Target{(std::declval<Args>(), ...)})>, Args...> :
-   public std::true_type
+  class HasConstructor<Target, void_t<decltype(Target{(std::declval<Args>(), ...)})>, Args...> :
+   public true_type
   {};
 
   //Positive idiom specialization for empty parameter pack
@@ -79,7 +90,7 @@ namespace CX {
   //
   //Negative idiom for empty parameter pack selects the base specialization
   template<typename Target>
-  class HasConstructor<Target, std::void_t<decltype(Target{})>> : public std::true_type {};
+  class HasConstructor<Target, void_t<decltype(Target{})>> : public std::true_type {};
  }
 
  //CX API

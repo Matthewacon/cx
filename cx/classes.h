@@ -2,6 +2,7 @@
 
 #include "cx/common.h"
 #include "cx/indirection.h"
+#include "cx/templates.h"
 
 namespace CX {
  //Given a variadic template T and the variadic template arguments VS, ReverseSpecialize will produce an instantiation
@@ -60,42 +61,35 @@ namespace CX {
   using type = typename deducer::template type<Prefix...>;
  };
 
- struct true_type {
-  static constexpr const auto value = true;
- };
+// //Detection idioms for constructor presence
+// namespace Internal {
+//  //Negative idiom specialization
+//  template<typename Target, typename = void, typename... Args>
+//  class HasConstructor: public std::false_type {};
+//
+//  //Positive idiom specialization
+//  template<typename Target, typename... Args>
+//  class HasConstructor<Target, std::void_t<decltype(Target{(std::declval<Args>(), ...)})>, Args...> :
+//   public std::true_type
+//  {};
+//
+//  //Positive idiom specialization for empty parameter pack
+//  //This specialization must be explicitly defined since an empty parameter pack
+//  //evaluates to `{void}` which would interfere with the actual signature that the
+//  //user is testing for.
+//  //
+//  //Negative idiom for empty parameter pack selects the base specialization
+//  template<typename Target>
+//  class HasConstructor<Target, std::void_t<decltype(Target{})>> : public std::true_type {};
+// }
+//
+// //CX API
+// template<typename Target, typename... Args>
+// using HasConstructor = Internal::HasConstructor<Target, void, Args...>;
 
- struct false_type {
-  static constexpr const auto value = false;
- };
-
- template<typename T>
- using void_t = void;
-
-//Detection idioms for constructor presence
- namespace Internal {
-  //Negative idiom specialization
-  template<typename Target, typename = void, typename... Args>
-  class HasConstructor: public false_type {};
-
-  //Positive idiom specialization
-  template<typename Target, typename... Args>
-  class HasConstructor<Target, void_t<decltype(Target{(std::declval<Args>(), ...)})>, Args...> :
-   public true_type
-  {};
-
-  //Positive idiom specialization for empty parameter pack
-  //This specialization must be explicitly defined since an empty parameter pack
-  //evaluates to `{void}` which would interfere with the actual signature that the
-  //user is testing for.
-  //
-  //Negative idiom for empty parameter pack selects the base specialization
-  template<typename Target>
-  class HasConstructor<Target, void_t<decltype(Target{})>> : public std::true_type {};
- }
-
- //CX API
  template<typename Target, typename... Args>
- using HasConstructor = Internal::HasConstructor<Target, void, Args...>;
+ struct HasConstructor : select_if_true<__is_constructible(Target, Args...), true_type, false_type>::type
+ {};
 
  template<typename>
  class IsTemplateTemplate;

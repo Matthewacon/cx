@@ -1,5 +1,7 @@
 #pragma once
 
+#include "common.h"
+
 #include <type_traits>
 
 #define DEFINE_MEMBER_DETECTOR(member)\
@@ -222,7 +224,7 @@ namespace CX {
   struct _IsCastable : false_type {};
 
   template<typename T1, typename T2>
-  struct _IsCastable<T1, T2, decltype((T1)std::declval<T2>())> : true_type {};
+  struct _IsCastable<T1, T2, void_t<decltype((T1)std::declval<T2>())>> : true_type {};
  }
 
  template<typename T1, typename T2>

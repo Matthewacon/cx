@@ -9,31 +9,27 @@ namespace CX {
 
   //Convert S1 into a char[]
   template<const char* S1, const char* S2, unsigned int I, const char... S>
-  class StringConcatenator {
-  public:
+  struct StringConcatenator {
 //   inline static constexpr const auto length = strLength(S1) + strLength(S2);
    inline static constexpr const auto data = StringConcatenator<S1, S2, I + 1, S..., S1[I]>::data;
   };
 
   //Proxy template to StringConcatenator<nullptr, const char *, unsigned int, const char... S>
   template<const char* S1, const char* S2, const char... S>
-  class StringConcatenator<S1, S2, strLength(S1), S...> {
-  public:
+  struct StringConcatenator<S1, S2, strLength(S1), S...> {
    inline static constexpr auto data = StringConcatenator<nullptr, S2, 0, S...>::data;
   };
 
   //Convert S2 into a char[] and concatenate it with the char[] representation of S1
   //from StringConcatenator<const char *, const char *, unsigned int, const char... S>
   template<const char* S2, unsigned int I, const char... S>
-  class StringConcatenator<nullptr, S2, I, S...> {
-  public:
+  struct StringConcatenator<nullptr, S2, I, S...> {
    inline static constexpr auto data = StringConcatenator<nullptr, S2, I + 1, S..., S2[I]>::data;
   };
 
   //Append a null-terminator to the end of the char[]
   template<const char* S2, const char... S>
-  class StringConcatenator<nullptr, S2, strLength(S2), S...> {
-  public:
+  struct StringConcatenator<nullptr, S2, strLength(S2), S...> {
    inline static constexpr const char data[] = {S..., '\0'};
   };
  }

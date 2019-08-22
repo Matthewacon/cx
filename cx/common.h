@@ -1,5 +1,6 @@
 #pragma once
 
+//Substitutes for stl equivalents
 namespace CX {
  template<typename T>
  T&& declval();

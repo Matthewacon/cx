@@ -92,13 +92,13 @@ namespace CX {
  {};
 
  template<typename>
- class IsTemplateTemplate;
+ struct IsTemplateTemplate;
 
  template<template<typename...> typename T, typename... Args>
- class IsTemplateTemplate<T<Args...>> : public std::true_type {};
+ struct IsTemplateTemplate<T<Args...>> : true_type {};
 
  template<typename... T>
- class IsTemplateTemplate<_Dummy<T...>> : public std::false_type {};
+ struct IsTemplateTemplate<_Dummy<T...>> : false_type {};
 
  //Explicit casting generators to disambiguate casting with multiple inheritance types
  namespace Internal {

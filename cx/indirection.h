@@ -1,7 +1,8 @@
 #pragma once
 
-#include "common.h"
-#include "templates.h"
+#include "cx/common.h"
+#include "cx/templates.h"
+#include "cx/idioms.h"
 
 namespace CX {
  //Will strip the pointers, references and const qualifications off of a type argument, to reveal the component type

@@ -1,38 +1,6 @@
 #pragma once
 
-#include "common.h"
-
-#define DEFINE_MEMBER_DETECTOR(member)\
-namespace CX {\
- template<typename T, typename V = bool>\
- class Has##member : public std::false_type {};\
- template<typename T>\
- class Has##member<T,\
-  typename std::enable_if<\
-  !std::is_same<decltype(std::declval<T>().member), void>::value,\
-  bool\
-  >::type\
- > : public std::true_type {};\
-}
-
-#define HAS_MEMBER(C, member) CX::Has##member<C>::value
-
-//TODO implement using c++17 sfinae
-#define DEFINE_FUNCTION_DETECTOR(NAME)\
-namespace CX {\
- template<typename T>\
- class Has##NAME##Function {\
- private:\
-  using TrueType = char[1];\
-  using FalseType = char[2];\
-  template<typename T1> static constexpr TrueType& check(decltype(&T1::NAME));\
-  template<typename T1> static constexpr FalseType& check(...);\
- public:\
-  inline static constexpr bool value = sizeof(check<T>(0)) == sizeof(TrueType);\
- };\
-}
-
-#define HAS_FUNCTION(CLASS, NAME) CX::Has##NAME##Function<CLASS>::value
+#include "cx/common.h"
 
 namespace CX {
  //TODO for all template related tools, add parameter separation for construction
@@ -161,38 +129,4 @@ namespace CX {
  struct select_if_true<true, Success, Failure> : true_type {
   using type = Success;
  };
-
- template<typename T1, typename T2>
- struct IsSame : false_type {};
-
- template<typename T>
- struct IsSame<T, T> : true_type {};
-
- //Similar to IsSame<typename, typename>, but enables comparisons between partially specialized or unspecialized templates
- template<template<typename...> typename T1, template<typename...> typename T2>
- struct TemplateIsSame : false_type {};
-
- template<template<typename...> typename T>
- struct TemplateIsSame<T, T> : true_type {};
-
- template<typename...>
- struct MatchAny;
-
- template<typename T1, typename T2, typename... TS>
- struct MatchAny<T1, T2, TS...> : select_if_true<
-  IsSame<T1, T2>::value || MatchAny<T2, TS...>::value,
-  true_type,
-  false_type
- >::type {};
-
- namespace Internal {
-  template<typename T1, typename T2, typename = void>
-  struct _IsCastable : false_type {};
-
-  template<typename T1, typename T2>
-  struct _IsCastable<T1, T2, void_t<decltype((T1)declval<T2>())>> : true_type {};
- }
-
- template<typename T1, typename T2>
- using IsCastable = Internal::_IsCastable<T1, T2, void>;
 }

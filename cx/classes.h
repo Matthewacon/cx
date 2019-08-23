@@ -3,6 +3,7 @@
 #include "cx/common.h"
 #include "cx/indirection.h"
 #include "cx/templates.h"
+#include "cx/idioms.h"
 
 namespace CX {
  //Given a variadic template T and the variadic template arguments VS, ReverseSpecialize will produce an instantiation
@@ -14,29 +15,29 @@ namespace CX {
   class ReverseSpecialize;
 
   //Trampoline specialization for argument order reversal
-  template<unsigned int N, template<typename...> typename Target, typename Dummy, typename Arg, typename... Args>
-  class ReverseSpecialize<N, Target, Dummy, Arg, Args...> {
+  template<unsigned int N, template<typename...> typename Target, typename _Dummy, typename Arg, typename... Args>
+  class ReverseSpecialize<N, Target, _Dummy, Arg, Args...> {
   private:
    template<typename>
    class DummyDeducer;
 
    template<typename... DArgs>
-   class DummyDeducer<_Dummy<DArgs...>> {
+   class DummyDeducer<Dummy<DArgs...>> {
    public:
-    using dummy = _Dummy<Arg, DArgs...>;
+    using dummy = Dummy<Arg, DArgs...>;
    };
 
-   using dummy = typename DummyDeducer<Dummy>::dummy;
+   using dummy = typename DummyDeducer<_Dummy>::dummy;
 
   public:
    using type = typename ReverseSpecialize<N - 1U, Target, dummy, Args..., Arg>::type;
   };
 
   //Base specialization
-  template<template<typename...> typename Target, typename Dummy, typename Arg, typename... Args>
-  class ReverseSpecialize<0U, Target, Dummy, Arg, Args...> {
+  template<template<typename...> typename Target, typename _Dummy, typename Arg, typename... Args>
+  class ReverseSpecialize<0U, Target, _Dummy, Arg, Args...> {
   public:
-   using type = Dummy;
+   using type = _Dummy;
   };
  }
 
@@ -48,48 +49,18 @@ namespace CX {
   class DummyDeducer;
 
   template<typename... DArgs>
-  class DummyDeducer<_Dummy<DArgs...>> {
+  class DummyDeducer<Dummy<DArgs...>> {
   public:
    template<typename... Prefix>
    using type = Target<Prefix..., DArgs...>;
   };
 
-  using deducer = DummyDeducer<typename Internal::ReverseSpecialize<sizeof...(Args), Target, _Dummy<>, Args...>::type>;
+  using deducer = DummyDeducer<typename Internal::ReverseSpecialize<sizeof...(Args), Target, Dummy<>, Args...>::type>;
 
  public:
   template<typename... Prefix>
   using type = typename deducer::template type<Prefix...>;
  };
-
-// //Detection idioms for constructor presence
-// namespace Internal {
-//  //Negative idiom specialization
-//  template<typename Target, typename = void, typename... Args>
-//  class HasConstructor: public std::false_type {};
-//
-//  //Positive idiom specialization
-//  template<typename Target, typename... Args>
-//  class HasConstructor<Target, std::void_t<decltype(Target{(std::declval<Args>(), ...)})>, Args...> :
-//   public std::true_type
-//  {};
-//
-//  //Positive idiom specialization for empty parameter pack
-//  //This specialization must be explicitly defined since an empty parameter pack
-//  //evaluates to `{void}` which would interfere with the actual signature that the
-//  //user is testing for.
-//  //
-//  //Negative idiom for empty parameter pack selects the base specialization
-//  template<typename Target>
-//  class HasConstructor<Target, std::void_t<decltype(Target{})>> : public std::true_type {};
-// }
-//
-// //CX API
-// template<typename Target, typename... Args>
-// using HasConstructor = Internal::HasConstructor<Target, void, Args...>;
-
- template<typename Target, typename... Args>
- struct HasConstructor : select_if_true<__is_constructible(Target, Args...), true_type, false_type>::type
- {};
 
  template<typename>
  struct IsTemplateTemplate;
@@ -98,7 +69,7 @@ namespace CX {
  struct IsTemplateTemplate<T<Args...>> : true_type {};
 
  template<typename... T>
- struct IsTemplateTemplate<_Dummy<T...>> : false_type {};
+ struct IsTemplateTemplate<Dummy<T...>> : false_type {};
 
  //Explicit casting generators to disambiguate casting with multiple inheritance types
  namespace Internal {
@@ -174,7 +145,7 @@ namespace CX {
  template<typename Target>
  class ExplicitCastGenerator<Target> {
  private:
-  class Dummy;
+  class _Dummy;
 
   using target_t = typename ComponentTypeResolver<Target>::type *;
 
@@ -183,7 +154,7 @@ namespace CX {
   inline static target_t cast(void *) {
    //Assertion will always fail
    static_assert(
-    std::is_same<Target, Dummy>::value,
+    IsSame<Target, _Dummy>::value,
     "No explicit cast is required if a polymorphic derived type is not going to be casted to a polymorphic base that "
     "is at least one type removed from the derivation. ExplicitCastGenerator is intended to be used with three or "
     "more template parameters!"
@@ -222,8 +193,8 @@ namespace CX {
   [[gnu::always_inline]]
   inline static constexpr void assertArgumentCompliance() {
    static_assert(
-    std::is_class<typename ComponentTypeResolver<Target>::type>::value
-    && (std::is_class<typename ComponentTypeResolver<Steps>::type>::value && ...),
+    __is_class(typename ComponentTypeResolver<Target>::type)
+    && (__is_class(typename ComponentTypeResolver<Steps>::type) && ...),
     "Explicit casting routes can only be generated for polymorphic types!"
    );
   }

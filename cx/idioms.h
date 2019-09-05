@@ -187,7 +187,7 @@ namespace CX {
 
  template<typename T1, typename T2, typename... TS>
  struct MatchAny<T1, T2, TS...> : select_if_true<
-  IsSame<T1, T2>::value || MatchAny<T2, TS...>::value,
+  IsSame<T1, T2>::value || MatchAny<T1, TS...>::value,
   true_type,
   false_type
  >::type {};

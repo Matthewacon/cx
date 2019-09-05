@@ -164,6 +164,24 @@ namespace CX {
  template<template<typename...> typename T>
  struct TemplateIsSame<T, T> : true_type {};
 
+ template<typename T>
+ struct IsPointer : false_type {};
+
+ template<typename T>
+ struct IsPointer<T*> : true_type {};
+
+ template<typename T>
+ struct IsLValueReference : false_type {};
+
+ template<typename T>
+ struct IsLValueReference<T&> : true_type {};
+
+ template<typename T>
+ struct IsRValueReference : false_type {};
+
+ template<typename T>
+ struct IsRValueReference<T&&> : true_type {};
+
  template<typename...>
  struct MatchAny;
 

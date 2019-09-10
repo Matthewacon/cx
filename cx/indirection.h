@@ -18,6 +18,17 @@ namespace CX {
   };
 
   template<auto C, auto I, typename T>
+  class ComponentTypeResolver<C, I, T[]> {
+  private:
+   using resolver = ComponentTypeResolver<C, I + 1U, T>;
+
+  public:
+   using type = typename resolver::type;
+   static constexpr const auto constCount = resolver::constCount;
+   static constexpr const auto indirectionCount = resolver::indirectionCount;
+  };
+
+  template<auto C, auto I, typename T>
   class ComponentTypeResolver<C, I, T*> {
   private:
    using resolver = ComponentTypeResolver<C, I + 1U, T>;

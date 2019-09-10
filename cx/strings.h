@@ -10,27 +10,27 @@ namespace CX {
   //Convert S1 into a char[]
   template<const char* S1, const char* S2, unsigned int I, const char... S>
   struct StringConcatenator {
-//   inline static constexpr const auto length = strLength(S1) + strLength(S2);
-   inline static constexpr const auto data = StringConcatenator<S1, S2, I + 1, S..., S1[I]>::data;
+//   static constexpr const auto length = strLength(S1) + strLength(S2);
+   static constexpr const auto data = StringConcatenator<S1, S2, I + 1, S..., S1[I]>::data;
   };
 
   //Proxy template to StringConcatenator<nullptr, const char *, unsigned int, const char... S>
   template<const char* S1, const char* S2, const char... S>
   struct StringConcatenator<S1, S2, strLength(S1), S...> {
-   inline static constexpr auto data = StringConcatenator<nullptr, S2, 0, S...>::data;
+   static constexpr auto data = StringConcatenator<nullptr, S2, 0, S...>::data;
   };
 
   //Convert S2 into a char[] and concatenate it with the char[] representation of S1
   //from StringConcatenator<const char *, const char *, unsigned int, const char... S>
   template<const char* S2, unsigned int I, const char... S>
   struct StringConcatenator<nullptr, S2, I, S...> {
-   inline static constexpr auto data = StringConcatenator<nullptr, S2, I + 1, S..., S2[I]>::data;
+   static constexpr auto data = StringConcatenator<nullptr, S2, I + 1, S..., S2[I]>::data;
   };
 
   //Append a null-terminator to the end of the char[]
   template<const char* S2, const char... S>
   struct StringConcatenator<nullptr, S2, strLength(S2), S...> {
-   inline static constexpr const char data[] = {S..., '\0'};
+   static constexpr const char data[] = {S..., '\0'};
   };
  }
 
@@ -41,16 +41,16 @@ namespace CX {
  template<const char * S1, const char * S2, const char *... SS>
  class Concat<S1, S2, SS...> {
  public:
-  inline static constexpr const auto result = Concat<Internal::StringConcatenator<S1, S2, 0>::data, SS...>::result;
+  static constexpr const auto result = Concat<Internal::StringConcatenator<S1, S2, 0>::data, SS...>::result;
  };
 
  template<const char * S>
  class Concat<S> {
  private:
-  inline static constexpr const char empty[] = "";
+  static constexpr const char empty[] = "";
 
  public:
-  inline static constexpr const auto result = Internal::StringConcatenator<S, empty, 0>::data;
+  static constexpr const auto result = Internal::StringConcatenator<S, empty, 0>::data;
  };
 
  //For use in constexpr contexts, ie. constexpr functions
@@ -63,8 +63,41 @@ namespace CX {
   }
  }
 
- //TODO implement these functions as templates first
- template<const char* S1, const char S2>
+// namespace Internal {
+//  using test_t = const char*[];
+//
+//  template<const char* S1, const char* Delimiter, const char* Split[], auto...>
+//  struct StringSplitter;
+//
+//  template<const char* S1, const char* Delimiter>
+//  struct StringSplitter<S1, Delimiter> {
+//   static constexpr const auto result = StringSplitter<>::result;
+//  };
+// }
+
+ template<auto...>
+ struct Split;
+
+ template<const char* S1, const char* Delimiter>
+ struct Split<S1, Delimiter> {
+
+ };
+
+ template<const char* S1, const char Delimiter>
+ struct Split<S1, Delimiter> {
+ private:
+  static constexpr const auto delimiter = Delimiter;
+
+ public:
+//  static constexpr const auto result = Internal::StringSplitter<S1, &delimiter>::result;
+ };
+
+ template<const char* S1, const char Delimiter>
+ constexpr const char* split() noexcept {
+  return nullptr;
+ }
+
+ template<const char* S1, const char* Delimiter>
  constexpr const char* split() noexcept {
   return nullptr;
  }

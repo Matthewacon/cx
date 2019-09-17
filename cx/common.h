@@ -8,6 +8,9 @@ namespace CX {
  template<typename...>
  using void_t = void;
 
+ template<auto...>
+ using void_a = void;
+
  struct true_type {
   static constexpr const auto value = true;
  };

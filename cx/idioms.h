@@ -229,4 +229,32 @@ using IsCastable = Internal::_IsCastable<T1, T2, void>;
 
  template<typename Target, typename... Args>
  struct HasConstructor : select_if_true<__is_constructible(Target, Args...), true_type, false_type>::type {};
+
+ template<typename, auto...>
+ struct IsMemberFunction : false_type {};
+
+ template<typename T, typename R, typename... Args>
+ struct IsMemberFunction<R (T::*)(Args...)> : true_type {};
+
+ template<typename...>
+ struct IsStaticFunction : false_type {};
+
+ template<typename R, typename... Args>
+ struct IsStaticFunction<R (*)(Args...)> : true_type {};
+
+ template<typename R, typename... Args>
+ struct IsStaticFunction<R (&)(Args...)> : true_type {};
+
+ template<typename R, typename... Args>
+ struct IsStaticFunction<R (Args...)> : true_type {};
+
+ template<auto T, bool = IsMemberFunction<decltype(T)>::value, typename = void>
+ struct IsVirtualFunction : true_type {};
+
+ template<auto T>
+ struct IsVirtualFunction<T, true, void_a<T == T>> : false_type {};
+
+ //Specialization for static member functions and non-member functions
+ template<auto T>
+ struct IsVirtualFunction<T, false> : false_type {};
 }

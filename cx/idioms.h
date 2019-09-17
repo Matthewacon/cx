@@ -230,13 +230,13 @@ using IsCastable = Internal::_IsCastable<T1, T2, void>;
  template<typename Target, typename... Args>
  struct HasConstructor : select_if_true<__is_constructible(Target, Args...), true_type, false_type>::type {};
 
- template<typename, auto...>
+ template<typename>
  struct IsMemberFunction : false_type {};
 
  template<typename T, typename R, typename... Args>
  struct IsMemberFunction<R (T::*)(Args...)> : true_type {};
 
- template<typename...>
+ template<typename>
  struct IsStaticFunction : false_type {};
 
  template<typename R, typename... Args>
@@ -248,6 +248,13 @@ using IsCastable = Internal::_IsCastable<T1, T2, void>;
  template<typename R, typename... Args>
  struct IsStaticFunction<R (Args...)> : true_type {};
 
+ template<typename T>
+ struct IsFunction : select_if_true<
+  IsStaticFunction<T>::value || IsMemberFunction<T>::value,
+  true_type,
+  false_type
+ >::type {};
+
  template<auto T, bool = IsMemberFunction<decltype(T)>::value, typename = void>
  struct IsVirtualFunction : true_type {};
 
@@ -257,4 +264,17 @@ using IsCastable = Internal::_IsCastable<T1, T2, void>;
  //Specialization for static member functions and non-member functions
  template<auto T>
  struct IsVirtualFunction<T, false> : false_type {};
+
+ template<typename>
+ struct IsMemberField : false_type {};
+
+ template<typename T, typename C>
+ struct IsMemberField<T C::*> : true_type {};
+
+ template<typename T>
+ struct IsField : select_if_true<
+  IsPointer<T>::value || IsMemberField<T>::value,
+  true_type,
+  false_type
+ >::type {};
 }

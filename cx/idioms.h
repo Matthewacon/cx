@@ -192,6 +192,9 @@ namespace CX {
   false_type
  >::type {};
 
+ template<typename T>
+ struct MatchAny<T> : false_type {};
+
  namespace Internal {
   template<typename T1, typename T2, typename = void>
   struct _IsCastable : false_type {};

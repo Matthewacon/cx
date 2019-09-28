@@ -239,6 +239,9 @@ using IsCastable = Internal::_IsCastable<T1, T2, void>;
  template<typename T, typename R, typename... Args>
  struct IsMemberFunction<R (T::*)(Args...)> : true_type {};
 
+ template<typename T, typename R, typename... Args>
+ struct IsMemberFunction<R (T::*)(Args...) const> : true_type {};
+
  template<typename>
  struct IsStaticFunction : false_type {};
 

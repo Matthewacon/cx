@@ -7,6 +7,7 @@ namespace CX {
    T t;
    R r;
    constexpr cast(T t) noexcept : t(t) {}
+   ~cast() noexcept {};
   };
   return cast{t}.r;
  }

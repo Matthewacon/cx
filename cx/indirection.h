@@ -4,6 +4,11 @@
 #include "cx/templates.h"
 #include "cx/idioms.h"
 
+#define _COMPONENTTYPERESOLVER_MEMBERS \
+using type = typename resolver::type;\
+inline static constexpr const auto constCount = resolver::constCount;\
+inline static constexpr const auto indirectionCount = resolver::indirectionCount;
+
 namespace CX {
  //Will strip the pointers, references and const qualifications off of a type argument, to reveal the component type
  //TODO if anybody asks for individual counters for reference and pointer type qualifications, implement it
@@ -23,9 +28,7 @@ namespace CX {
    using resolver = ComponentTypeResolver<C, I + 1U, T>;
 
   public:
-   using type = typename resolver::type;
-   static constexpr const auto constCount = resolver::constCount;
-   static constexpr const auto indirectionCount = resolver::indirectionCount;
+   _COMPONENTTYPERESOLVER_MEMBERS
   };
 
   template<auto C, auto I, typename T>
@@ -34,9 +37,7 @@ namespace CX {
    using resolver = ComponentTypeResolver<C, I + 1U, T>;
 
   public:
-   using type = typename resolver::type;
-   inline static constexpr const auto constCount = resolver::constCount;
-   inline static constexpr const auto indirectionCount = resolver::indirectionCount;
+   _COMPONENTTYPERESOLVER_MEMBERS
   };
 
   template<auto C, auto I, typename T>
@@ -45,9 +46,16 @@ namespace CX {
    using resolver = ComponentTypeResolver<C, I + 1U, T>;
 
   public:
-   using type = typename resolver::type;
-   inline static constexpr const auto constCount = resolver::constCount;
-   inline static constexpr const auto indirectionCount = resolver::indirectionCount;
+   _COMPONENTTYPERESOLVER_MEMBERS
+  };
+
+  template<auto C, auto I, typename T>
+  class ComponentTypeResolver<C, I, T&&> {
+  private:
+   using resolver = ComponentTypeResolver<C, I + 1U, T>;
+
+  public:
+   _COMPONENTTYPERESOLVER_MEMBERS
   };
 
   template<auto C, auto I, typename T>
@@ -57,9 +65,7 @@ namespace CX {
    using resolver = ComponentTypeResolver<C + 1U, I, T>;
 
   public:
-   using type = typename resolver::type;
-   inline static constexpr const auto constCount = resolver::constCount;
-   inline static constexpr const auto indirectionCount = resolver::indirectionCount;
+   _COMPONENTTYPERESOLVER_MEMBERS
   };
  }
 
@@ -69,9 +75,7 @@ namespace CX {
   using resolver = Internal::ComponentTypeResolver<0U, 0U, T>;
 
  public:
-  using type = typename resolver::type;
-  inline static constexpr const auto constCount = resolver::constCount;
-  inline static constexpr const auto indirectionCount = resolver::indirectionCount;
+  _COMPONENTTYPERESOLVER_MEMBERS
  };
 
  //Produces a pointer type, with N levels of indirection

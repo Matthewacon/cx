@@ -22,6 +22,10 @@ to act as a replacement for, and expansion of, the meta-utilities provided by th
 ```cpp
 #include <cx/common.h>
 
+//Same as std::declval<T>(), but with no type restrictions
+//This function has no linkage and can only be used in mata-functions
+T&& declval<T>();
+
 //An identity type for trait truthiness. Exposes a member `::value` which is true
 CX::true_type
 
@@ -328,7 +332,7 @@ int main() {
  return 0;
 }
 ```
-Using `CX::va_list_t&` resolves of the aforementioned issues and produce portable code that behaves identically,
+Using `CX::va_list_t&` resolves of the aforementioned issues and produces portable code that behaves identically,
 regardless of the platform that you are compiling for. Furthermore, `CX::safe_va_arg<T>(CX::va_list_t&)` performs static
 checks on the type `T`, to prevent UB from arising at runtime.
 ```cpp

@@ -319,7 +319,7 @@ void example1(int argc, va_list list) {
 void vararg(int argc, ...) {
  va_list list;
  va_start(list);
- example(argc);
+ example(argc, list);
  va_end(list);
 }
 
@@ -356,7 +356,7 @@ void example1(int argc, CX::va_list_t& list) {
 void vararg(int argc, ...) {
  CX::va_list_t list;
  va_start(list);
- example(argc);
+ example(argc, list);
  va_end(list);
 }
 

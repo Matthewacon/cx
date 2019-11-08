@@ -74,7 +74,7 @@ namespace CX {
     type = ANONYMOUS;
     constexpr R (T::* const func)(Args...) const = &T::operator();
     *((void **)functor) = union_cast<member_ptr_align_t>(func).ptr;
-    memcpy(data + sizeof(void *), &inst, sizeof(T));
+    memcpy(functor + sizeof(void *), &inst, sizeof(T));
     return *this;
    }
 

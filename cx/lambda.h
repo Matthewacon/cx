@@ -35,7 +35,8 @@ namespace CX {
      return data;
     }())
    {
-    static_assert(FunctionOperatorExists<T>::value);
+    //TODO this is causing issues for some lambda functions?
+//    static_assert(FunctionOperatorExists<T>::value);
    }
 
    ~FunctionCapture() {

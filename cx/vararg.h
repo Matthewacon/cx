@@ -7,6 +7,8 @@
 
 namespace CX {
  namespace Internal {
+  struct va_list_wrapper;
+
   template<typename T>
   constexpr T doNothing(T) noexcept;
 
@@ -26,7 +28,7 @@ namespace CX {
    template<typename T, typename LT>
    [[gnu::always_inline]]
    inline static T safe_va_arg(LT& t) {
-    static_assert(IsSame<LT, __va_list_t>::value);
+    static_assert(IsSame<LT, va_list_wrapper>::value);
     return (T)va_arg(t, T);
    }
 
@@ -44,6 +46,7 @@ namespace CX {
    template<typename T, typename LT>
    [[gnu::always_inline]]
    inline static T safe_va_arg(LT& t) {
+    static_assert(IsSame<LT, va_list_wrapper>::value);
     return (T)va_arg(&t, T);
    }
 

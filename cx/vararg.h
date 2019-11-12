@@ -23,7 +23,7 @@ namespace CX {
   //everyone else
   template<>
   struct FunctionSelector<__va_list_t> {
-   using conformant_va_list_t = __va_list_t&;
+   using conformant_va_list_t = __va_list_t;
 
    template<typename T, typename LT>
    [[gnu::always_inline]]
@@ -33,8 +33,8 @@ namespace CX {
    }
 
    [[gnu::always_inline]]
-   inline static __va_list_t& normalize(conformant_va_list_t& list) noexcept {
-    return list;
+   inline static __va_list_t& normalize(const conformant_va_list_t& list) noexcept {
+    return const_cast<conformant_va_list_t&>(list);
    }
   };
 

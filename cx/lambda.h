@@ -9,10 +9,19 @@ namespace CX {
   template<typename T>
   struct FunctionCapture;
 
+  //TODO combine this with the Lambda template
   //non-capturing lambdas are implicitly convertible to plain function pointers
   template<typename R, typename... Args>
   struct FunctionCapture<R (Args...)> {
    using functor_t = FunctionCapture<R (Args...)>;
+
+   enum Type {
+    PLAIN,
+    ANONYMOUS,
+    UINIT
+   };
+
+   Type type;
 
    constexpr FunctionCapture() noexcept :
     type(UINIT),
@@ -92,13 +101,6 @@ namespace CX {
    }
 
   private:
-   enum Type {
-    PLAIN,
-    ANONYMOUS,
-    UINIT
-   };
-
-   Type type;
    char * const functor;
 
    [[gnu::always_inline]]
@@ -117,6 +119,8 @@ namespace CX {
  struct Lambda<R (Args...), true> {
   using func_t = R (Args...);
 
+  Internal::FunctionCapture<func_t> capture;
+
   constexpr Lambda() noexcept = default;
 
   template<typename T>
@@ -130,8 +134,5 @@ namespace CX {
   inline constexpr R operator()(Args... args) const {
    return capture(args...);
   }
-
- private:
-  Internal::FunctionCapture<func_t> capture;
  };
 }

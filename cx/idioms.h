@@ -283,4 +283,10 @@ using IsCastable = Internal::_IsCastable<T1, T2, void>;
   true_type,
   false_type
  >::type {};
+
+ template<auto, typename = void, typename...>
+ struct DefinesFunction : false_type {};
+
+ template<auto F, typename T, typename R, typename... Args>
+ struct DefinesFunction<F, void_t<decltype((declval<T>.*F)((declval<Args>, ...)))>, T, R, Args...> : true_type {};
 }

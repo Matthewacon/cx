@@ -5,134 +5,142 @@
 #include "cx/unsafe.h"
 
 namespace CX {
- namespace Internal {
-  template<typename T>
-  struct FunctionCapture;
-
-  //TODO combine this with the Lambda template
-  //non-capturing lambdas are implicitly convertible to plain function pointers
-  template<typename R, typename... Args>
-  struct FunctionCapture<R (Args...)> {
-   using functor_t = FunctionCapture<R (Args...)>;
-
-   enum Type {
-    PLAIN,
-    ANONYMOUS,
-    UINIT
-   };
-
-   Type type;
-
-   constexpr FunctionCapture() noexcept :
-    type(UINIT),
-    functor(nullptr)
-   {}
-
-   constexpr FunctionCapture(R (*func)(Args...)) noexcept :
-    type(PLAIN),
-    functor(union_cast<char *>(func))
-   {}
-
-   template<typename T>
-   constexpr FunctionCapture(T inst) noexcept :
-    type(ANONYMOUS),
-    functor([=]() {
-     auto data = new char[sizeof(T) + sizeof(void *)];
-     constexpr R (T::* const func)(Args...) const = &T::operator();
-     *((void **)data) = union_cast<member_ptr_align_t>(func).ptr;
-     memcpy(data + sizeof(void *), &inst, sizeof(T));
-     return data;
-    }())
-   {
-    //TODO this is causing issues for some lambda functions?
-//    static_assert(FunctionOperatorExists<T>::value);
-   }
-
-   ~FunctionCapture() {
-    cleanup();
-   }
-
-   //TODO anonymous struct size required...
-// functor_t& operator=(const FunctionCapture<R (Args...)>& other) const noexcept {
-//  cleanup();
-//  switch (other.type) {
-//   case PLAIN: {
-//    functor = other.functor;
-//    type = PLAIN;
-//    break;
-//   }
-//   case ANONYMOUS: {
-//    functor = ;
-//    type = ANONYMOUS;
-//    break;
-//   }
-//  }
-//  return *this;
-// }
-
-   functor_t& operator=(R (* const func)(Args...)) const noexcept {
-    cleanup();
-    functor = union_cast<char *>(func);
-    type = PLAIN;
-    return *this;
-   }
-
-   template<typename T>
-   functor_t& operator=(T inst) const noexcept {
-    cleanup();
-    functor = new char[sizeof(T) + sizeof(void *)];
-    type = ANONYMOUS;
-    constexpr R (T::* const func)(Args...) const = &T::operator();
-    *((void **)functor) = union_cast<member_ptr_align_t>(func).ptr;
-    memcpy(functor + sizeof(void *), &inst, sizeof(T));
-    return *this;
-   }
-
-   [[gnu::always_inline]]
-   inline R operator()(Args... args) const {
-    switch(type) {
-     case PLAIN: return (union_cast<R (*)(Args...)>(functor))(args...);
-     case ANONYMOUS: {
-      auto memPtr = member_ptr_align_t{*((void **)functor), nullptr};
-      return (union_cast<Dummy<> *>(functor + sizeof(void *))->*union_cast<R (Dummy<>::*)(Args...)>(memPtr))(args...);
-     }
-     case UINIT: throw std::runtime_error("FATAL: Lambda functor is uninitialized!");
-    }
-   }
-
-  private:
-   char * const functor;
-
-   [[gnu::always_inline]]
-   inline void cleanup() const noexcept {
-    if (type == ANONYMOUS) {
-     delete[] functor;
-    }
-   }
-  };
- }
-
  template<typename F, bool = CX::IsFunction<F>::value>
  struct Lambda;
 
  template<typename R, typename... Args>
  struct Lambda<R (Args...), true> {
-  using func_t = R (Args...);
+  using lambda_t = Lambda<R (Args...)>;
 
-  Internal::FunctionCapture<func_t> capture;
+  enum Type : unsigned char {
+   PLAIN,
+   ANONYMOUS,
+   UINIT
+  };
 
-  constexpr Lambda() noexcept = default;
+  Lambda() noexcept :
+   functor([]() {
+    auto data = new char[sizeof(Type)];
+    *(Type *)data = PLAIN;
+    return data;
+   })
+  {}
+
+  Lambda(R (*func)(Args...)) noexcept :
+   functor([&]() {
+    auto data = new char[sizeof(Type) + sizeof(void *)];
+    *(Type *)data = PLAIN;
+    *(void **)(data + sizeof(Type)) = (void *)func;
+    return data;
+   })
+  {}
 
   template<typename T>
-  constexpr Lambda(T t) : capture(t)
-  {}
+  Lambda(T inst) noexcept :
+   functor(nullptr)
+  {
+   copy(ANONYMOUS, &functor, &inst);
+   //TODO this is causing issues for some lambda functions?
+//    static_assert(FunctionOperatorExists<T>::value);
+  }
 
-  constexpr Lambda(func_t * const func) : capture(func)
-  {}
+  Lambda(const lambda_t& other) noexcept :
+   functor(nullptr)
+  {
+   auto pCopy = (void (*)(Type, char **, char *))(*(void **)(other.functor + sizeof(Type)));
+   pCopy(*(Type *)other.functor, &functor, ((char *)other.functor + sizeof(Type) + 2 * sizeof(void *)));
+  }
 
-  [[gnu::always_inline nodiscard]]
-  inline constexpr R operator()(Args... args) const {
-   return capture(args...);
+  Lambda(const Lambda<R (Args...)>&& other) noexcept :
+   functor(other.functor)
+  {
+   other.functor = nullptr;
+  }
+
+  ~Lambda() {
+   cleanup();
+  }
+
+  lambda_t& operator=(const lambda_t& other) noexcept {
+   cleanup();
+   switch (*(Type *)other.functor) {
+    case PLAIN: {
+     functor = new char[sizeof(Type) + sizeof(void *)];
+     *(void **)(functor + sizeof(Type)) = *(void **)(other.functor + sizeof(Type));
+     break;
+    }
+    case ANONYMOUS: {
+     auto pCopy = (void (*)(Type, char **, char *))(*(void **)(other.functor + sizeof(Type)));
+     pCopy(ANONYMOUS, &functor, ((char *)other.functor + sizeof(Type) + 2 * sizeof(void *)));
+     break;
+    }
+    case UINIT: {
+     functor = new char[sizeof(Type) + sizeof(void *)];
+     *(void **)(functor + sizeof(Type)) = nullptr;
+     break;
+    }
+   }
+   *(Type *)functor = *(Type *)other.functor;
+   return *this;
+  }
+
+  lambda_t& operator=(const lambda_t&& other) noexcept {
+   functor = other.functor;
+   other.functor = nullptr;
+   return *this;
+  }
+
+  lambda_t& operator=(R (* const func)(Args...)) noexcept {
+   cleanup();
+   functor = new char[sizeof(Type) + sizeof(void *)];
+   *(Type *)functor = PLAIN;
+   *(void **)(functor + sizeof(Type)) = (void *)func;
+   return *this;
+  }
+
+  template<typename T>
+  lambda_t& operator=(T inst) noexcept {
+   cleanup();
+   copy(ANONYMOUS, &functor, &inst);
+   return *this;
+  }
+
+  [[gnu::always_inline]]
+  inline R operator()(Args... args) const {
+   switch(*(Type *)functor) {
+    case PLAIN: {
+     return union_cast<R (*)(Args...)>(functor + sizeof(Type))(args...);
+    }
+    case ANONYMOUS: {
+     auto pMem = member_ptr_align_t{*(void **)(functor + sizeof(Type) + sizeof(void *)), nullptr};
+     auto pInst = (void *)(functor + sizeof(Type) + 2*sizeof(void *));
+     return (union_cast<Dummy<> *>(pInst)->*union_cast<R (Dummy<>::*)(Args...)>(pMem))(args...);
+    }
+    case UINIT: {
+     throw std::runtime_error("FATAL: Lambda functor is uninitialized!");
+    }
+   }
+  }
+
+ private:
+  char * functor;
+
+  [[gnu::always_inline]]
+  inline void cleanup() const noexcept {
+   if (functor) {
+    delete[] functor;
+   }
+  }
+
+  template<typename T>
+  static void copy(Type type, char ** target, T * functor) {
+   constexpr R (T::* const func)(Args...) const = &T::operator();
+   //Layout: [sizeof(type): type, sizeof(void *): copy, sizeof(void *): &T::operator(), sizeof(T): functor]
+   *target = new char[sizeof(Type) + (2 * sizeof(void *)) + sizeof(T)];
+   *(Type *)*target = type;
+   *(void **)(*target + sizeof(Type)) = (void *)&copy<T>;
+   *(void **)(*target + sizeof(Type) + sizeof(void *)) = (void *)union_cast<member_ptr_align_t>(func).ptr;
+   memcpy((void *)(*target + sizeof(Type) + 2*sizeof(void *)), (void *)functor, sizeof(T));
   }
  };
 }

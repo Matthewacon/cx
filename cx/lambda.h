@@ -51,10 +51,10 @@ namespace CX {
    pCopy(*(Type *)other.functor, &functor, ((char *)other.functor + sizeof(Type) + 2 * sizeof(void *)));
   }
 
-  Lambda(const Lambda<R (Args...)>&& other) noexcept :
+  Lambda(const lambda_t&& other) noexcept :
    functor(other.functor)
   {
-   other.functor = nullptr;
+   const_cast<lambda_t&>(other).functor = nullptr;
   }
 
   ~Lambda() {

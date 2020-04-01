@@ -6,6 +6,7 @@
 #include "cx/idioms.h"
 
 namespace CX {
+
  namespace Internal {
   struct va_list_wrapper;
 
@@ -21,9 +22,11 @@ namespace CX {
   struct FunctionSelector;
 
   //everyone else
+  //aarch64
   template<>
   struct FunctionSelector<__va_list_t> {
    using conformant_va_list_t = __va_list_t;
+   using wrap_va_list_t = __va_list_t;
 
    template<typename T, typename LT>
    [[gnu::always_inline]]
@@ -33,15 +36,16 @@ namespace CX {
    }
 
    [[gnu::always_inline]]
-   inline static __va_list_t& normalize(const conformant_va_list_t& list) noexcept {
+   inline static wrap_va_list_t& normalize(const conformant_va_list_t& list) noexcept {
     return const_cast<conformant_va_list_t&>(list);
    }
   };
 
-  //x86_64 and amd64
+  //x86_64
   template<>
   struct FunctionSelector<__va_list_t[1]> {
    using conformant_va_list_t = __va_list_t *;
+   using wrap_va_list_t = __va_list_t;
 
    template<typename T, typename LT>
    [[gnu::always_inline]]
@@ -51,16 +55,44 @@ namespace CX {
    }
 
    [[gnu::always_inline]]
-   inline static __va_list_t& normalize(const conformant_va_list_t& list) noexcept {
+   inline static wrap_va_list_t& normalize(const conformant_va_list_t& list) noexcept {
     return *const_cast<conformant_va_list_t&>(list);
    }
   };
 
+  //x86
+  //Note: x86 uses char* as the impl for va_list, but if other platforms use pointer implementations this will handle
+  // them as well.
+  template<>
+  struct FunctionSelector<__va_list_t*> {
+   using conformant_va_list_t = __va_list_t *;
+   using wrap_va_list_t = conformant_va_list_t;
+
+   template<typename T, typename LT>
+   [[gnu::always_inline]]
+   inline static T __safe_va_arg(LT& t) {
+    return (T)va_arg(t, T);
+   }
+
+   template<typename T, typename LT>
+   [[gnu::always_inline]]
+   inline static T safe_va_arg(LT& t) {
+    static_assert(IsSame<LT, va_list_wrapper>::value);
+    return __safe_va_arg<T>((conformant_va_list_t&)t);
+   }
+
+   [[gnu::always_inline]]
+   inline static wrap_va_list_t& normalize(const conformant_va_list_t& list) noexcept {
+    return const_cast<conformant_va_list_t&>(list);
+   }
+  };
+
   using __va_list_function_selector = FunctionSelector<>;
+  using __wrap_va_list_t = __va_list_function_selector::wrap_va_list_t;
   using __conformant_va_list_t = __va_list_function_selector::conformant_va_list_t;
 
   struct va_list_wrapper final {
-   __va_list_t _list;
+   __wrap_va_list_t _list;
 
    va_list_wrapper() = default;
 
@@ -93,25 +125,25 @@ namespace CX {
    }
 
    [[gnu::always_inline]]
-   inline __va_list_t* operator&() const {
-    auto& ref = const_cast<va_list_wrapper &>(*this);
+   inline __wrap_va_list_t* operator&() const {
+    auto& ref = const_cast<va_list_wrapper&>(*this);
     return &ref._list;
    }
 
    [[gnu::always_inline]]
-   operator __va_list_t&() const {
+   operator __wrap_va_list_t&() const {
     auto& ref = const_cast<va_list_wrapper&>(*this);
     return ref._list;
    }
 
    [[gnu::always_inline]]
-   operator __va_list_t*() const {
+   operator __wrap_va_list_t*() const {
     auto& ref = const_cast<va_list_wrapper&>(*this);
     return &ref._list;
    }
   };
  }
- 
+
  using va_list_t = Internal::va_list_wrapper;
 
  template<typename T>

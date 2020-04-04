@@ -83,8 +83,7 @@ namespace CX {
   }
  public:
 
-  Lambda() noexcept :
-   functor(new BaseData(Type::UINIT))
+  Lambda() noexcept
   {}
 
   Lambda(R (*func)(Args...)) noexcept :

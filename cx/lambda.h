@@ -21,9 +21,9 @@ namespace CX {
   Lambda() noexcept :
    functor([]() {
     auto data = new char[sizeof(Type)];
-    *(Type *)data = PLAIN;
+    *(Type *)data = UINIT;
     return data;
-   })
+   }())
   {}
 
   Lambda(R (*func)(Args...)) noexcept :
@@ -32,7 +32,7 @@ namespace CX {
     *(Type *)data = PLAIN;
     *(void **)(data + sizeof(Type)) = (void *)func;
     return data;
-   })
+   }())
   {}
 
   template<typename T>
@@ -109,7 +109,7 @@ namespace CX {
   inline R operator()(Args... args) const {
    switch(*(Type *)functor) {
     case PLAIN: {
-     return union_cast<R (*)(Args...)>(functor + sizeof(Type))(args...);
+     return union_cast<R (*)(Args...)>(*(void **)(functor + sizeof(Type)))(args...);
     }
     case ANONYMOUS: {
      auto pMem = member_ptr_align_t{*(void **)(functor + sizeof(Type) + sizeof(void *)), nullptr};

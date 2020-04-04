@@ -20,11 +20,11 @@ namespace CX {
   };
   struct BaseData {
    Type type;
-   BaseData(Type type) : type(type) {}
+   explicit BaseData(Type type) : type(type) {}
   };
   struct PlainData : BaseData {
    void *fn;
-   PlainData(void *fn) : BaseData(Type::PLAIN), fn(fn) {}
+   explicit PlainData(void *fn) : BaseData(Type::PLAIN), fn(fn) {}
   };
   struct AnonymousDataBase;
   struct AnyClass;

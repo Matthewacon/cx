@@ -1,5 +1,6 @@
 #pragma once
 
+#include <memory>
 #include "cx/common.h"
 #include "cx/idioms.h"
 #include "cx/unsafe.h"
@@ -10,137 +11,138 @@ namespace CX {
 
  template<typename R, typename... Args>
  struct Lambda<R (Args...), true> {
+ private:
   using lambda_t = Lambda<R (Args...)>;
 
   enum Type : unsigned char {
    PLAIN,
-   ANONYMOUS,
-   UINIT
+   ANONYMOUS
+  };
+  struct BaseData {
+   Type type;
+   BaseData(Type type) : type(type) {}
+  };
+  struct PlainData : BaseData {
+   void *fn;
+   PlainData(void *fn) : BaseData(Type::PLAIN), fn(fn) {}
+  };
+  struct AnonymousDataBase;
+  struct AnyClass;
+  using AnonymousFn = void (AnyClass::*)();
+  enum class AnonymousDataOperation {
+      DESTRUCT, COPY
+  };
+  using AnonymousDataOperationFn = void (*)(AnonymousDataBase *th, AnonymousDataOperation op, void *param);
+  struct AnonymousDataBase : BaseData {
+   AnonymousFn fn;
+   AnonymousDataOperationFn opFn;
+
+   AnonymousDataBase(AnonymousFn fn, AnonymousDataOperationFn opFn) : BaseData(Type::ANONYMOUS), fn(fn), opFn(opFn) {}
+
+   void *getData() const { return (void *) (this + 1); }
+  };
+  template <typename T>
+  struct AnonymousData : AnonymousDataBase {
+   T data;
+
+   explicit AnonymousData(T inst) :
+    AnonymousDataBase((AnonymousFn) &T::operator(), (AnonymousDataOperationFn) &opFunction),
+    data(std::move(inst))
+   {}
+
+   static void opFunction(AnonymousDataBase *th, AnonymousDataOperation op, void *param) {
+    if (op == AnonymousDataOperation::DESTRUCT) {
+     ((AnonymousData<T> *) th)->~AnonymousData<T>();
+    } else if (op == AnonymousDataOperation::COPY) {
+     auto &data = ((AnonymousData<T> *) th)->data;
+     *(AnonymousData<T> **) param = new AnonymousData(data);
+    }
+   }
   };
 
+  struct DataDeleter {
+   void operator()(BaseData* data) const {
+    if (data->type == Type::ANONYMOUS)
+     ((AnonymousDataBase *) data)->opFn((AnonymousDataBase *) data, AnonymousDataOperation::DESTRUCT, nullptr);
+    delete data;
+   }
+  };
+  using DataPtr = std::unique_ptr<BaseData, DataDeleter>;
+  static DataPtr cloneData(BaseData *data) {
+   if (data == nullptr)
+    return DataPtr();
+   switch (data->type) {
+    case Type::PLAIN:
+     return DataPtr(new PlainData(((PlainData *) data)->fn));
+    case Type::ANONYMOUS: {
+     AnonymousDataBase *ret;
+     ((AnonymousDataBase *) data)->opFn((AnonymousDataBase *) data, AnonymousDataOperation::COPY, &ret);
+     return DataPtr(ret);
+    }
+   }
+  }
+ public:
+
   Lambda() noexcept :
-   functor([]() {
-    auto data = new char[sizeof(Type)];
-    *(Type *)data = UINIT;
-    return data;
-   }())
+   functor(new BaseData(Type::UINIT))
   {}
 
   Lambda(R (*func)(Args...)) noexcept :
-   functor([&]() {
-    auto data = new char[sizeof(Type) + sizeof(void *)];
-    *(Type *)data = PLAIN;
-    *(void **)(data + sizeof(Type)) = (void *)func;
-    return data;
-   }())
+   functor(new PlainData(func))
   {}
 
   template<typename T>
   Lambda(T inst) noexcept :
-   functor(nullptr)
-  {
-   copy(ANONYMOUS, &functor, &inst);
-   //TODO this is causing issues for some lambda functions?
-//    static_assert(FunctionOperatorExists<T>::value);
-  }
+   functor(new AnonymousData<T>(inst))
+  {}
 
   Lambda(const lambda_t& other) noexcept :
-   functor(nullptr)
-  {
-   auto pCopy = (void (*)(Type, char **, char *))(*(void **)(other.functor + sizeof(Type)));
-   pCopy(*(Type *)other.functor, &functor, ((char *)other.functor + sizeof(Type) + 2 * sizeof(void *)));
-  }
+   functor(cloneData(other.functor.get()))
+  {}
 
-  Lambda(const lambda_t&& other) noexcept :
-   functor(other.functor)
+  Lambda(lambda_t&& other) noexcept :
+   functor(std::move(other.functor))
   {
-   const_cast<lambda_t&>(other).functor = nullptr;
-  }
-
-  ~Lambda() {
-   cleanup();
+   other.functor = nullptr;
   }
 
   lambda_t& operator=(const lambda_t& other) noexcept {
-   cleanup();
-   switch (*(Type *)other.functor) {
-    case PLAIN: {
-     functor = new char[sizeof(Type) + sizeof(void *)];
-     *(void **)(functor + sizeof(Type)) = *(void **)(other.functor + sizeof(Type));
-     break;
-    }
-    case ANONYMOUS: {
-     auto pCopy = (void (*)(Type, char **, char *))(*(void **)(other.functor + sizeof(Type)));
-     pCopy(ANONYMOUS, &functor, ((char *)other.functor + sizeof(Type) + 2 * sizeof(void *)));
-     break;
-    }
-    case UINIT: {
-     functor = new char[sizeof(Type) + sizeof(void *)];
-     *(void **)(functor + sizeof(Type)) = nullptr;
-     break;
-    }
-   }
-   *(Type *)functor = *(Type *)other.functor;
+   functor = cloneData(other.functor);
    return *this;
   }
 
-  lambda_t& operator=(const lambda_t&& other) noexcept {
-   functor = other.functor;
+  lambda_t& operator=(lambda_t&& other) noexcept {
+   functor = std::move(other.functor);
    other.functor = nullptr;
    return *this;
   }
 
   lambda_t& operator=(R (* const func)(Args...)) noexcept {
-   cleanup();
-   functor = new char[sizeof(Type) + sizeof(void *)];
-   *(Type *)functor = PLAIN;
-   *(void **)(functor + sizeof(Type)) = (void *)func;
+   functor = DataPtr(new BaseData((void *) func));
    return *this;
   }
 
   template<typename T>
   lambda_t& operator=(T inst) noexcept {
-   cleanup();
-   copy(ANONYMOUS, &functor, &inst);
+   functor = DataPtr(new AnonymousData(inst));
    return *this;
   }
 
   [[gnu::always_inline]]
   inline R operator()(Args... args) const {
-   switch(*(Type *)functor) {
+   switch(functor->type) {
     case PLAIN: {
-     return union_cast<R (*)(Args...)>(*(void **)(functor + sizeof(Type)))(args...);
+     return union_cast<R (*)(Args...)>(((PlainData *) functor.get())->fn)(args...);
     }
     case ANONYMOUS: {
-     auto pMem = member_ptr_align_t{*(void **)(functor + sizeof(Type) + sizeof(void *)), nullptr};
-     auto pInst = (void *)(functor + sizeof(Type) + 2*sizeof(void *));
-     return (union_cast<Dummy<> *>(pInst)->*union_cast<R (Dummy<>::*)(Args...)>(pMem))(args...);
-    }
-    case UINIT: {
-     throw std::runtime_error("FATAL: Lambda functor is uninitialized!");
+     auto pMem = ((AnonymousDataBase *) functor.get())->fn;
+     auto pInst = (AnyClass *) ((AnonymousDataBase *) functor.get())->getData();
+     return (pInst->*union_cast<R (AnyClass::*)(Args...)>(pMem))(args...);
     }
    }
   }
 
  private:
-  char * functor;
-
-  [[gnu::always_inline]]
-  inline void cleanup() const noexcept {
-   if (functor) {
-    delete[] functor;
-   }
-  }
-
-  template<typename T>
-  static void copy(Type type, char ** target, T * functor) {
-   constexpr R (T::* const func)(Args...) const = &T::operator();
-   //Layout: [sizeof(type): type, sizeof(void *): copy, sizeof(void *): &T::operator(), sizeof(T): functor]
-   *target = new char[sizeof(Type) + (2 * sizeof(void *)) + sizeof(T)];
-   *(Type *)*target = type;
-   *(void **)(*target + sizeof(Type)) = (void *)&copy<T>;
-   *(void **)(*target + sizeof(Type) + sizeof(void *)) = (void *)union_cast<member_ptr_align_t>(func).ptr;
-   memcpy((void *)(*target + sizeof(Type) + 2*sizeof(void *)), (void *)functor, sizeof(T));
-  }
+  DataPtr functor;
  };
 }

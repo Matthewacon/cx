@@ -123,7 +123,7 @@ namespace CX {
 
   template<typename T>
   lambda_t& operator=(T inst) noexcept {
-   functor = DataPtr(new AnonymousData(inst));
+   functor = DataPtr(new AnonymousData<T>(inst));
    return *this;
   }
 

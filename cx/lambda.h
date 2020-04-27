@@ -55,7 +55,7 @@ namespace CX {
    struct LambdaEncapsulator : FunctorEncapsulator {
     static_assert(FunctionOperatorExists<T>::value);
 
-    mutable typename StripReferences<T>::type t;
+    mutable typename ComponentTypeResolver<T>::type t;
 
     LambdaEncapsulator(decltype(t)&& t) noexcept : t(t) {}
 

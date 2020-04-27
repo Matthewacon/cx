@@ -2,6 +2,7 @@
 
 #include "cx/common.h"
 #include "cx/idioms.h"
+#include "cx/indirection.h"
 
 #include <stdexcept>
 #include <memory>

@@ -115,21 +115,11 @@ namespace CX {
 // DEFINE_RHS_UNARY_OPERATOR_DETECTOR(Ptr, ->)
 // DEFINE_RHS_UNARY_OPERATOR_DETECTOR(MemberAccess, ->*)
 
- template<typename = void, typename...>
- struct FunctionOperatorExists : CX::false_type {};
-
- template<typename T, typename... Args>
- struct FunctionOperatorExists<
-  CX::void_t<decltype(CX::declval<T>()((CX::declval<Args>(), ...)))>,
-  T,
-  Args...
- > : CX::true_type {};
+ template<typename, typename = void>
+ struct FunctionOperatorExists : false_type {};
 
  template<typename T>
- struct FunctionOperatorExists<
-  CX::void_t<decltype(CX::declval<T>()())>,
-  T
- > : CX::true_type {};
+ struct FunctionOperatorExists<T, void_t<decltype(&ComponentTypeResolver<T>::type::operator())>> : true_type {};
 
  template<typename = void, typename...>
  struct SubscriptOperatorExists : CX::false_type {};

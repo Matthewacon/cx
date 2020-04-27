@@ -2,145 +2,118 @@
 
 #include "cx/common.h"
 #include "cx/idioms.h"
-#include "cx/unsafe.h"
+
+#include <stdexcept>
+#include <memory>
 
 namespace CX {
- template<typename F, bool = CX::IsFunction<F>::value>
+ template<typename>
  struct Lambda;
 
  template<typename R, typename... Args>
- struct Lambda<R (Args...), true> {
-  using lambda_t = Lambda<R (Args...)>;
+ struct Lambda<R (Args...)> {
+  friend Lambda<R (Args...) const>;
+  friend Lambda<R (Args...) noexcept>;
+  friend Lambda<R (Args...) const noexcept>;
 
-  enum Type : unsigned char {
-   PLAIN,
-   ANONYMOUS,
-   UINIT
+ public:
+  struct FunctorEncapsulator {
+   virtual ~FunctorEncapsulator() = default;
+   [[gnu::always_inline]]
+   inline virtual R operator()(Args...) const = 0;
   };
 
-  Lambda() noexcept :
-   functor([]() {
-    auto data = new char[sizeof(Type)];
-    *(Type *)data = UINIT;
-    return data;
-   }())
-  {}
-
-  Lambda(R (*func)(Args...)) noexcept :
-   functor([&]() {
-    auto data = new char[sizeof(Type) + sizeof(void *)];
-    *(Type *)data = PLAIN;
-    *(void **)(data + sizeof(Type)) = (void *)func;
-    return data;
-   }())
-  {}
-
-  template<typename T>
-  Lambda(T inst) noexcept :
-   functor(nullptr)
-  {
-   copy(ANONYMOUS, &functor, &inst);
-   //TODO this is causing issues for some lambda functions?
-//    static_assert(FunctionOperatorExists<T>::value);
-  }
-
-  Lambda(const lambda_t& other) noexcept :
-   functor(nullptr)
-  {
-   auto pCopy = (void (*)(Type, char **, char *))(*(void **)(other.functor + sizeof(Type)));
-   pCopy(*(Type *)other.functor, &functor, ((char *)other.functor + sizeof(Type) + 2 * sizeof(void *)));
-  }
-
-  Lambda(const lambda_t&& other) noexcept :
-   functor(other.functor)
-  {
-   const_cast<lambda_t&>(other).functor = nullptr;
-  }
-
-  ~Lambda() {
-   cleanup();
-  }
-
-  lambda_t& operator=(const lambda_t& other) noexcept {
-   cleanup();
-   switch (*(Type *)other.functor) {
-    case PLAIN: {
-     functor = new char[sizeof(Type) + sizeof(void *)];
-     *(void **)(functor + sizeof(Type)) = *(void **)(other.functor + sizeof(Type));
-     break;
-    }
-    case ANONYMOUS: {
-     auto pCopy = (void (*)(Type, char **, char *))(*(void **)(other.functor + sizeof(Type)));
-     pCopy(ANONYMOUS, &functor, ((char *)other.functor + sizeof(Type) + 2 * sizeof(void *)));
-     break;
-    }
-    case UINIT: {
-     functor = new char[sizeof(Type) + sizeof(void *)];
-     *(void **)(functor + sizeof(Type)) = nullptr;
-     break;
-    }
-   }
-   *(Type *)functor = *(Type *)other.functor;
-   return *this;
-  }
-
-  lambda_t& operator=(const lambda_t&& other) noexcept {
-   functor = other.functor;
-   other.functor = nullptr;
-   return *this;
-  }
-
-  lambda_t& operator=(R (* const func)(Args...)) noexcept {
-   cleanup();
-   functor = new char[sizeof(Type) + sizeof(void *)];
-   *(Type *)functor = PLAIN;
-   *(void **)(functor + sizeof(Type)) = (void *)func;
-   return *this;
-  }
-
-  template<typename T>
-  lambda_t& operator=(T inst) noexcept {
-   cleanup();
-   copy(ANONYMOUS, &functor, &inst);
-   return *this;
-  }
-
-  [[gnu::always_inline]]
-  inline R operator()(Args... args) const {
-   switch(*(Type *)functor) {
-    case PLAIN: {
-     return union_cast<R (*)(Args...)>(*(void **)(functor + sizeof(Type)))(args...);
-    }
-    case ANONYMOUS: {
-     auto pMem = member_ptr_align_t{*(void **)(functor + sizeof(Type) + sizeof(void *)), nullptr};
-     auto pInst = (void *)(functor + sizeof(Type) + 2*sizeof(void *));
-     return (union_cast<Dummy<> *>(pInst)->*union_cast<R (Dummy<>::*)(Args...)>(pMem))(args...);
-    }
-    case UINIT: {
-     throw std::runtime_error("FATAL: Lambda functor is uninitialized!");
-    }
-   }
-  }
+  using lambda_t = Lambda<R (Args...)>;
 
  private:
-  char * functor;
+  std::shared_ptr<FunctorEncapsulator> functor;
 
-  [[gnu::always_inline]]
-  inline void cleanup() const noexcept {
-   if (functor) {
-    delete[] functor;
-   }
+ public:
+  Lambda() noexcept = default;
+
+  template<typename T>
+  Lambda(T&& t) noexcept {
+   operator=(static_cast<typename ComponentTypeResolver<T>::type&&>(t));
+  }
+
+  Lambda(R (* const func)(Args...)) noexcept {
+   operator=(func);
+  }
+
+  Lambda(lambda_t& l) noexcept {
+   operator=(l);
+  }
+
+  template<>
+  Lambda(lambda_t&& l) noexcept {
+   operator=((lambda_t&&)l);
   }
 
   template<typename T>
-  static void copy(Type type, char ** target, T * functor) {
-   constexpr R (T::* const func)(Args...) const = &T::operator();
-   //Layout: [sizeof(type): type, sizeof(void *): copy, sizeof(void *): &T::operator(), sizeof(T): functor]
-   *target = new char[sizeof(Type) + (2 * sizeof(void *)) + sizeof(T)];
-   *(Type *)*target = type;
-   *(void **)(*target + sizeof(Type)) = (void *)&copy<T>;
-   *(void **)(*target + sizeof(Type) + sizeof(void *)) = (void *)union_cast<member_ptr_align_t>(func).ptr;
-   memcpy((void *)(*target + sizeof(Type) + 2*sizeof(void *)), (void *)functor, sizeof(T));
+  Lambda& operator=(const T&& t) noexcept {
+   functor.reset();
+   struct LambdaEncapsulator : FunctorEncapsulator {
+    static_assert(FunctionOperatorExists<T>::value);
+
+    mutable typename StripReferences<T>::type t;
+
+    LambdaEncapsulator(decltype(t)&& t) noexcept : t(t) {}
+
+    [[gnu::always_inline]]
+    inline R operator()(Args... args) const override {
+     return t(args...);
+    }
+   };
+   functor = std::make_shared<LambdaEncapsulator>((T&&)t);
+   return *this;
   }
+
+  Lambda& operator=(R (* const func)(Args...)) noexcept {
+   struct FunctionEncapsulator {
+    R (* const func)(Args...);
+
+    FunctionEncapsulator(decltype(func) func) noexcept : func(func) {}
+
+    [[gnu::always_inline]]
+    inline R operator()(Args... args) noexcept override {
+     return func(args...);
+    }
+   };
+   functor = std::make_shared<FunctionEncapsulator>(func);
+  }
+
+  Lambda& operator=(const lambda_t& l) noexcept {
+   functor = l.functor;
+   return *this;
+  }
+
+  template<>
+  Lambda& operator=(const lambda_t&& l) noexcept {
+   functor = l.functor;
+   const_cast<lambda_t&&>(l).functor.reset();
+   return *this;
+  }
+
+  R operator()(Args... args) const {
+   if (!functor) {
+    throw std::runtime_error("Lambda is uninitialized!");
+   }
+   return (*functor)(args...);
+  }
+ };
+
+ template<typename R, typename... Args>
+ struct Lambda<R (Args...) const> : Lambda<R (Args...)> {
+  using Lambda<R (Args...)>::Lambda;
+ };
+
+ template<typename R, typename... Args>
+ struct Lambda<R (Args...) noexcept> : Lambda<R (Args...)> {
+  using Lambda<R (Args...)>::Lambda;
+ };
+
+ template<typename R, typename... Args>
+ struct Lambda<R (Args...) const noexcept> : Lambda<R (Args...) noexcept> {
+  using Lambda<R (Args...) noexcept>::Lambda;
  };
 }

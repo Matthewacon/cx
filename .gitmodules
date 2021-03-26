@@ -1,0 +1,3 @@
+[submodule "scripts/cmake-utils"]
+	path = scripts/cmake-utils
+	url = git@github.com:Matthewacon/cmake-utils.git

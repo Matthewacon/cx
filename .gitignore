@@ -1,4 +1,18 @@
 ### C++ ###
+# Clang
+.cache/
+compile_commands.json
+build*/
+
+# Do not include disabled files
+**/*-disabled
+
+# Scribble files
+scribbles/
+
+# Dependencies
+dependencies/
+
 # Prerequisites
 build
 *.d

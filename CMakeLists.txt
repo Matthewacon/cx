@@ -11,13 +11,13 @@ set(CMAKE_POSITION_INDEPENDENT_CODE TRUE)
 #Explicitly disallow in-source builds
 if("${PROJECT_SOURCE_DIR}" STREQUAL "${PROJECT_BINARY_DIR}")
  message(
-  FATAL_ERROR 
+  FATAL_ERROR
   "In-source builds are not permitted."
  )
 endif()
 
 #Display error if compiler is not clang or gcc
-if(NOT (${CMAKE_CXX_COMPILER_ID} STREQUAL "Clang" 
+if(NOT (${CMAKE_CXX_COMPILER_ID} STREQUAL "Clang"
  OR ${CMAKE_C_COMPILER_ID} STREQUAL "Clang"
  OR ${CMAKE_CXX_COMPILER_ID} STREQUAL "GNU"
  OR ${CMAKE_C_COMPILER_ID} STREQUAL "GNU"))
@@ -47,7 +47,7 @@ if(
  ${CX_COVERAGE}
  AND NOT (${CMAKE_CXX_COMPILER_ID} STREQUAL "Clang" AND ${CMAKE_C_COMPILER_ID} STREQUAL "Clang"))
  message(
-  FATAL_ERROR 
+  FATAL_ERROR
   "'CX_COVERAGE' can only be used when building with Clang"
  )
 endif()
@@ -115,7 +115,7 @@ endif()
 
 #Conditional library build type
 if(${CX_HEADER_ONLY})
- #Warning for header-only builds and flag to disable headers with linkage 
+ #Warning for header-only builds and flag to disable headers with linkage
  message(
   WARNING
   "CX is building in header-only mode; the following headers will be unavailable:\
@@ -123,12 +123,12 @@ if(${CX_HEADER_ONLY})
   "
  )
 
- #Add source flag for header-only builds 
+ #Add source flag for header-only builds
  list(
   APPEND CX_COMPILE_FLAGS
   -DCX_HEADER_ONLY
  )
- 
+
  #Set up header-only build
  if(${CX_TOP_LEVEL})
   set(CX_OPTION_SCOPE INTERFACE)

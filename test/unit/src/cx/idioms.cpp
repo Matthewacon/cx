@@ -14,7 +14,7 @@ namespace CX {
  }
 
  template<typename Incomplete>
- concept IncompleteSafeSameType = requires { SameType<Incomplete, Incomplete>; }; 
+ concept IncompleteSafeSameType = requires { SameType<Incomplete, Incomplete>; };
 
  TEST(SameType, concept_is_incomplete_safe) {
   EXPECT_TRUE((IncompleteSafeSameType<ImpossibleType<>>));
@@ -22,7 +22,7 @@ namespace CX {
 
  TEST(MatchAnyType, type_pack_containing_first_type_parameter_satisfies_constraint) {
   EXPECT_TRUE((MatchAnyType<int, float, void, char, double, int, short>));
- } 
+ }
 
  TEST(MatchAnyType, type_pack_not_containing_first_type_parameter_does_not_satisfy_constraint) {
   EXPECT_FALSE((MatchAnyType<>));
@@ -42,12 +42,12 @@ namespace CX {
  concept IncompleteSafeSameTemplateType = requires { SameTemplateType<T, T>; };
 
  TEST(SameTemplateType, concept_is_incomplete_safe) {
-  EXPECT_TRUE((IncompleteSafeSameTemplateType<ImpossibleType>)); 
+  EXPECT_TRUE((IncompleteSafeSameTemplateType<ImpossibleType>));
  }
 
  TEST(MatchAnyTemplateType, type_pack_containing_first_type_parameter_satisfies_constraint) {
   EXPECT_TRUE((MatchAnyTemplateType<Dummy, VoidT, MetaFunctions::SameType, Dummy>));
- } 
+ }
 
  TEST(MatchAnyTemplateType, type_pack_not_containing_first_type_parameter_does_not_satisfy_constraint) {
   EXPECT_FALSE((MatchAnyTemplateType<>));
@@ -56,7 +56,7 @@ namespace CX {
  }
 
  TEST(SameValue, identical_values_satisfy_constraint) {
-  EXPECT_TRUE((SameValue<314, 314>)); 
+  EXPECT_TRUE((SameValue<314, 314>));
  }
 
  TEST(SameValue, different_values_do_not_satisfy_constraint) {
@@ -65,7 +65,7 @@ namespace CX {
 
  TEST(MatchAnyValue, value_pack_containing_first_value_satisfies_constraint) {
   EXPECT_TRUE((MatchAnyValue<0, 1, 2, 3, 4, 0>));
- } 
+ }
 
  TEST(MatchAnyValue, value_pack_not_containing_first_value_does_not_satisfy_constraint) {
   EXPECT_FALSE((MatchAnyValue<>));
@@ -96,11 +96,11 @@ namespace CX {
  TEST(UniqueValues, unique_value_pack_satisfies_constraint) {
   EXPECT_TRUE((UniqueValues<>));
   EXPECT_TRUE((UniqueValues<0>));
-  EXPECT_TRUE((UniqueValues<0, 1, 2, 3, 4, 5, 6, 7, 8, 9>)); 
+  EXPECT_TRUE((UniqueValues<0, 1, 2, 3, 4, 5, 6, 7, 8, 9>));
  }
 
  TEST(UniqueValues, value_pack_with_duplicates_does_not_satisfy_constraint) {
-  EXPECT_FALSE((UniqueValues<0, 1, 2, 3, 4, 5, 6, 7, 8, 8, 9>)); 
+  EXPECT_FALSE((UniqueValues<0, 1, 2, 3, 4, 5, 6, 7, 8, 8, 9>));
  }
 
  TEST(ConvertibleTo, integral_types_satisfy_constraint) {
@@ -170,7 +170,7 @@ namespace CX {
  TEST(Unqualified, unqualified_types_are_unmodified) {
   using TypeA = char;
   using ExpectedTypeA = TypeA;
-  EXPECT_TRUE((SameType<Unqualified<TypeA>, ExpectedTypeA>)); 
+  EXPECT_TRUE((SameType<Unqualified<TypeA>, ExpectedTypeA>));
 
   using TypeB = void (int, float) noexcept;
   using ExpectedTypeB = TypeB;
@@ -184,7 +184,7 @@ namespace CX {
  TEST(Decayed, qualified_types_lose_lowest_depth_qualifier) {
   using TypeA = char [1234];
   using ExpectedTypeA = char [];
-  EXPECT_TRUE((SameType<Decayed<TypeA>, ExpectedTypeA>)); 
+  EXPECT_TRUE((SameType<Decayed<TypeA>, ExpectedTypeA>));
 
   using TypeB = int const * const;
   using ExpectedTypeB = int const *;
@@ -222,7 +222,7 @@ namespace CX {
   virtual signed char f6(void (*)()) const noexcept { return 0; }
   template<typename R>
   void f7(R) const {}
-  
+
   int m1;
   static float m2;
   static void f8() noexcept {}
@@ -254,7 +254,7 @@ namespace CX {
  TEST(MemberFunction, non_member_functions_do_not_satisfy_constraint) {
   EXPECT_FALSE((MemberFunction<decltype(&S::m1)>));
   EXPECT_FALSE((MemberFunction<decltype(&S::m2)>));
-  EXPECT_FALSE((MemberFunction<decltype(&S::f8)>)); 
+  EXPECT_FALSE((MemberFunction<decltype(&S::f8)>));
   EXPECT_FALSE((MemberFunction<float>));
  }
 
@@ -377,7 +377,7 @@ namespace CX {
    void operator->() {}
    void operator->*(int) {}
    void operator[](int) {}
-   void operator()(int) {} 
+   void operator()(int) {}
    void operator~() {}
    void operator++(int) {}
    void operator--(int) {}
@@ -426,7 +426,7 @@ namespace CX {
    EXPECT_TRUE((FunctionOperator<UnqualifiedOperators>));
 
    //Unary operators
-   EXPECT_TRUE((DereferenceOperator<UnqualifiedOperators>)); 
+   EXPECT_TRUE((DereferenceOperator<UnqualifiedOperators>));
    EXPECT_TRUE((ComplimentOperator<UnqualifiedOperators>));
    EXPECT_TRUE((IncrementOperator<UnqualifiedOperators>));
    EXPECT_TRUE((DecrementOperator<UnqualifiedOperators>));
@@ -470,7 +470,7 @@ namespace CX {
    virtual void operator->() const noexcept {}
    virtual void operator->*(int) const noexcept {}
    virtual void operator[](int) const noexcept {}
-   virtual void operator()(int) const noexcept {} 
+   virtual void operator()(int) const noexcept {}
    virtual void operator~() const noexcept {}
    virtual void operator++(int) const noexcept {}
    virtual void operator--(int) const noexcept {}
@@ -519,7 +519,7 @@ namespace CX {
    EXPECT_TRUE((FunctionOperator<QualifiedOperators>));
 
    //Unary operators
-   EXPECT_TRUE((DereferenceOperator<QualifiedOperators>)); 
+   EXPECT_TRUE((DereferenceOperator<QualifiedOperators>));
    EXPECT_TRUE((ComplimentOperator<QualifiedOperators>));
    EXPECT_TRUE((IncrementOperator<QualifiedOperators>));
    EXPECT_TRUE((DecrementOperator<QualifiedOperators>));
@@ -563,7 +563,7 @@ namespace CX {
    template<typename A> void operator->() {}
    template<typename A> void operator->*(A) {}
    template<typename A> void operator[](A) {}
-   template<typename A> void operator()(A) {} 
+   template<typename A> void operator()(A) {}
    template<typename A> void operator~() {}
    template<typename A> void operator++(A) {}
    template<typename A> void operator--(A) {}
@@ -612,7 +612,7 @@ namespace CX {
    EXPECT_TRUE((FunctionOperator<TemplateOperators, void, int>));
 
    //Unary operators
-   EXPECT_TRUE((DereferenceOperator<TemplateOperators, void, int>)); 
+   EXPECT_TRUE((DereferenceOperator<TemplateOperators, void, int>));
    EXPECT_TRUE((ComplimentOperator<TemplateOperators, void>));
    EXPECT_TRUE((IncrementOperator<TemplateOperators, void, int>));
    EXPECT_TRUE((DecrementOperator<TemplateOperators, void, int>));
@@ -664,7 +664,7 @@ namespace CX {
    EXPECT_FALSE((FunctionOperator<S>));
 
    //Unary operators
-   EXPECT_FALSE((DereferenceOperator<S>)); 
+   EXPECT_FALSE((DereferenceOperator<S>));
    EXPECT_FALSE((ComplimentOperator<S>));
    EXPECT_FALSE((IncrementOperator<S>));
    EXPECT_FALSE((DecrementOperator<S>));
@@ -673,7 +673,7 @@ namespace CX {
 
    //Must explicitly specify the result of the conversion operator
    //since you can't directly address it
-   EXPECT_FALSE((ConversionOperator<S, int>));  
+   EXPECT_FALSE((ConversionOperator<S, int>));
   }
- } 
+ }
 }

@@ -1,5 +1,5 @@
 #pragma once
- 
+
 #include <cx/idioms.h>
 
 namespace CX {
@@ -7,6 +7,16 @@ namespace CX {
   //Produce max value from pack of non-type template parameters
   template<auto... Values>
   struct MaxValue;
+
+  template<>
+  struct MaxValue<> {
+   static constexpr auto const Value = 0;
+  };
+
+  template<auto V>
+  struct MaxValue<V> {
+   static constexpr auto const Value = V;
+  };
 
   template<auto V1, auto V2>
   requires (requires { { V1 > V2 } -> CX::SameType<bool>; })
@@ -26,6 +36,16 @@ namespace CX {
   template<auto...>
   struct MinValue;
 
+  template<>
+  struct MinValue<> {
+   static constexpr auto const Value = 0;
+  };
+
+  template<auto V>
+  struct MinValue<V> {
+   static constexpr auto const Value = V;
+  };
+
   template<auto V1, auto V2>
   requires (requires { { V1 < V2 } -> CX::SameType<bool>; })
   struct MinValue<V1, V2> {
@@ -34,7 +54,7 @@ namespace CX {
 
   template<auto V1, auto V2, auto... Values>
   struct MinValue<V1, V2, Values...> {
-   static constexpr auto const Vlaue = MinValue<
+   static constexpr auto const Value = MinValue<
     MinValue<V1, V2>::Value,
     Values...
    >::Value;
@@ -77,84 +97,172 @@ namespace CX {
    ::TypeSizeCommon<Producer, Types...>
    ::Value;
 
-  template<typename Match, typename... Args>
+  template<typename Match, typename... Types>
   struct IndexOfType {
    template<typename...>
    struct Matcher;
-   
-   static constexpr auto const Value = Matcher<Args...>::Value;
   };
 
-  template<typename Match, typename... Args>
-  template<typename T, typename... Remaining>
-  struct IndexOfType<Match, Args...>::Matcher<T, Remaining...> {
-   static constexpr auto const Value = CX::SameType<Match, T>
-    ? (sizeof...(Args) - sizeof...(Remaining)) - 1
-    : Matcher<Remaining...>::Value;
+  template<typename Match, typename... Types>
+  template<typename... Remaining>
+  requires (sizeof...(Remaining) == 0)
+  struct IndexOfType<Match, Types...>::Matcher<Remaining...> {
+   static constexpr long const Value = -1;
   };
 
   template<typename Match, typename... Args>
   template<typename T>
   struct IndexOfType<Match, Args...>::Matcher<T> {
-   static constexpr auto const Value = CX::SameType<Match, T> 
+   static constexpr long const Value = CX::SameType<Match, T>
     ? sizeof...(Args) - 1
-    : -1;
+    : Matcher<>::Value;
   };
 
-  template<template<typename...> typename Match, template<typename...> typename... Args>
+  template<typename Match, typename... Args>
+  template<typename T, typename... Remaining>
+  struct IndexOfType<Match, Args...>::Matcher<T, Remaining...> {
+   static constexpr long const Value = CX::SameType<Match, T>
+    ? (sizeof...(Args) - sizeof...(Remaining)) - 1
+    : Matcher<Remaining...>::Value;
+  };
+
+  template<long Index, typename... Types>
+  struct TypeAtIndex;
+
+  template<long Index, typename T, typename... Types>
+  requires (Index > 0)
+  struct TypeAtIndex<Index, T, Types...> {
+   using Type = typename TypeAtIndex<Index - 1, Types...>::Type;
+  };
+
+  template<typename T, typename... Types>
+  struct TypeAtIndex<0, T, Types...> {
+   using Type = T;
+  };
+
+  template<long Index, typename... Types>
+  requires (Index < 0 || Index >= sizeof...(Types))
+  struct TypeAtIndex<Index, Types...> {
+   using Type = ImpossibleType<>;
+  };
+
+  template<template<typename...> typename Match, template<typename...> typename... Types>
   struct IndexOfTemplateType {
    template<template<typename...> typename...>
    struct Matcher;
-
-   static constexpr auto const Value = Matcher<Args...>::Value; 
   };
 
-  template<template<typename...> typename Match, template<typename...> typename... Args>
-  template<template<typename...> typename T, template<typename...> typename... Remaining>
-  struct IndexOfTemplateType<Match, Args...>::Matcher<T, Remaining...> {
+  template<template<typename...> typename Match, template<typename...> typename... Types>
+  template<template<typename...> typename... Remaining>
+  requires (sizeof...(Remaining) == 0)
+  struct IndexOfTemplateType<Match, Types...>::Matcher<Remaining...> {
+   static constexpr int const Value = -1;
+  };
+
+  template<template<typename...> typename Match, template<typename...> typename... Types>
+  template<template<typename...> typename T>
+  struct IndexOfTemplateType<Match, Types...>::Matcher<T> {
    static constexpr auto const Value = CX::SameTemplateType<Match, T>
-    ? (sizeof...(Args) - sizeof...(Remaining)) - 1
+    ? sizeof...(Types) - 1
+    : Matcher<>::Value;
+  };
+
+  template<template<typename...> typename Match, template<typename...> typename... Types>
+  template<template<typename...> typename T, template<typename...> typename... Remaining>
+  struct IndexOfTemplateType<Match, Types...>::Matcher<T, Remaining...> {
+   static constexpr auto const Value = CX::SameTemplateType<Match, T>
+    ? (sizeof...(Types) - sizeof...(Remaining)) - 1
     : Matcher<Remaining...>::Value;
   };
 
-  template<template<typename...> typename Match, template<typename...> typename... Args>
-  template<template<typename...> typename T>
-  struct IndexOfTemplateType<Match, Args...>::Matcher<T> {
-   static constexpr auto const Value = CX::SameTemplateType<Match, T> 
-    ? sizeof...(Args) - 1
-    : -1;
-  }; 
+  template<
+   long Index,
+   template<template<typename...> typename> typename Receiver,
+   template<typename...> typename... Types
+  >
+  struct TemplateTypeAtIndex;
 
-  template<auto Match, auto... Args>
+  template<
+   long Index,
+   template<template<typename...> typename> typename Receiver,
+   template<typename...> typename T, template<typename...> typename... Types
+  >
+  struct TemplateTypeAtIndex<Index, Receiver, T, Types...> {
+   using Type = typename TemplateTypeAtIndex<Index - 1, Receiver, Types...>::Type;
+  };
+
+  template<
+   template<template<typename...> typename> typename Receiver,
+   template<typename...> typename T,
+   template<typename...> typename... Types
+  >
+  struct TemplateTypeAtIndex<0, Receiver, T, Types...> {
+   using Type = Receiver<T>;
+  };
+
+  template<
+   long Index,
+   template<template<typename...> typename> typename Receiver,
+   template<typename...> typename... Types
+  >
+  requires (Index < 0 || Index >= sizeof...(Types))
+  struct TemplateTypeAtIndex<Index, Receiver, Types...> {
+   using Type = Receiver<ImpossibleType>;
+  };
+
+  template<auto Match, auto... Values>
   struct IndexOfValue {
    template<auto...>
    struct Matcher;
-
-   static constexpr auto const Value = Matcher<Args...>::Value;
   };
 
-  template<auto Match, auto... Args>
-  template<auto V, auto... Remaining>
-  struct IndexOfValue<Match, Args...>::Matcher<V, Remaining...> {
+  template<auto Match, auto... Values>
+  template<auto... Remaining>
+  requires (sizeof...(Remaining) == 0)
+  struct IndexOfValue<Match, Values...>::Matcher<Remaining...> {
+   static constexpr int const Value = -1;
+  };
+
+  template<auto Match, auto... Values>
+  template<auto V>
+  struct IndexOfValue<Match, Values...>::Matcher<V> {
    static constexpr auto const Value = CX::SameValue<Match, V>
-    ? (sizeof...(Args) - sizeof...(Remaining)) - 1
+    ? sizeof...(Values) - 1
+    : Matcher<>::Value;
+  };
+
+  template<auto Match, auto... Values>
+  template<auto V, auto... Remaining>
+  struct IndexOfValue<Match, Values...>::Matcher<V, Remaining...> {
+   static constexpr auto const Value = CX::SameValue<Match, V>
+    ? (sizeof...(Values) - sizeof...(Remaining)) - 1
     : Matcher<Remaining...>::Value;
   };
 
-  template<auto Match, auto... Args>
-  template<auto V>
-  struct IndexOfValue<Match, Args...>::Matcher<V> {
-   static constexpr auto const Value = CX::SameValue<Match, V>
-    ? sizeof...(Args) - 1
-    : -1;
+  template<long Index, auto... Values>
+  struct ValueAtIndex;
+
+  template<auto V, auto... Values>
+  struct ValueAtIndex<0, V, Values...> {
+   static constexpr auto const Value = V;
+  };
+
+  template<auto Index, auto... Values>
+  requires (Index < 0 || Index >= sizeof...(Values))
+  struct ValueAtIndex<Index, Values...> {
+   static constexpr auto const Value = 0;
   };
  }
 
  template<auto... Values>
- constexpr auto const MaxValue = MetaFunctions::MaxValue<Values...>::Value;
+ constexpr auto const MaxValue = MetaFunctions
+  ::MaxValue<Values...>
+  ::Value;
 
  template<auto... Values>
- constexpr auto const MinValue = MetaFunctions::MinValue<Values...>::Value;
+ constexpr auto const MinValue = MetaFunctions
+  ::MinValue<Values...>
+  ::Value;
 
  template<typename... Types>
  constexpr auto const MaxTypeSize = MetaFunctions::TypeSize<MetaFunctions::MaxValue, Types...>;
@@ -163,23 +271,39 @@ namespace CX {
  constexpr auto const MinTypeSize = MetaFunctions::TypeSize<MetaFunctions::MinValue, Types...>;
 
  template<typename Match, typename... Args>
- constexpr auto const IndexOfType = MetaFunctions::IndexOfType<Match, Args...>::Value;
+ constexpr auto const IndexOfType = MetaFunctions
+  ::IndexOfType<Match, Args...>
+  ::template Matcher<Args...>
+  ::Value;
 
- //TODO
- //template<decltype(IndexOfType<void, void>) Index, typename... Types>
- //using TypeAtIndex = ImpossibleType<>/*MetaFunctions::TypeAtIndex<Index, Types...>::Type*/;
+ template<decltype(IndexOfType<void, void>) Index, typename... Types>
+ using TypeAtIndex = typename MetaFunctions
+  ::TypeAtIndex<Index, Types...>
+  ::Type;
 
  template<template<typename...> typename Match, template<typename...> typename... Args>
- constexpr auto const IndexOfTemplateType = MetaFunctions::IndexOfTemplateType<Match, Args...>::Value;
+ constexpr auto const IndexOfTemplateType = MetaFunctions
+  ::IndexOfTemplateType<Match, Args...>
+  ::template Matcher<Args...>
+  ::Value;
 
- //TODO
- //template<decltype(IndexOfTemplateType<VoidT, VoidT>) Index, template<typename...> typename... Types>
- //using TemplateTypeAtIndex = ImpossibleType<>/*MetaFunctions::TemplateTypeAtIndex<Index, Types...>::Type*/;
+ template<
+  decltype(IndexOfTemplateType<VoidT, VoidT>) Index,
+  template<template<typename...> typename> typename Receiver,
+  template<typename...> typename... Types
+ >
+ using TemplateTypeAtIndex = typename MetaFunctions
+  ::TemplateTypeAtIndex<Index, Receiver, Types...>
+  ::Type;
 
  template<auto Match, auto... Values>
- constexpr auto const IndexOfValue = MetaFunctions::IndexOfValue<Match, Values...>::Value;
+ constexpr auto const IndexOfValue = MetaFunctions
+  ::IndexOfValue<Match, Values...>
+  ::template Matcher<Values...>
+  ::Value;
 
- //TODO
- //template<decltype(IndexOfValue<0, 0>) Index, auto... Values>
- //constexpr auto const ValueAtIndex = 0/*MetaFunctions::ValueAtIndex<Index, Values...>::Value*/;
+ template<decltype(IndexOfValue<0, 0>) Index, auto... Values>
+ constexpr auto const ValueAtIndex = MetaFunctions
+  ::ValueAtIndex<Index, Values...>
+  ::Value;
 }

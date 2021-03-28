@@ -122,7 +122,7 @@ namespace CX {
 
  TEST(TypeIterator, empty_type_pack_does_not_iterate) {
   int i = 0;
-  TypeIterator<>::run([&]<typename T> { i++; });
+  TypeIterator<>::run([&]<typename> { i++; });
   EXPECT_EQ(i, 0);
  }
 
@@ -134,11 +134,84 @@ namespace CX {
   EXPECT_EQ(i, 3);
  }
 
+ TEST(TypeIterator, bool_producer_callback_does_not_halt_iteration_when_returning_true) {
+  int i = 0;
+  TypeIterator<char, double, float, int, void>::run([&]<typename> {
+   i++;
+   return true;
+  });
+  EXPECT_EQ(i, 5);
+ }
+
  TEST(TypeIterator, callback_invoked_for_all_types_in_pack) {
   auto const expected = ~(~0 << 6);
   auto invoked = 0;
   TypeIterator<char, void, double, int, float, short>::run([&]<typename T> {
    invoked |= (1 << IndexOfType<T, char, void, double, int, float, short>);
+  });
+  EXPECT_EQ(invoked ^ expected, 0);
+ }
+
+ TEST(TemplateTypeIterator, empty_type_pack_does_not_iterate) {
+  int i = 0;
+  TemplateTypeIterator<>::run([&]<template<typename...> typename> { i++; });
+  EXPECT_EQ(i, 0);
+ }
+
+ TEST(TemplateTypeIterator, bool_producer_callback_halts_iteration_when_returning_false) {
+  int i = 0;
+  TemplateTypeIterator<MetaFunctions::SameType, Dummy, ImpossibleType>::run([&]<template<typename...> typename> {
+   return i++ < 1;
+  });
+  EXPECT_EQ(i, 2);
+ }
+
+ TEST(TemplateTypeIterator, bool_producer_callback_does_not_halt_iteration_when_returning_true) {
+  int i = 0;
+  TemplateTypeIterator<MetaFunctions::MatchAnyType, Dummy, ImpossibleType, Dummy>::run([&]<template<typename...> typename> {
+   i++;
+   return true;
+  });
+  EXPECT_EQ(i, 4);
+ }
+
+ TEST(TemplateTypeIterator, callback_invoked_for_all_types_in_pack) {
+  auto const expected = ~(~0 << 4);
+  auto invoked = 0;
+  TemplateTypeIterator<MetaFunctions::Unqualified, MetaFunctions::SameType, Dummy, ImpossibleType>::run([&]<template<typename...> typename T> {
+   invoked |= (1 << IndexOfTemplateType<T, MetaFunctions::Unqualified, MetaFunctions::SameType, Dummy, ImpossibleType>);
+  });
+  EXPECT_EQ(invoked ^ expected, 0);
+ }
+
+ TEST(ValueIterator, empty_value_pack_does_not_iterate) {
+  int i = 0;
+  ValueIterator<>::run([&]<auto> { i++; });
+  EXPECT_EQ(i, 0);
+ }
+
+ TEST(ValueIterator, bool_producer_callback_halts_iteration_when_returning_false) {
+  int i = 0;
+  ValueIterator<1, 2, 3, 4, 5, 6>::run([&]<auto> {
+   return i++ < 3;
+  });
+  EXPECT_EQ(i, 4);
+ }
+
+ TEST(ValueIterator, bool_producer_callback_does_not_halt_iteration_when_returning_true) {
+  int i = 0;
+  ValueIterator<5, 4, 3, 2, 1, 0, -1>::run([&]<auto> {
+   i++;
+   return true;
+  });
+  EXPECT_EQ(i, 7);
+ }
+
+ TEST(ValueIterator, callback_invoked_for_all_types_in_pack) {
+  auto const expected = ~(~0 << 12);
+  auto invoked = 0;
+  ValueIterator<12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1>::run([&]<auto V> {
+   invoked |= (1 << IndexOfValue<V, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1>);
   });
   EXPECT_EQ(invoked ^ expected, 0);
  }

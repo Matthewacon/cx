@@ -3,8 +3,6 @@
 #include <cx/variant.h>
 
 namespace CX {
- //TODO move to idioms and create template-parameter and value-parameter
- //equivalents
  template<template<typename...> typename S, typename... Types>
  concept Specializable = requires (S<Types...> s) { (void)s; };
 
@@ -31,7 +29,7 @@ namespace CX {
   EXPECT_FALSE((VariantHasInvokable<VariantType, void>));
   EXPECT_FALSE((VariantDrainInvokable<VariantType, void>));
   EXPECT_FALSE((VariantRdrainInvokable<VariantType, void>));
-  //TODO element and variant assignment operators 
+  //TODO element and variant assignment operators
   //EXPECT_FALSE(());
  }
 
@@ -43,7 +41,7 @@ namespace CX {
  }
 
  TEST(Variant, empty_variant_get_throws_exception_for_all_element_types) {
-  throw "Unimplemented"; 
+  throw "Unimplemented";
  }
 
  TEST(Variant, empty_variant_drain_throws_exception_for_all_element_types) {
@@ -55,7 +53,7 @@ namespace CX {
  }
 
  TEST(Variant, a) {
-  constexpr float const expectedValue = 1234.5; 
+  constexpr float const expectedValue = 1234.5;
   using expectedType = float;
   Variant<int, float, char> v1{expectedValue};
   EXPECT_TRUE(v1.has<expectedType>());

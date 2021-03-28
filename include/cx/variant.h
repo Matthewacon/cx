@@ -84,7 +84,7 @@ namespace CX {
   char const * what() const noexcept {
    return "Variant types are not convertible";
   }
- }; 
+ };
 
  //Variant impl
  template<typename... Elements>
@@ -136,7 +136,7 @@ namespace CX {
    #ifdef CX_VARIANT_HARD_CLEAR
     for (auto &c : ref.data) {
      c = 0;
-    } 
+    }
    #endif
   }
 
@@ -196,7 +196,7 @@ namespace CX {
    operator=((decltype(v)&)v);
   }
 
-  //Move constructor 
+  //Move constructor
   Variant(CompatibleVariant<Variant> auto &&v) :
    tag(0),
    data{}
@@ -235,14 +235,14 @@ namespace CX {
       v.destruct();
      }
     } gc{*this};
-    return *(E *)&data; 
+    return *(E *)&data;
    }
    throw VariantTypeError{};
   }
 
   //Similar to `drain()`, however, instead of returning a value,
-  //accept a reference to the destination and move the 
-  //encapsulated element 
+  //accept a reference to the destination and move the
+  //encapsulated element
   template<MatchAnyType<Elements...> E>
   void rdrain(E &e) {
    if (has<E>()) {
@@ -283,7 +283,7 @@ namespace CX {
   Variant& operator=(MatchAnyType<Elements...> auto const &e) {
    assign((decltype(e)&)e);
    return *this;
-  } 
+  }
 
   //Element move assignment operator
   Variant& operator=(MatchAnyType<Elements...> auto &&e) {
@@ -324,7 +324,7 @@ namespace CX {
   template<typename E>
   bool has() const noexcept {
    return false;
-  } 
+  }
 
   template<typename E>
   E& get() {

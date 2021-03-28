@@ -25,7 +25,7 @@ namespace CX {
 
  //Converts type and value meta-functions to stl-compatible equivalents
  namespace MetaFunctions {
-  template<typename T> 
+  template<typename T>
   struct AsStlCompatible;
 
   //Type meta-function specialization
@@ -35,11 +35,11 @@ namespace CX {
    using type = typename T::Type;
   };
 
-  //Value meta-function specialization 
+  //Value meta-function specialization
   template<typename T>
   requires (requires { expect(&T::Value); })
   struct AsStlCompatible<T> {
-   static constexpr auto const value = T::Value; 
+   static constexpr auto const value = T::Value;
   };
  }
 

@@ -318,7 +318,7 @@ namespace CX {
   friend struct TypeIterator;
 
   [[gnu::always_inline]]
-  inline static constexpr void exec(auto&) noexcept {} 
+  inline static constexpr void exec(auto&) noexcept {}
 
  public:
   [[gnu::always_inline]]
@@ -326,7 +326,7 @@ namespace CX {
 
   [[gnu::always_inline]]
   inline static constexpr void run(auto&) noexcept {}
- }; 
+ };
 
  template<typename T, typename... Types>
  struct TypeIterator<T, Types...> {
@@ -338,16 +338,16 @@ namespace CX {
   static constexpr bool const OpIsNoexcept = noexcept(
    declval<F>().template operator()<T>()
   );
-  
+
   [[gnu::always_inline]]
   inline static constexpr void exec(auto &op) noexcept(OpIsNoexcept<decltype(op)>) {
    //If `op` is a bool producer, allow for conditional iteration
-   if constexpr (SameType<decltype(op.template operator()<T>()), bool>) {
+   if constexpr (SameType<bool, decltype(op.template operator()<T>())>) {
     auto const next = [&]<typename...>() constexpr {
      return op.template operator()<T>();
     }();
     if (next) {
-     TypeIterator<Types...>::exec(op); 
+     TypeIterator<Types...>::exec(op);
     }
    } else {
     op.template operator()<T>();
@@ -367,11 +367,120 @@ namespace CX {
   }
  };
 
- //TODO
  template<template<typename...> typename... Types>
  struct TemplateTypeIterator;
 
- //TODO
+ template<>
+ struct TemplateTypeIterator<> {
+ private:
+  template<template<typename...> typename...>
+  friend struct TemplateTypeIterator;
+
+  [[gnu::always_inline]]
+  inline static constexpr void exec(auto&) noexcept {}
+
+ public:
+  [[gnu::always_inline]]
+  inline static constexpr void run(auto) noexcept {}
+
+  [[gnu::always_inline]]
+  inline static constexpr void run(auto&) noexcept {}
+ };
+
+ template<template<typename...> typename T, template<typename...> typename... Types>
+ struct TemplateTypeIterator<T, Types...> {
+ private:
+  template<template<typename...> typename...>
+  friend struct TemplateTypeIterator;
+
+  template<typename F>
+  static constexpr bool const OpIsNoexcept = noexcept(
+   declval<F>().template operator()<T>()
+  );
+
+  [[gnu::always_inline]]
+  inline static constexpr void exec(auto &op) noexcept {
+   //If `op` is a bool producer, allow for conditional iteration
+   if constexpr(SameType<bool, decltype(op.template operator()<T>())>) {
+    auto const next = [&]<typename...> {
+     return op.template operator()<T>();
+    }();
+    if (next) {
+     TemplateTypeIterator<Types...>::exec(op);
+    }
+   } else {
+    op.template operator()<T>();
+    TemplateTypeIterator<Types...>::exec(op);
+   }
+  }
+
+ public:
+  [[gnu::always_inline]]
+  inline static constexpr void run(auto op) noexcept(OpIsNoexcept<decltype(op)>) {
+   exec(op);
+  }
+
+  [[gnu::always_inline]]
+  inline static constexpr void run(auto &op) noexcept(OpIsNoexcept<decltype(op)>) {
+   exec(op);
+  }
+ };
+
  template<auto... Values>
  struct ValueIterator;
+
+ template<>
+ struct ValueIterator<> {
+ private:
+  template<auto...>
+  friend struct ValueIterator;
+
+  [[gnu::always_inline]]
+  inline static constexpr void exec(auto&) noexcept {}
+
+ public:
+  [[gnu::always_inline]]
+  inline static constexpr void run(auto) noexcept {}
+
+  [[gnu::always_inline]]
+  inline static constexpr void run(auto&) noexcept {}
+ };
+
+ template<auto V, auto... Values>
+ struct ValueIterator<V, Values...> {
+ private:
+  template<auto...>
+  friend struct ValueIterator;
+
+  template<typename F>
+  static constexpr bool const OpIsNoexcept = noexcept(
+   declval<F>().template operator()<V>()
+  );
+
+  [[gnu::always_inline]]
+  inline static constexpr void exec(auto op) noexcept {
+   if constexpr (SameType<bool, decltype(op.template operator()<V>())>) {
+    auto const next = [&]<typename...> {
+     return op.template operator()<V>();
+    }();
+    if (next) {
+     ValueIterator<Values...>::exec(op);
+    }
+   } else {
+    op.template operator()<V>();
+    ValueIterator<Values...>::exec(op);
+   }
+  }
+
+ public:
+  [[gnu::always_inline]]
+  inline static constexpr void run(auto op) noexcept(OpIsNoexcept<decltype(op)>) {
+   exec(op);
+  }
+
+  [[gnu::always_inline]]
+  inline static constexpr void run(auto &op) noexcept(OpIsNoexcept<decltype(op)>) {
+   exec(op);
+  }
+ };
 }

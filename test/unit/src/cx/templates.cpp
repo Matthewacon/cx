@@ -119,4 +119,27 @@ namespace CX {
  TEST(IndexOfValue, special_cases_yield_default_value) {
   EXPECT_EQ((IndexOfValue<0>), -1);
  }
+
+ TEST(TypeIterator, empty_type_pack_does_not_iterate) {
+  int i = 0;
+  TypeIterator<>::run([&]<typename T> { i++; });
+  EXPECT_EQ(i, 0);
+ }
+
+ TEST(TypeIterator, bool_producer_callback_halts_iteration_when_returning_false) {
+  int i = 0;
+  TypeIterator<int, float, char, void, double>::run([&]<typename T> {
+   return i++ < 2;
+  });
+  EXPECT_EQ(i, 3);
+ }
+
+ TEST(TypeIterator, callback_invoked_for_all_types_in_pack) {
+  auto const expected = ~(~0 << 6);
+  auto invoked = 0;
+  TypeIterator<char, void, double, int, float, short>::run([&]<typename T> {
+   invoked |= (1 << IndexOfType<T, char, void, double, int, float, short>);
+  });
+  EXPECT_EQ(invoked ^ expected, 0);
+ }
 }

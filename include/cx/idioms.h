@@ -350,6 +350,11 @@ namespace CX {
  concept Constructible = __is_constructible(T, Args...);
 
  template<typename T>
+ concept Destructible = requires (T t) {
+  { t.~T() } -> SameType<void>;
+ };
+
+ template<typename T>
  using Unqualified = typename MetaFunctions::Unqualified<T>::Type;
 
  template<typename T>

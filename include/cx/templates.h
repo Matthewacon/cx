@@ -306,4 +306,72 @@ namespace CX {
  constexpr auto const ValueAtIndex = MetaFunctions
   ::ValueAtIndex<Index, Values...>
   ::Value;
+
+ //Runtime type, template type and template value iterators
+ template<typename... Types>
+ struct TypeIterator;
+
+ template<>
+ struct TypeIterator<> {
+ private:
+  template<typename...>
+  friend struct TypeIterator;
+
+  [[gnu::always_inline]]
+  inline static constexpr void exec(auto&) noexcept {} 
+
+ public:
+  [[gnu::always_inline]]
+  inline static constexpr void run(auto) noexcept {}
+
+  [[gnu::always_inline]]
+  inline static constexpr void run(auto&) noexcept {}
+ }; 
+
+ template<typename T, typename... Types>
+ struct TypeIterator<T, Types...> {
+ private:
+  template<typename...>
+  friend struct TypeIterator;
+
+  template<typename F>
+  static constexpr bool const OpIsNoexcept = noexcept(
+   declval<F>().template operator()<T>()
+  );
+  
+  [[gnu::always_inline]]
+  inline static constexpr void exec(auto &op) noexcept(OpIsNoexcept<decltype(op)>) {
+   //If `op` is a bool producer, allow for conditional iteration
+   if constexpr (SameType<decltype(op.template operator()<T>()), bool>) {
+    auto const next = [&]<typename...>() constexpr {
+     return op.template operator()<T>();
+    }();
+    if (next) {
+     TypeIterator<Types...>::exec(op); 
+    }
+   } else {
+    op.template operator()<T>();
+    TypeIterator<Types...>::exec(op);
+   }
+  }
+
+ public:
+  [[gnu::always_inline]]
+  inline static constexpr void run(auto op) noexcept(OpIsNoexcept<decltype(op)>) {
+   exec(op);
+  }
+
+  [[gnu::always_inline]]
+  inline static constexpr void run(auto &op) noexcept(OpIsNoexcept<decltype(op)>) {
+   exec(op);
+  }
+ };
+
+ //TODO
+ template<template<typename...> typename... Types>
+ struct TemplateTypeIterator;
+
+ //TODO
+ template<auto... Values>
+ struct ValueIterator;
 }

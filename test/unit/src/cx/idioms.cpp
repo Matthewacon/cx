@@ -130,6 +130,7 @@ namespace CX {
    A(int) {}
   };
   EXPECT_TRUE((Constructible<A, int>));
+  EXPECT_TRUE((Constructible<char [1234]>));
   struct B {
    B(int, float, double, char *) noexcept {}
   };
@@ -143,6 +144,19 @@ namespace CX {
    A() = delete;
   };
   EXPECT_FALSE((Constructible<A>));
+ }
+
+ TEST(Destructible, destructible_types_satisfy_constraint) {
+  EXPECT_TRUE((Destructible<int>));
+  struct A {};
+  EXPECT_TRUE((Destructible<A>));
+  EXPECT_TRUE((Destructible<void *>));
+ }
+
+ TEST(Destructible, non_destructible_types_do_not_satisfy_constraint) {
+  EXPECT_FALSE((Destructible<void>));
+  EXPECT_FALSE((Destructible<int&>));
+  EXPECT_FALSE((Destructible<ImpossibleType<>>));
  }
 
  TEST(Unqualified, qualified_types_lose_all_qualifiers) {

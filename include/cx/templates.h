@@ -252,6 +252,59 @@ namespace CX {
   struct ValueAtIndex<Index, Values...> {
    static constexpr auto const Value = 0;
   };
+
+  //Conditional type, template-type and value selector meta-functions
+  template<bool Cond, typename Success, typename Failure>
+  struct SelectType;
+
+  template<typename Success, typename Failure>
+  struct SelectType<true, Success, Failure> {
+   using Type = Success;
+  };
+
+  template<typename Success, typename Failure>
+  struct SelectType<false, Success, Failure> {
+   using Type = Failure;
+  };
+
+  template<
+   template<template<typename...> typename> typename Receiver,
+   bool Cond,
+   template<typename...> typename Success,
+   template<typename...> typename Failure
+  >
+  struct SelectTemplateType;
+
+  template<
+   template<template<typename...> typename> typename Receiver,
+   template<typename...> typename Success,
+   template<typename...> typename Failure
+  >
+  struct SelectTemplateType<Receiver, true, Success, Failure> {
+   using Type = Receiver<Success>;
+  };
+
+  template<
+   template<template<typename...> typename> typename Receiver,
+   template<typename...> typename Success,
+   template<typename...> typename Failure
+  >
+  struct SelectTemplateType<Receiver, false, Success, Failure> {
+   using Type = Receiver<Failure>;
+  };
+
+  template<bool Cond, auto Success, auto Failure>
+  struct SelectValue;
+
+  template<auto Success, auto Failure>
+  struct SelectValue<true, Success, Failure> {
+   static constexpr auto const Value = Success;
+  };
+
+  template<auto Success, auto Failure>
+  struct SelectValue<false, Success, Failure> {
+   static constexpr auto const Value = Failure;
+  };
  }
 
  template<auto... Values>
@@ -305,6 +358,26 @@ namespace CX {
  template<decltype(IndexOfValue<0, 0>) Index, auto... Values>
  constexpr auto const ValueAtIndex = MetaFunctions
   ::ValueAtIndex<Index, Values...>
+  ::Value;
+
+ template<bool Cond, typename Success, typename Failure>
+ using SelectType = typename MetaFunctions
+  ::SelectType<Cond, Success, Failure>
+  ::Type;
+
+ template<
+  template<template<typename...> typename> typename Receiver,
+  bool Cond,
+  template<typename...> typename Success,
+  template<typename...> typename Failure
+ >
+ using SelectTemplateType = typename MetaFunctions
+  ::SelectTemplateType<Receiver, Cond, Success, Failure>
+  ::Type;
+
+ template<bool Cond, auto Success, auto Failure>
+ constexpr auto const SelectValue = MetaFunctions
+  ::SelectValue<Cond, Success, Failure>
   ::Value;
 
  //Runtime type, template type and template value iterators

@@ -120,6 +120,18 @@ namespace CX {
   EXPECT_EQ((IndexOfValue<0>), -1);
  }
 
+ TEST(SelectType, condition_yields_expected_type) {
+  throw std::runtime_error{"Unimplemented"};
+ }
+
+ TEST(SelectTemplateType, condition_yields_expected_template_type) {
+  throw std::runtime_error{"Unimplemented"};
+ }
+
+ TEST(SelectValue, condition_yields_expected_value) {
+  throw std::runtime_error{"Unimplemented"};
+ }
+
  TEST(TypeIterator, empty_type_pack_does_not_iterate) {
   int i = 0;
   TypeIterator<>::run([&]<typename> { i++; });

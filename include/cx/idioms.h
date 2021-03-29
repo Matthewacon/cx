@@ -2,6 +2,15 @@
 
 #include <cx/common.h>
 
+//Optional STL dependencies for construction constraints
+//Adds placement new operator
+#ifdef CX_STL_SUPPORT
+ #include <new>
+#else
+ [[nodiscard]]
+ void * operator new(decltype(sizeof(0)), void *) noexcept;
+#endif
+
 namespace CX {
  //Utility macro for defining conditional requirements
  #define CX_CONDITIONAL_CONSTRAINT(condition, constraint, defaultCase) \
@@ -16,7 +25,7 @@ namespace CX {
   template<typename T>
   struct SameType<T, T> : TrueType {};
 
-  //True for parameter packs that contain the first parameter 
+  //True for parameter packs that contain the first parameter
   template<typename... Types>
   struct MatchAnyType;
 
@@ -49,7 +58,7 @@ namespace CX {
 
   template<template<typename...> typename T, template<typename...> typename... Args>
   struct MatchAnyTemplateType<T, Args...> {
-   static constexpr auto const Value = (SameTemplateType<T, Args>::Value || ...); 
+   static constexpr auto const Value = (SameTemplateType<T, Args>::Value || ...);
   };
 
   //True for matching values
@@ -92,7 +101,7 @@ namespace CX {
    template<typename...>
    friend struct UniqueTypes;
 
-   static constexpr auto const FoundMatch = MatchAnyType<T, Types...>::Value 
+   static constexpr auto const FoundMatch = MatchAnyType<T, Types...>::Value
     || UniqueTypes<Types...>::FoundMatch;
 
   public:
@@ -109,7 +118,7 @@ namespace CX {
    template<template<typename...> typename...>
    friend struct UniqueTemplateTypes;
 
-   static constexpr auto const FoundMatch = false; 
+   static constexpr auto const FoundMatch = false;
   };
 
   template<template<typename...> typename T, template<typename...> typename... Types>
@@ -119,11 +128,11 @@ namespace CX {
    template<template<typename...> typename...>
    friend struct UniqueTemplateTypes;
 
-   static constexpr auto const FoundMatch = MatchAnyTemplateType<T, Types...>::Value 
+   static constexpr auto const FoundMatch = MatchAnyTemplateType<T, Types...>::Value
     || UniqueTemplateTypes<Types...>::Value;
 
   public:
-   static constexpr auto const Value = !FoundMatch; 
+   static constexpr auto const Value = !FoundMatch;
   };
 
   template<auto... Values>
@@ -150,9 +159,9 @@ namespace CX {
     || UniqueValues<Values...>::FoundMatch;
 
   public:
-   static constexpr auto const Value = !FoundMatch; 
+   static constexpr auto const Value = !FoundMatch;
   };
- 
+
   //Strips all type qualifiers
   template<typename T>
   struct Unqualified {
@@ -163,7 +172,7 @@ namespace CX {
   template<typename T>
   struct Unqualified<T *> : Unqualified<T> {
    using DecayedType = T;
-  }; 
+  };
 
   template<typename T>
   struct Unqualified<T&> : Unqualified<T> {
@@ -174,7 +183,7 @@ namespace CX {
   struct Unqualified<T&&> : Unqualified<T> {
    using DecayedType = T&;
   };
-  
+
   template<typename T>
   struct Unqualified<T[]> : Unqualified<T> {
    using DecayedType = T;
@@ -183,13 +192,13 @@ namespace CX {
   template<typename T>
   struct Unqualified<T const[]> : Unqualified<T> {
    using DecayedType = T const;
-  }; 
+  };
 
   template<typename T, auto N>
   struct Unqualified<T[N]> : Unqualified<T> {
    using DecayedType = T[];
   };
- 
+
   template<typename T, auto N>
   struct Unqualified<T const[N]> : Unqualified<T> {
    using DecayedType = T const[];
@@ -198,6 +207,72 @@ namespace CX {
   template<typename T>
   struct Unqualified<T const> : Unqualified<T> {
    using DecayedType = T;
+  };
+
+  //Const identity
+  template<typename T>
+  struct Const : FalseType {
+   using Type = T;
+   using ConstDecayed = T;
+  };
+
+  template<typename T>
+  struct Const<T const> : TrueType {
+   using Type = T const;
+   using ConstDecayed = T;
+  };
+
+  template<typename T>
+  struct Const<T const&> : TrueType {
+   using Type = T const&;
+   using ConstDecayed = T&;
+  };
+
+  template<typename T>
+  struct Const<T const&&> : TrueType {
+   using Type = T const&&;
+   using ConstDecayed = T&&;
+  };
+
+  //Array identity
+  template<typename T>
+  struct Array : FalseType {
+   using ElementType = ImpossibleType<>;
+   static constexpr auto const Size = -1;
+  };
+
+  template<typename T>
+  struct Array<T []> : TrueType {
+   using ElementType = T;
+   static constexpr auto const Size = -1;
+  };
+
+  template<auto N, typename T>
+  struct Array<T [N]> : TrueType {
+   using ElementType = T;
+   static constexpr auto const Size = N;
+  };
+
+  //lvalue reference identity
+  template<typename T>
+  struct LValueReference : FalseType {
+   using ElementType = T;
+  };
+
+  template<typename T>
+  struct LValueReference<T&> : TrueType {
+   using ElementType = T;
+  };
+
+  //rvalue reference identity
+  template<typename T>
+  struct RValueReference : FalseType {
+   using ElementType = T;
+  };
+
+  template<typename T>
+  struct RValueReference<T&&> : TrueType {
+   using ElementType = T;
   };
 
   //Function identity meta-functions
@@ -249,7 +324,7 @@ namespace CX {
 
   template<typename T, typename R, typename... Args>
   struct MemberFunction<R (T::*)(Args...) const noexcept> : MemberFunction<R (T::*)(Args...) noexcept> {
-   static constexpr auto const Const = true; 
+   static constexpr auto const Const = true;
   };
 
   template<typename T, typename R, typename... Args>
@@ -289,7 +364,7 @@ namespace CX {
    static constexpr auto const Variadic = true;
   };
 
-  //Virtual member function idiom 
+  //Virtual member function idiom
   template<auto F, typename = void>
   struct VirtualFunction {
    static constexpr auto const Value = MemberFunction<decltype(F)>::Value;
@@ -324,7 +399,7 @@ namespace CX {
  concept SameTemplateType = MetaFunctions::SameTemplateType<T1, T2>::Value;
 
  template<template<typename...> typename... Types>
- concept MatchAnyTemplateType = MetaFunctions::MatchAnyTemplateType<Types...>::Value; 
+ concept MatchAnyTemplateType = MetaFunctions::MatchAnyTemplateType<Types...>::Value;
 
  template<auto V1, auto V2>
  concept SameValue = MetaFunctions::SameValue<V1, V2>::Value;
@@ -355,23 +430,97 @@ namespace CX {
  };
 
  template<typename T>
- using Unqualified = typename MetaFunctions::Unqualified<T>::Type;
+ concept CopyConstructible = __is_constructible(T, T const&)
+  && requires (T * t1, T t2) {
+   { new (t1) T {(T const&)t2} } -> SameType<T *>;
+  };
 
  template<typename T>
- using Decayed = typename MetaFunctions::Unqualified<T>::DecayedType;
+ concept MoveConstructible = __is_constructible(T, T&&)
+  && requires (T * t1, T t2) {
+   { new (t1) T {(T&&)t2} } -> SameType<T *>;
+  };
+
+ template<typename T>
+ concept CopyAssignable =
+  requires (T t1, T t2) {
+   { t1.operator=((T const&)t2) } -> SameType<T&>;
+  }
+  || requires (T t1, T t2) {
+   { t1 = (T&)t2 } -> SameType<T&>;
+  };
+
+ template<typename T>
+ concept MoveAssignable =
+  requires (T t1, T t2) {
+   { t1.operator=((T&&)t2) } -> SameType<T&>;
+  }
+  || requires (T t1, T t2) {
+   { t1 = (T&&)t2 } -> SameType<T&>;
+  };
+
+ template<typename T>
+ using Unqualified = typename MetaFunctions
+  ::Unqualified<T>
+  ::Type;
+
+ template<typename T>
+ using Decayed = typename MetaFunctions
+  ::Unqualified<T>
+  ::DecayedType;
+
+ template<typename T>
+ concept Const = MetaFunctions
+  ::Const<T>
+  ::Value;
+
+ template<typename T>
+ using ConstDecayed = typename MetaFunctions
+  ::Const<T>
+  ::ConstDecayed;
+
+ template<typename T>
+ concept Array = MetaFunctions
+  ::Array<T>
+  ::Value;
+
+ template<typename T>
+ using ArrayElementType = typename MetaFunctions
+  ::Array<T>
+  ::ElementType;
+
+ template<typename T>
+ concept LValueReference = MetaFunctions
+  ::LValueReference<T>
+  ::Value;
+
+ template<typename T>
+ using LValueReferenceElementType = typename MetaFunctions
+  ::LValueReference<T>
+  ::ElementType;
+
+ template<typename T>
+ concept RValueReference = MetaFunctions
+  ::RValueReference<T>
+  ::Value;
+
+ template<typename T>
+ using RValueReferenceElementType = typename MetaFunctions
+  ::RValueReference<T>
+  ::ElementType;
 
  //Function identity concepts
  template<typename F, typename R = ImpossibleType<>, typename... Args>
  concept MemberFunction = MetaFunctions::MemberFunction<Unqualified<F>>::Value
-  //Match member function against return type, if specified 
+  //Match member function against return type, if specified
   && CX_CONDITIONAL_CONSTRAINT(
-   (!SameType<R, ImpossibleType<>>), 
+   (!SameType<R, ImpossibleType<>>),
    (SameType<R, typename MetaFunctions::MemberFunction<Unqualified<F>>::ReturnType>),
    true
   )
   //Match member function against argument types
   //Note: Will only match against argument types if the return type
-  // has been specified and there is at least one argument specified 
+  // has been specified and there is at least one argument specified
   && CX_CONDITIONAL_CONSTRAINT(
    (!SameType<R, ImpossibleType<>> && sizeof...(Args) > 0),
    (SameType<Dummy<Args...>, typename MetaFunctions::MemberFunction<Unqualified<F>>::ArgumentTypes>),
@@ -385,7 +534,7 @@ namespace CX {
    (!SameType<R, ImpossibleType<>>),
    (SameType<R, typename MetaFunctions::StaticFunction<Unqualified<F>>::ReturnType>),
    true
-  ) 
+  )
   //Match static function against argument types
   //Note: Same conditional logic as the argument matching case for
   // the `MemberFunction` concept
@@ -401,7 +550,7 @@ namespace CX {
  template<typename T>
  concept MemberField = MetaFunctions::MemberField<T>::Value;
 
- //Operator detection concepts 
+ //Operator detection concepts
  #define DEFINE_OPERATOR_CONCEPT(name, op) \
  template<typename T, typename R = ImpossibleType<>, typename... Args>\
  concept name##Operator = \
@@ -451,7 +600,7 @@ namespace CX {
  DEFINE_OPERATOR_CONCEPT(Inequality, !=);
  DEFINE_OPERATOR_CONCEPT(GreaterOrEqualThan, >=);
  DEFINE_OPERATOR_CONCEPT(LessOrEqualThan, <=);
- //Add default cases for the l/r-value assignment operators since they are 
+ //Add default cases for the l/r-value assignment operators since they are
  //overloads of any user defined assignment operator
  DEFINE_OPERATOR_CONCEPT(Assignment, =)
   || (SameType<R, ImpossibleType<>> && (
@@ -487,7 +636,7 @@ namespace CX {
  DEFINE_OPERATOR_CONCEPT(Decrement, --);
  DEFINE_OPERATOR_CONCEPT(Not, !);
  DEFINE_OPERATOR_CONCEPT(Address, &);
- 
+
  //Clean up internal macro
  #undef DEFINE_OPERATOR_CONCEPT
 
@@ -496,7 +645,7 @@ namespace CX {
  // 1. There is no way to explicitly specify template arguments for the conversion operator
  // 2. The conversion function does not accept arguments so there is no need to check for overloads
  template<typename T, typename C>
- concept ConversionOperator = 
+ concept ConversionOperator =
   /*Member non-overloaded operator*/
   requires { expect(&T::operator C); }
   /*Member overloaded operator (C as implicit template parameter + return type)*/

@@ -140,6 +140,7 @@ namespace CX {
    #endif
   }
 
+  /*
   template<typename EQualified, MatchAnyType<Elements...> E = Unqualified<EQualified>>
   void assign(EQualified e) const {
    auto &ref = const_cast<Variant&>(*this);
@@ -147,6 +148,39 @@ namespace CX {
    ref.tag = 1 << IndexOfType<E, Elements...>;
    //Prevent l/r-value decay by re-promoting to `EQualified`
    *(E *)&ref.data = (EQualified)e;
+  }
+  */
+
+  template<MatchAnyType<Elements...> E>
+  requires (CopyConstructible<E> || CopyAssignable<E>)
+  void assign(E const &e) const {
+   auto &ref = const_cast<Variant&>(*this);
+   destruct();
+   ref.tag = 1 << IndexOfType<E, Elements...>;
+   //Prevent l-value decay by re-promoting
+   if constexpr (CopyConstructible<E>) {
+    //[&]<typename...> {
+    new (&ref.data) E{(E const&)e};
+    //}();
+   } else if constexpr (CopyAssignable<E>) {
+    //[&]<typename...> {
+    *(E *)&ref.data = (E const&)e;
+    //}();
+   }
+  }
+
+  template<MatchAnyType<Elements...> E>
+  requires (!Const<E> && (MoveConstructible<E> || MoveAssignable<E>))
+  void assign(E &&e) const {
+   auto &ref = const_cast<Variant&>(*this);
+   destruct();
+   ref.tag = 1 << IndexOfType<E, Elements...>;
+   //Prevent r-value reference -> l-value reference decay by re-promoting
+   if constexpr (MoveConstructible<E>) {
+    new (&ref.data) E{(E&&)e};
+   } else if constexpr (MoveAssignable<E>) {
+    *(E *)&ref.data = (E&&)e;
+   }
   }
 
   void convert(auto &otherVariant) {

@@ -159,6 +159,38 @@ namespace CX {
   EXPECT_FALSE((Destructible<ImpossibleType<>>));
  }
 
+ TEST(CopyConstructible, copy_constructible_types_satisfy_constraint) {
+  throw std::runtime_error{"Unimplemented"};
+ }
+
+ TEST(CopyConstructible, non_copy_constructible_types_do_not_satisfy_constraint) {
+  throw std::runtime_error{"Unimplemented"};
+ }
+
+ TEST(MoveConstructible, move_constructible_types_satisfy_constraint) {
+  throw std::runtime_error{"Unimplemented"};
+ }
+
+ TEST(MoveConstructible, non_move_constructible_types_do_not_satisfy_constraint) {
+  throw std::runtime_error{"Unimplemented"};
+ }
+
+ TEST(CopyAssignable, copy_assignable_types_satisfy_constraint) {
+  throw std::runtime_error{"Unimplemented"};
+ }
+
+ TEST(CopyAssignable, non_copy_assignable_types_do_not_satisfy_constraint) {
+  throw std::runtime_error{"Unimplemented"};
+ }
+
+ TEST(MoveAssignable, move_assignable_types_satisfy_constraint) {
+  throw std::runtime_error{"Unimplemented"};
+ }
+
+ TEST(MoveAssignable, non_move_assignable_types_do_not_satisfy_constraint) {
+  throw std::runtime_error{"Unimplemented"};
+ }
+
  TEST(Unqualified, qualified_types_lose_all_qualifiers) {
   using TypeA = char const[1234];
   using ExpectedTypeA = char;
@@ -225,6 +257,70 @@ namespace CX {
   using TypeC = signed char;
   using ExpectedTypeC = TypeC;
   EXPECT_TRUE((SameType<Decayed<TypeC>, ExpectedTypeC>));
+ }
+
+ TEST(Const, const_types_satisfy_constraints) {
+  throw std::runtime_error{"Unimplemented"};
+ }
+
+ TEST(Const, const_reference_types_satisfy_constraint) {
+  throw std::runtime_error{"Unimplemented"};
+ }
+
+ TEST(Const, non_const_types_do_not_satisfy_constraint) {
+  throw std::runtime_error{"Unimplemented"};
+ }
+
+ TEST(Array, unsized_array_types_satisfy_constraint) {
+  throw std::runtime_error{"Unimplemented"};
+ }
+
+ TEST(Array, sized_array_types_satisfy_constraint) {
+  throw std::runtime_error{"Unimplemented"};
+ }
+
+ TEST(Array, non_array_types_do_not_satisfy_constraint) {
+  throw std::runtime_error{"Unimplemented"};
+ }
+
+ TEST(ArrayElementType, array_types_yield_array_element_type) {
+  throw std::runtime_error{"Unimplemented"};
+ }
+
+ TEST(ArrayElementType, non_array_types_yield_the_same_type) {
+  throw std::runtime_error{"Unimplemented"};
+ }
+
+ TEST(LValueReference, lvalue_reference_types_satisfy_constraint) {
+  throw std::runtime_error{"Unimplemented"};
+ }
+
+ TEST(LValueReference, non_lvalue_reference_types_do_not_satisfy_constraint) {
+  throw std::runtime_error{"Unimplemented"};
+ }
+
+ TEST(LValueReferenceElementType, lvalue_reference_types_yield_the_reference_element_type) {
+  throw std::runtime_error{"Unimplemented"};
+ }
+
+ TEST(LValueReferenceElementType, non_lvalue_reference_types_yield_the_same_type) {
+  throw std::runtime_error{"Unimplemented"};
+ }
+
+ TEST(RValueReference, rvalue_reference_types_satisfy_constraint) {
+  throw std::runtime_error{"Unimplemented"};
+ }
+
+ TEST(RValueReference, non_rvalue_reference_types_do_not_satisfy_constraint) {
+  throw std::runtime_error{"Unimplemented"};
+ }
+
+ TEST(RValueReferenceElementType, rvalue_reference_types_yield_the_reference_element_type) {
+  throw std::runtime_error{"Unimplemented"};
+ }
+
+ TEST(RValueReferenceElementType, non_rvalue_reference_types_yield_the_same_type) {
+  throw std::runtime_error{"Unimplemented"};
  }
 
  struct S {

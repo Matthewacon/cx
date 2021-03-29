@@ -38,9 +38,6 @@ namespace CX {
    static constexpr auto const Value = (SameType<T, Args>::Value || ...);
   };
 
-  //Note: Idioms for value-template-template parameter types have not
-  // been defined. If there is demand for them, they will be added.
-
   //True for matching unspecialized templates
   template<template<typename...> typename, template<typename...> typename>
   struct SameTemplateType : FalseType {};
@@ -81,8 +78,9 @@ namespace CX {
    static constexpr auto const Value = (SameValue<V, Values>::Value || ...);
   };
 
+  //True for type packs that do not repeat parameters
   template<typename...>
-  struct UniqueTypes ;
+  struct UniqueTypes;
 
   template<typename... Types>
   requires (sizeof...(Types) <= 1)
@@ -108,6 +106,7 @@ namespace CX {
    static constexpr auto const Value = !FoundMatch;
   };
 
+  //True for template-type packs that do not repeat parameters
   template<template<typename...> typename...>
   struct UniqueTemplateTypes;
 
@@ -135,6 +134,7 @@ namespace CX {
    static constexpr auto const Value = !FoundMatch;
   };
 
+  //True for value packs that do not repeat parameters
   template<auto... Values>
   struct UniqueValues;
 

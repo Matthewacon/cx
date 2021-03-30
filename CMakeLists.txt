@@ -63,6 +63,7 @@ list(
  -pedantic
  -ftemplate-backtrace-limit=0
  -fno-common
+ -Wno-zero-length-array
 )
 
 #Conditional compile flags

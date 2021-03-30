@@ -84,6 +84,8 @@ namespace CX {
      //Add `0` to `MaxValue` parameter list to cover single type argument case
      static constexpr auto const Value = MaxValue<Values..., 0, sizeof(T)>::Value;
     };
+
+    static constexpr auto const Value = Collector<>::Value;
    };
 
    template<template<auto...> typename Producer>
@@ -254,6 +256,7 @@ namespace CX {
   };
 
   //Conditional type, template-type and value selector meta-functions
+  //Yields the result of the type expression: `Cond ? Success : Failure`
   template<bool Cond, typename Success, typename Failure>
   struct SelectType;
 
@@ -267,6 +270,7 @@ namespace CX {
    using Type = Failure;
   };
 
+  //Yields the result of the type expression: `Receiver<Cond ? Success : Failure>`
   template<
    template<template<typename...> typename> typename Receiver,
    bool Cond,
@@ -293,6 +297,7 @@ namespace CX {
    using Type = Receiver<Failure>;
   };
 
+  //Yields the result of the type expression: `Cond ? Success : Failure`
   template<bool Cond, auto Success, auto Failure>
   struct SelectValue;
 
@@ -304,6 +309,53 @@ namespace CX {
   template<auto Success, auto Failure>
   struct SelectValue<false, Success, Failure> {
    static constexpr auto const Value = Failure;
+  };
+
+  //Given a specialized template, with type parameters, yields
+  //the receiver type with the parameters of the specialized
+  //template
+  template<template<typename...> typename Receiver, typename D>
+  struct TypeParameterDeducer;
+
+  template<template<typename...> typename Receiver, template<typename...> typename D, typename... Types>
+  struct TypeParameterDeducer<Receiver, D<Types...>> {
+   using Type = Receiver<Types...>;
+  };
+
+  //Given a specialized template, with template-template parameters,
+  //yields the receiver type with the parameters of the specialized
+  //template
+  template<
+   template<template<typename...> typename...> typename Receiver,
+   typename D
+  >
+  struct TemplateTypeParameterDeducer;
+
+  template<
+   template<template<typename...> typename...> typename Receiver,
+   template<template<typename...> typename...> typename D,
+   template<typename...> typename... Types
+  >
+  struct TemplateTypeParameterDeducer<Receiver, D<Types...>> {
+   using Type = Receiver<Types...>;
+  };
+
+  //Given a specialized template, with non-template-type parameters,
+  //yields the receiver type with the parameters of the specialized
+  //template
+  template<
+   template<auto...> typename Receiver,
+   typename D
+  >
+  struct ValueParameterDeducer;
+
+  template<
+   template<auto...> typename Receiver,
+   template<auto...> typename D,
+   auto... Values
+  >
+  struct ValueParameterDeducer<Receiver, D<Values...>> {
+   using Type = Receiver<Values...>;
   };
  }
 
@@ -318,10 +370,16 @@ namespace CX {
   ::Value;
 
  template<typename... Types>
- constexpr auto const MaxTypeSize = MetaFunctions::TypeSize<MetaFunctions::MaxValue, Types...>;
+ constexpr auto const MaxTypeSize = MetaFunctions::TypeSize<
+  MetaFunctions::MaxValue,
+  Types...
+ >;
 
  template<typename... Types>
- constexpr auto const MinTypeSize = MetaFunctions::TypeSize<MetaFunctions::MinValue, Types...>;
+ constexpr auto const MinTypeSize = MetaFunctions::TypeSize<
+  MetaFunctions::MinValue,
+  Types...
+ >;
 
  template<typename Match, typename... Args>
  constexpr auto const IndexOfType = MetaFunctions
@@ -379,6 +437,21 @@ namespace CX {
  constexpr auto const SelectValue = MetaFunctions
   ::SelectValue<Cond, Success, Failure>
   ::Value;
+
+ template<template<typename...> typename Receiver, typename D>
+ using TypeParameterDeducer = typename MetaFunctions
+  ::TypeParameterDeducer<Receiver, D>
+  ::Type;
+
+ template<template<template<typename...> typename...> typename Receiver, typename D>
+ using TemplateTypeParameterDeducer = typename MetaFunctions
+  ::TemplateTypeParameterDeducer<Receiver, D>
+  ::Type;
+
+ template<template<auto...> typename Receiver, typename D>
+ using ValueParameterDeducer = typename MetaFunctions
+  ::ValueParameterDeducer<Receiver, D>
+  ::Type;
 
  //Runtime type, template type and template value iterators
  template<typename... Types>

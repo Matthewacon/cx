@@ -12,6 +12,10 @@
  #define CX_STL_SUPPORT_EXPR(expr)
 #endif
 
+#ifdef CX_LIBC_SUPPORT
+ #include <cstring>
+#endif
+
 namespace CX {
  //Forward declare variant for use with supporting variant meta-functions
  template<typename... Elements>
@@ -61,7 +65,7 @@ namespace CX {
    //For V2 to be compatible with V1, the element set for V2 must be a superset of V1's element
    //set.
    static constexpr auto const Value = sizeof...(V2Elements) >= sizeof...(V1Elements)
-    && (MatchAnyType<V1Elements, V2Elements...> && ...);
+    && (MatchAnyType<Unqualified<V1Elements>, Unqualified<V2Elements>...> && ...);
   };
  }
 
@@ -90,6 +94,10 @@ namespace CX {
  template<typename... Elements>
  requires (UniqueTypes<void, Elements...>)
  struct Variant final {
+  template<typename... Types>
+  requires (UniqueTypes<void, Types...>)
+  friend struct Variant;
+
   static constexpr auto const Size = MaxTypeSize<Elements...>;
 
  private:
@@ -134,9 +142,13 @@ namespace CX {
    });
    ref.tag = 0;
    #ifdef CX_VARIANT_HARD_CLEAR
-    for (auto &c : ref.data) {
-     c = 0;
-    }
+    #ifdef CX_LIBC_SUPPORT
+     memset(ref.data, 0, Size);
+    #else
+     for (auto &c : ref.data) {
+      c = 0;
+     }
+    #endif
    #endif
   }
 
@@ -295,7 +307,7 @@ namespace CX {
     assign(*(E *)&v.data);
    });
    */
-   TypeIterator<Elements...>::run([&]<typename E> {
+   TypeParameterDeducer<TypeIterator, Unqualified<decltype(v)>>::run([&]<typename E> {
     if (v.template has<E>()) {
      destruct();
      assign(*(E *)&v.data);
@@ -340,10 +352,14 @@ namespace CX {
  //Empty variant
  template<>
  struct Variant<> final {
+  static constexpr decltype(sizeof(0)) const Size = 0;
+
  private:
   template<typename... Elements>
   requires (UniqueTypes<void, Elements...>)
   friend struct Variant;
+
+  char data[Size];
 
   void runtimeElementOp(auto) {}
 

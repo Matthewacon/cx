@@ -24,6 +24,16 @@ namespace CX {
   EXPECT_TRUE((CompatibleVariant<Variant<double, char, float>, Variant<float, double, char, int [1234]>>));
  }
 
+ TEST(CompatibleVariant, superset_and_matched_set_with_mixed_const_variant_types_satisfy_constraint) {
+  //Matched type set
+  EXPECT_TRUE((CompatibleVariant<Variant<int const>, Variant<int>>));
+  EXPECT_TRUE((CompatibleVariant<Variant<float, char const, int>, Variant<float const, char, int const>>));
+
+  //Superset
+  EXPECT_TRUE((CompatibleVariant<Variant<int, float const>, Variant<int const, float, char const, double>>));
+  EXPECT_TRUE((CompatibleVariant<Variant<char const, int, std::tuple<> const>, Variant<char, int const, std::tuple<>, void * const>>));
+ }
+
  TEST(CompatibleVariant, subset_variant_types_do_not_satisfy_constraint) {
   EXPECT_FALSE((CompatibleVariant<Variant<float [123]>, Variant<>>));
   EXPECT_FALSE((CompatibleVariant<Variant<double, char>, Variant<int, double>>));
@@ -49,6 +59,7 @@ namespace CX {
 
  //Constructor tests
  TEST(Constructor, element_copy_constructor_properly_initializes_variant) {
+  //Test with integral type
   using ExpectedTypeA = char;
   ExpectedTypeA const expectedValueA = 123;
   Variant<int, ExpectedTypeA> v{expectedValueA};
@@ -57,8 +68,11 @@ namespace CX {
    EXPECT_EQ((v.get<ExpectedTypeA>()), expectedValueA);
   }()));
 
+  //Test with copyable type
   //Ensure element copy constructor is properly invoked
-  static bool copyConstructorInvoked = false;
+  static bool copyConstructorInvoked;
+  //Reset static flag if test is re-run
+  copyConstructorInvoked = false;
   using ExpectedTypeB = struct A {
    int i;
 
@@ -82,18 +96,109 @@ namespace CX {
  }
 
  TEST(Constructor, element_move_constructor_properly_initializes_variant) {
-  throw std::runtime_error{"Unimplemented"};
+  //Test with integral type
+  using ExpectedTypeA = short;
+  ExpectedTypeA const expectedValueA = 534;
+  Variant<float, ExpectedTypeA> v1{expectedValueA};
+  EXPECT_TRUE((v1.has<ExpectedTypeA>()));
+  EXPECT_NO_THROW(([&] {
+   EXPECT_EQ((v1.get<ExpectedTypeA>()), expectedValueA);
+  }()));
+
+  //Test with movable type
+  //Ensure element move constructor is properly invoked
+  static bool moveConstructorInvoked;
+  //Reset static flag if test is re-run
+  moveConstructorInvoked = false;
+  using ExpectedTypeB = struct A {
+   int i;
+
+   A(int i) :
+    i(i)
+   {}
+
+   A(A &&a) :
+    i(a.i)
+   {
+    a.i = 0;
+    moveConstructorInvoked = true;
+   }
+  };
+  int const expectedValueB = 473829;
+  ExpectedTypeB temp{expectedValueB};
+  Variant<char, ExpectedTypeB> v2{(ExpectedTypeB&&)temp};
+  EXPECT_TRUE((moveConstructorInvoked));
+  EXPECT_EQ(temp.i, 0);
+  EXPECT_TRUE((v2.has<ExpectedTypeB>()));
+  EXPECT_NO_THROW(([&] {
+   EXPECT_EQ((v2.get<ExpectedTypeB>().i), expectedValueB);
+  }()));
  }
 
  TEST(Constructor, variant_copy_constructor_properly_initializes_variant) {
-  throw std::runtime_error{"Unimplemented"};
+  using ExpectedType = int;
+  constexpr ExpectedType const expectedValue = 314151617;
+
+  //Initialize first variant and ensure it was initialized correctly
+  Variant<char, int> v1{expectedValue};
+  EXPECT_TRUE((v1.has<ExpectedType>()));
+  EXPECT_NO_THROW(([&] {
+   EXPECT_EQ((v1.get<ExpectedType>()), expectedValue);
+  }()));
+
+  //Copy first variant into second variant
+  Variant<float, int, char> v2{(decltype(v1)&)v1};
+
+  //Ensure all properties of the second variant were correctly initialized
+  EXPECT_TRUE((v2.has<ExpectedType>()));
+  EXPECT_NO_THROW(([&] {
+   EXPECT_EQ((v2.get<ExpectedType>()), expectedValue);
+  }()));
  }
 
  TEST(Constructor, variant_move_constructor_properly_initializes_variant_and_destructs_moved_variant) {
-  throw std::runtime_error{"Unimplemented"};
+  using ExpectedType = short;
+  constexpr ExpectedType const expectedValue = 1345;
+
+  //Initialize first variant and ensure it was initialized correctly
+  Variant<double, char, short> v1{expectedValue};
+  EXPECT_TRUE((v1.has<ExpectedType>()));
+  EXPECT_NO_THROW(([&] {
+   EXPECT_EQ((v1.get<ExpectedType>()), expectedValue);
+  }()));
+
+  //Move first variant into second variant
+  Variant<short, double, char, int> v2{(decltype(v1)&&)v1};
+
+  //Ensure first variant was properly destructed
+  EXPECT_FALSE((v1.has<ExpectedType>()));
+  EXPECT_THROW(
+   ([&] { v1.get<ExpectedType>(); }()),
+   VariantTypeError
+  );
+
+  //Ensure all properties of second variant were correctly initialized
+  EXPECT_TRUE((v2.has<ExpectedType>()));
+  EXPECT_NO_THROW(([&] {
+   EXPECT_EQ((v2.get<ExpectedType>()), expectedValue);
+  }()));
  }
 
  TEST(Constructor, variant_const_member_supports_l_and_r_value_reference_construction) {
+  using ExpectedTypeA = int const;
+  constexpr int expectedValueA = 153125;
+  (void)(ExpectedTypeA)expectedValueA;
+  //Test with intgral types
+  //TODO deal with const element conversions within variant
+  /*
+  Variant<ExpectedTypeA> v1{(decltype(expectedValueA)&)expectedValueA};
+  Variant<ExpectedTypeA> v2{(decltype(expectedValueA)&&)expectedValueA};
+  */
+
+  //Test with copyable and movable type
+  struct A {
+   int data[124];
+  };
   throw std::runtime_error{"Unimplemented"};
  }
 

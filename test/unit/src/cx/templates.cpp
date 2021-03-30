@@ -40,8 +40,12 @@ namespace CX {
   EXPECT_EQ((MaxTypeSize<char *, short, char[12345], int>), sizeof(char[12345]));
  }
 
- TEST(MaxTypeSize, special_cases_yield_default_value) {
+ TEST(MaxTypeSize, special_cases_yield_expected_value) {
+  //Empty pack should yield `0`
   EXPECT_EQ((MaxTypeSize<>), 0);
+
+  //Single argument pack should yield the type size
+  EXPECT_EQ((MaxTypeSize<void *>), sizeof(void *));
  }
 
  TEST(MinTypeSize, type_pack_yields_expected_value) {
@@ -49,8 +53,12 @@ namespace CX {
   EXPECT_EQ((MinTypeSize<void *, int, long double[123]>), sizeof(long double[123]));
  }
 
- TEST(MinTypeSize, special_cases_yield_default_value) {
+ TEST(MinTypeSize, special_cases_yield_expected_value) {
+  //Empty pack should yield `0`
   EXPECT_EQ((MinTypeSize<>), 0);
+
+  //Single argument pack should yield the type size
+  EXPECT_EQ((MinTypeSize<void *>), sizeof(void *));
  }
 
  TEST(IndexOfType, type_pack_yeilds_expected_value) {
@@ -147,6 +155,33 @@ namespace CX {
   constexpr auto const ValueB = 15;
   constexpr auto const ExpectedValueB = 31415;
   EXPECT_TRUE((SameValue<SelectValue<false, ValueB, 31415>, ExpectedValueB>));
+ }
+
+ template<typename... Types>
+ struct TypeReceiver {};
+
+ TEST(TypeParameterDeducer, receiver_specialized_with_expected_deduced_parameter_types) {
+  using TypeA = std::tuple<int, void, char, float, double, short>;
+  using ExpectedTypeA = TypeReceiver<int, void, char, float, double, short>;
+  EXPECT_TRUE((SameType<TypeParameterDeducer<TypeReceiver, TypeA>, ExpectedTypeA>));
+ }
+
+ template<template<typename...> typename... Types>
+ struct TemplateTypeReceiver {};
+
+ TEST(TemplateTypeParameterDeducer, receiver_specialized_with_expected_deduced_parameter_types) {
+  using TypeA = MetaFunctions::MatchAnyTemplateType<Dummy, MetaFunctions::SameType, std::tuple, std::function>;
+  using ExpectedTypeA = TemplateTypeReceiver<Dummy, MetaFunctions::SameType, std::tuple, std::function>;
+  EXPECT_TRUE((SameType<TemplateTypeParameterDeducer<TemplateTypeReceiver, TypeA>, ExpectedTypeA>));
+ }
+
+ template<auto... Values>
+ struct ValueReceiver {};
+
+ TEST(ValueParameterDeducer, receiver_specialized_with_expedcted_deduced_parameter_values) {
+  using TypeA = MetaFunctions::MatchAnyValue<1, 2, 3, 4, 55, 67, 78, 99>;
+  using ExpectedTypeA = ValueReceiver<1, 2, 3, 4, 55, 67, 78, 99>;
+  EXPECT_TRUE((SameType<ValueParameterDeducer<ValueReceiver, TypeA>, ExpectedTypeA>));
  }
 
  TEST(TypeIterator, empty_type_pack_does_not_iterate) {

@@ -237,7 +237,7 @@ namespace CX {
   //Array identity
   template<typename T>
   struct Array : FalseType {
-   using ElementType = ImpossibleType<>;
+   using ElementType = T;
    static constexpr auto const Size = -1;
   };
 
@@ -488,6 +488,12 @@ namespace CX {
  using ArrayElementType = typename MetaFunctions
   ::Array<T>
   ::ElementType;
+
+ template<typename T>
+ requires (Array<T>)
+ constexpr auto const ArraySize = MetaFunctions
+  ::Array<T>
+  ::Size;
 
  template<typename T>
  concept LValueReference = MetaFunctions

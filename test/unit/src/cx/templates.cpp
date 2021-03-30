@@ -85,7 +85,8 @@ namespace CX {
  template<template<typename...> typename T>
  struct Receiver {
   template<template<typename...> typename Other>
-  //Note: can't use `auto const` w/ clang due to fatal frontend bug
+  //TODO can't use `auto const` w/ clang due to fatal frontend bug
+  //See: https://bugs.llvm.org/show_bug.cgi?id=49741
   static constexpr bool const SameTemplateType = CX::SameTemplateType<T, Other>;
  };
 
@@ -121,15 +122,31 @@ namespace CX {
  }
 
  TEST(SelectType, condition_yields_expected_type) {
-  throw std::runtime_error{"Unimplemented"};
+  using TypeA = int;
+  using ExpectedTypeA = TypeA;
+  EXPECT_TRUE((SameType<SelectType<true, TypeA, void>, ExpectedTypeA>));
+
+  using TypeB = float ();
+  using ExpectedTypeB = char;
+  EXPECT_TRUE((SameType<SelectType<false, TypeB, char>, ExpectedTypeB>));
  }
 
  TEST(SelectTemplateType, condition_yields_expected_template_type) {
-  throw std::runtime_error{"Unimplemented"};
+  using ResultA = SelectTemplateType<Receiver, true, Dummy, ImpossibleType>;
+  EXPECT_TRUE((ResultA::SameTemplateType<Dummy>));
+
+  using ResultB = SelectTemplateType<Receiver, false, MetaFunctions::SameType, MetaFunctions::MatchAnyType>;
+  EXPECT_TRUE((ResultB::SameTemplateType<MetaFunctions::MatchAnyType>));
  }
 
  TEST(SelectValue, condition_yields_expected_value) {
-  throw std::runtime_error{"Unimplemented"};
+  constexpr auto const ValueA = 1234;
+  constexpr auto const ExpectedValueA = ValueA;
+  EXPECT_TRUE((SameValue<SelectValue<true, ValueA, 0>, ExpectedValueA>));
+
+  constexpr auto const ValueB = 15;
+  constexpr auto const ExpectedValueB = 31415;
+  EXPECT_TRUE((SameValue<SelectValue<false, ValueB, 31415>, ExpectedValueB>));
  }
 
  TEST(TypeIterator, empty_type_pack_does_not_iterate) {

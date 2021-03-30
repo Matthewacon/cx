@@ -130,7 +130,7 @@ namespace CX {
    A(int) {}
   };
   EXPECT_TRUE((Constructible<A, int>));
-  EXPECT_TRUE((Constructible<char [1234]>));
+  EXPECT_TRUE((Constructible<char[1234]>));
   struct B {
    B(int, float, double, char *) noexcept {}
   };
@@ -160,35 +160,69 @@ namespace CX {
  }
 
  TEST(CopyConstructible, copy_constructible_types_satisfy_constraint) {
-  throw std::runtime_error{"Unimplemented"};
+  EXPECT_TRUE((CopyConstructible<int>));
+  EXPECT_TRUE((CopyConstructible<void *>));
+  struct A {};
+  EXPECT_TRUE((CopyConstructible<A>));
  }
 
  TEST(CopyConstructible, non_copy_constructible_types_do_not_satisfy_constraint) {
-  throw std::runtime_error{"Unimplemented"};
+  EXPECT_FALSE((Constructible<void>));
+  EXPECT_FALSE((Constructible<int[]>));
+  struct A {
+   A(A const&) = delete;
+  };
+  EXPECT_FALSE((Constructible<A>));
  }
 
  TEST(MoveConstructible, move_constructible_types_satisfy_constraint) {
-  throw std::runtime_error{"Unimplemented"};
+  EXPECT_TRUE((MoveConstructible<int>));
+  EXPECT_TRUE((MoveConstructible<void *>));
+  struct A {};
+  EXPECT_TRUE((MoveConstructible<A>));
  }
 
  TEST(MoveConstructible, non_move_constructible_types_do_not_satisfy_constraint) {
-  throw std::runtime_error{"Unimplemented"};
+  EXPECT_FALSE((MoveConstructible<void>));
+  EXPECT_FALSE((MoveConstructible<int[]>));
+  EXPECT_FALSE((MoveConstructible<double[1234]>));
+  struct A {
+   A(A&&) = delete;
+  };
+  EXPECT_FALSE((MoveConstructible<A>));
  }
 
  TEST(CopyAssignable, copy_assignable_types_satisfy_constraint) {
-  throw std::runtime_error{"Unimplemented"};
+  EXPECT_TRUE((CopyAssignable<int>));
+  EXPECT_TRUE((CopyAssignable<char *>));
+  struct A {};
+  EXPECT_TRUE((CopyAssignable<A>));
  }
 
  TEST(CopyAssignable, non_copy_assignable_types_do_not_satisfy_constraint) {
-  throw std::runtime_error{"Unimplemented"};
+  EXPECT_FALSE((CopyAssignable<void>));
+  EXPECT_FALSE((CopyAssignable<short[]>));
+  EXPECT_FALSE((CopyAssignable<long[323]>));
+  struct A {
+   A& operator=(A const&) = delete;
+  };
+  EXPECT_FALSE((CopyAssignable<A>));
  }
 
  TEST(MoveAssignable, move_assignable_types_satisfy_constraint) {
-  throw std::runtime_error{"Unimplemented"};
+  EXPECT_TRUE((MoveAssignable<char>));
+  EXPECT_TRUE((MoveAssignable<double *>));
+  struct A {};
+  EXPECT_TRUE((MoveAssignable<A>));
  }
 
  TEST(MoveAssignable, non_move_assignable_types_do_not_satisfy_constraint) {
-  throw std::runtime_error{"Unimplemented"};
+  EXPECT_FALSE((MoveAssignable<void>));
+  EXPECT_FALSE((MoveAssignable<long long[]>));
+  struct A {
+   A& operator=(A&&) = delete;
+  };
+  EXPECT_FALSE((MoveAssignable<A>));
  }
 
  TEST(Unqualified, qualified_types_lose_all_qualifiers) {
@@ -260,67 +294,163 @@ namespace CX {
  }
 
  TEST(Const, const_types_satisfy_constraints) {
-  throw std::runtime_error{"Unimplemented"};
+  EXPECT_TRUE((Const<int const>));
+  EXPECT_TRUE((Const<Dummy<> const>));
+  EXPECT_TRUE((Const<char * const>));
  }
 
  TEST(Const, const_reference_types_satisfy_constraint) {
-  throw std::runtime_error{"Unimplemented"};
+  EXPECT_TRUE((Const<short const&>));
+  EXPECT_TRUE((Const<double const&&>));
  }
 
  TEST(Const, non_const_types_do_not_satisfy_constraint) {
-  throw std::runtime_error{"Unimplemented"};
+  EXPECT_FALSE((Const<void>));
+  EXPECT_FALSE((Const<char>));
+  EXPECT_FALSE((Const<int&>));
+  EXPECT_FALSE((Const<float&&>));
  }
 
  TEST(Array, unsized_array_types_satisfy_constraint) {
-  throw std::runtime_error{"Unimplemented"};
+  EXPECT_TRUE((Array<char[]>));
+  EXPECT_TRUE((Array<float const[]>));
+  EXPECT_TRUE((Array<void (Dummy<>::*[])()>));
  }
 
  TEST(Array, sized_array_types_satisfy_constraint) {
-  throw std::runtime_error{"Unimplemented"};
+  EXPECT_TRUE((Array<double[1234]>));
+  EXPECT_TRUE((Array<char const[5513]>));
+  EXPECT_TRUE((Array<void (Dummy<>::*[500])()>));
  }
 
  TEST(Array, non_array_types_do_not_satisfy_constraint) {
-  throw std::runtime_error{"Unimplemented"};
+  EXPECT_FALSE((Array<void>));
+  EXPECT_FALSE((Array<char *>));
+  EXPECT_FALSE((Array<void (Dummy<>::*)()>));
  }
 
  TEST(ArrayElementType, array_types_yield_array_element_type) {
-  throw std::runtime_error{"Unimplemented"};
+  using TypeA = char [123];
+  using ExpectedTypeA = char;
+  EXPECT_TRUE((SameType<ArrayElementType<TypeA>, ExpectedTypeA>));
+
+  using TypeB = float[];
+  using ExpectedTypeB = float;
+  EXPECT_TRUE((SameType<ArrayElementType<TypeB>, ExpectedTypeB>));
+
+  using TypeC = void * const[34];
+  using ExpectedTypeC = void * const;
+  EXPECT_TRUE((SameType<ArrayElementType<TypeC>, ExpectedTypeC>));
+
+  using TypeD = float (Dummy<>::* const[5124])() const;
+  using ExpectedTypeD = float (Dummy<>::* const)() const;
+  EXPECT_TRUE((SameType<ArrayElementType<TypeD>, ExpectedTypeD>));
  }
 
  TEST(ArrayElementType, non_array_types_yield_the_same_type) {
-  throw std::runtime_error{"Unimplemented"};
+  using TypeA = char (Dummy<>::*)() noexcept;
+  using ExpectedTypeA = TypeA;
+  EXPECT_TRUE((SameType<ArrayElementType<TypeA>, ExpectedTypeA>));
+
+  using TypeB = float const * const;
+  using ExpectedTypeB = TypeB;
+  EXPECT_TRUE((SameType<ArrayElementType<TypeB>, ExpectedTypeB>));
+
+  using TypeC = void;
+  using ExpectedTypeC = TypeC;
+  EXPECT_TRUE((SameType<ArrayElementType<TypeC>, ExpectedTypeC>));
+ }
+
+ TEST(ArraySize, sized_array_types_yield_the_correct_size) {
+  EXPECT_EQ((ArraySize<char const[1234]>), 1234);
+  EXPECT_EQ((ArraySize<double (Dummy<>::*[1846729])()>), 1846729);
+  EXPECT_EQ((ArraySize<long long const[1]>), 1);
+ }
+
+ TEST(ArraySize, unsized_array_types_yield_negaitve_one) {
+  EXPECT_EQ((ArraySize<char[]>), -1);
+  EXPECT_EQ((ArraySize<float (*[])() noexcept>), -1);
+  EXPECT_EQ((ArraySize<int const[]>), -1);
  }
 
  TEST(LValueReference, lvalue_reference_types_satisfy_constraint) {
-  throw std::runtime_error{"Unimplemented"};
+  EXPECT_TRUE((LValueReference<int&>));
+  EXPECT_TRUE((LValueReference<double const&>));
+  EXPECT_TRUE((LValueReference<void (&)()>));
  }
 
  TEST(LValueReference, non_lvalue_reference_types_do_not_satisfy_constraint) {
-  throw std::runtime_error{"Unimplemented"};
+  EXPECT_FALSE((LValueReference<void>));
+  EXPECT_FALSE((LValueReference<int[]>));
+  EXPECT_FALSE((LValueReference<char *>));
  }
 
  TEST(LValueReferenceElementType, lvalue_reference_types_yield_the_reference_element_type) {
-  throw std::runtime_error{"Unimplemented"};
+  using TypeA = int&;
+  using ExpectedTypeA = int;
+  EXPECT_TRUE((SameType<LValueReferenceElementType<TypeA>, ExpectedTypeA>));
+
+  using TypeB = char * const&;
+  using ExpectedTypeB = char * const;
+  EXPECT_TRUE((SameType<LValueReferenceElementType<TypeB>, ExpectedTypeB>));
+
+  using TypeC = void (&)();
+  using ExpectedTypeC = void ();
+  EXPECT_TRUE((SameType<LValueReferenceElementType<TypeC>, ExpectedTypeC>));
  }
 
  TEST(LValueReferenceElementType, non_lvalue_reference_types_yield_the_same_type) {
-  throw std::runtime_error{"Unimplemented"};
+  using TypeA = char *;
+  using ExpectedTypeA = TypeA;
+  EXPECT_TRUE((SameType<LValueReferenceElementType<TypeA>, ExpectedTypeA>));
+
+  using TypeB = float ();
+  using ExpectedTypeB = TypeB;
+  EXPECT_TRUE((SameType<LValueReferenceElementType<TypeB>, ExpectedTypeB>));
+
+  using TypeC = void;
+  using ExpectedTypeC = TypeC;
+  EXPECT_TRUE((SameType<LValueReferenceElementType<TypeC>, ExpectedTypeC>));
  }
 
  TEST(RValueReference, rvalue_reference_types_satisfy_constraint) {
-  throw std::runtime_error{"Unimplemented"};
+  EXPECT_TRUE((RValueReference<int&&>));
+  EXPECT_TRUE((RValueReference<float(&&)[]>));
+  EXPECT_TRUE((RValueReference<short const&&>));
  }
 
  TEST(RValueReference, non_rvalue_reference_types_do_not_satisfy_constraint) {
-  throw std::runtime_error{"Unimplemented"};
+  EXPECT_FALSE((RValueReference<void>));
+  EXPECT_FALSE((RValueReference<char&>));
+  EXPECT_FALSE((RValueReference<Dummy<>>));
  }
 
  TEST(RValueReferenceElementType, rvalue_reference_types_yield_the_reference_element_type) {
-  throw std::runtime_error{"Unimplemented"};
+  using TypeA = Dummy<>&&;
+  using ExpectedTypeA = Dummy<>;
+  EXPECT_TRUE((SameType<RValueReferenceElementType<TypeA>, ExpectedTypeA>));
+
+  using TypeB = char (Dummy<>::*&&)();
+  using ExpectedTypeB = char (Dummy<>::*)();
+  EXPECT_TRUE((SameType<RValueReferenceElementType<TypeB>, ExpectedTypeB>));
+
+  using TypeC = void *&&;
+  using ExpectedTypeC = void *;
+  EXPECT_TRUE((SameType<RValueReferenceElementType<TypeC>, ExpectedTypeC>));
  }
 
  TEST(RValueReferenceElementType, non_rvalue_reference_types_yield_the_same_type) {
-  throw std::runtime_error{"Unimplemented"};
+  using TypeA = float *;
+  using ExpectedTypeA = TypeA;
+  EXPECT_TRUE((SameType<RValueReferenceElementType<TypeA>, ExpectedTypeA>));
+
+  using TypeB = void (Dummy<>::*[])() const;
+  using ExpectedTypeB = TypeB;
+  EXPECT_TRUE((SameType<RValueReferenceElementType<TypeB>, ExpectedTypeB>));
+
+  using TypeC = void *;
+  using ExpectedTypeC = TypeC;
+  EXPECT_TRUE((SameType<RValueReferenceElementType<TypeC>, ExpectedTypeC>));
  }
 
  struct S {

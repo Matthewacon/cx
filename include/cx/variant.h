@@ -3,7 +3,7 @@
 #include <cx/idioms.h>
 #include <cx/templates.h>
 
-//Conditional logic if CX was built with stl support enabled
+//Conditional dependency if CX was built with stl support enabled
 #ifdef CX_STL_SUPPORT
  #define CX_STL_SUPPORT_EXPR(expr) expr
 
@@ -12,6 +12,7 @@
  #define CX_STL_SUPPORT_EXPR(expr)
 #endif
 
+//Conditional dependency if CX was built with libc support enabled
 #ifdef CX_LIBC_SUPPORT
  #include <cstring>
 #endif
@@ -20,7 +21,7 @@ namespace CX {
  //Forward declare variant for use with supporting variant meta-functions
  template<typename... Elements>
  //Disallow duplicated elements, as well as void elements
- requires (UniqueTypes<void, Elements...>)
+ requires (UniqueTypes<void, Elements...> && !(UnsizedArray<Elements> || ...))
  struct Variant;
 
  //Supporting variant meta-functions and concepts
@@ -92,17 +93,18 @@ namespace CX {
 
  //Variant impl
  template<typename... Elements>
- requires (UniqueTypes<void, Elements...>)
+ requires (UniqueTypes<void, Elements...> && !(UnsizedArray<Elements> || ...))
  struct Variant final {
   template<typename... Types>
-  requires (UniqueTypes<void, Types...>)
+  requires (UniqueTypes<void, Types...> && !(UnsizedArray<Types> || ...))
   friend struct Variant;
 
   static constexpr auto const Size = MaxTypeSize<Elements...>;
+  static constexpr auto const Alignment = MaxTypeAlignment<Elements...>;
 
  private:
   decltype(1 << sizeof...(Elements)) tag;
-  char data[Size];
+  alignas(Alignment) char data[Size];
 
   //TODO this cannot be used yet due to a clang frontend bug.
   //See: https://bugs.llvm.org/show_bug.cgi?id=49743
@@ -152,50 +154,67 @@ namespace CX {
    #endif
   }
 
-  /*
-  template<typename EQualified, MatchAnyType<Elements...> E = Unqualified<EQualified>>
-  void assign(EQualified e) const {
-   auto &ref = const_cast<Variant&>(*this);
-   destruct();
-   ref.tag = 1 << IndexOfType<E, Elements...>;
-   //Prevent l/r-value decay by re-promoting to `EQualified`
-   *(E *)&ref.data = (EQualified)e;
-  }
-  */
-
   template<MatchAnyType<Elements...> E>
-  requires (CopyConstructible<E> || CopyAssignable<E>)
+  requires (
+   CopyConstructible<Unqualified<E>>
+   || (Constructible<Unqualified<E>> && CopyAssignable<Unqualified<E>>)
+  )
   void assign(E const &e) const {
+   using EUnqualified = Unqualified<E>;
    auto &ref = const_cast<Variant&>(*this);
    destruct();
    ref.tag = 1 << IndexOfType<E, Elements...>;
    //Prevent l-value decay by re-promoting
-   if constexpr (CopyConstructible<E>) {
-    //[&]<typename...> {
+   if constexpr (CopyConstructible<EUnqualified>) {
+    //If `EUnqualified` is copy-constructible, try constructing it
     new (&ref.data) E{(E const&)e};
-    //}();
-   } else if constexpr (CopyAssignable<E>) {
-    //[&]<typename...> {
-    *(E *)&ref.data = (E const&)e;
-    //}();
+   } else if constexpr (Constructible<EUnqualified> && CopyAssignable<EUnqualified>) {
+    //If `EUnqualified` is default-constructible and copy-assignable
+    //try constructing and assigning to it
+    *new (&ref.data) E{} = (E const&)e;
    }
   }
 
   template<MatchAnyType<Elements...> E>
-  requires (!Const<E> && (MoveConstructible<E> || MoveAssignable<E>))
-  void assign(E &&e) const {
+  requires (
+   MoveConstructible<Unqualified<E>>
+   || (Constructible<Unqualified<E>> && MoveAssignable<Unqualified<E>>)
+  )
+  //r-value assignments cannot have const operands
+  void assign(Unqualified<E> &&e) const {
+   using EUnqualified = Unqualified<E>;
    auto &ref = const_cast<Variant&>(*this);
    destruct();
    ref.tag = 1 << IndexOfType<E, Elements...>;
-   //Prevent r-value reference -> l-value reference decay by re-promoting
-   if constexpr (MoveConstructible<E>) {
-    new (&ref.data) E{(E&&)e};
-   } else if constexpr (MoveAssignable<E>) {
-    *(E *)&ref.data = (E&&)e;
+   //Prevent r-value reference -> l-value reference decay by
+   //re-promoting
+   if constexpr (MoveConstructible<EUnqualified>) {
+    //If `EUnqualified` is move constructible, try constructing it
+    new (&ref.data) E{(EUnqualified&&)e};
+   } else if constexpr (Constructible<EUnqualified> && MoveAssignable<EUnqualified>) {
+    //If `EUnqualified` is default constructible and move assignable,
+    //try constructing and assigning to it
+    *new (&ref.data) E{} = (EUnqualified&&)e;
    }
   }
 
-  void convert(auto &otherVariant) {
+  //Array type assignment
+  void assign(SizedArray auto &array) const {
+   using ArrayType = Decayed<decltype(array)>;
+   static constexpr auto const Length = ArraySize<ArrayType>;
+   auto &ref = const_cast<Variant&>(*this);
+   destruct();
+   ref.tag = 1 << IndexOfType<ArrayType, Elements...>;
+   #ifdef CX_LIBC_SUPPORT
+    memcpy(&ref.data, array, Length);
+   #else
+    for (decltype(Length) i = 0; i < Length; i++) {
+     ref.data[i] = array[i];
+    }
+   #endif
+  }
+
+ void convert(auto &otherVariant) {
    /*TODO use when compiler bug has been fixed
    runtimeElementOp([&]<typename E> {
     otherVariant = get<E>();
@@ -222,7 +241,7 @@ namespace CX {
    tag(0),
    data{}
   {
-   assign((E const&)e);
+   assign<E>(e);
   }
 
   //Element move constructor
@@ -231,7 +250,7 @@ namespace CX {
    tag(0),
    data{}
   {
-   assign((E&&)e);
+   assign<E>((E&&)e);
   }
 
   //Copy constructor
@@ -310,7 +329,7 @@ namespace CX {
    TypeParameterDeducer<TypeIterator, Unqualified<decltype(v)>>::run([&]<typename E> {
     if (v.template has<E>()) {
      destruct();
-     assign(*(E *)&v.data);
+     assign<E>(*(E *)&v.data);
      return false;
     }
     return true;
@@ -340,7 +359,7 @@ namespace CX {
   //Implicit conversion to compatible variant types
   template<typename OtherVariant>
   requires CompatibleVariant<OtherVariant, Variant>
-  operator OtherVariant() const {
+  explicit operator OtherVariant() const {
    Unqualified<OtherVariant> v;
    if (tag) {
     convert(v);
@@ -353,13 +372,16 @@ namespace CX {
  template<>
  struct Variant<> final {
   static constexpr decltype(sizeof(0)) const Size = 0;
+  //Note: `alignof(expression)` is a GNU-extension; using
+  //`alignof(char)` as a portable substitute
+  static constexpr decltype(alignof(char)) const Alignment = 1;
 
  private:
-  template<typename... Elements>
-  requires (UniqueTypes<void, Elements...>)
+  template<typename... Types>
+  requires (UniqueTypes<void, Types...> && !(UnsizedArray<Types> || ...))
   friend struct Variant;
 
-  char data[Size];
+  alignas(Alignment) char data[Size];
 
   void runtimeElementOp(auto) {}
 

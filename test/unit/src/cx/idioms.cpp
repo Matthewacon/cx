@@ -262,8 +262,8 @@ namespace CX {
  }
 
  TEST(Decayed, qualified_types_lose_lowest_depth_qualifier) {
-  using TypeA = char [1234];
-  using ExpectedTypeA = char [];
+  using TypeA = char[1234];
+  using ExpectedTypeA = char[];
   EXPECT_TRUE((SameType<Decayed<TypeA>, ExpectedTypeA>));
 
   using TypeB = int const * const;
@@ -329,8 +329,30 @@ namespace CX {
   EXPECT_FALSE((Array<void (Dummy<>::*)()>));
  }
 
+ TEST(SizedArray, sized_array_types_satisfy_constraint) {
+  EXPECT_TRUE((SizedArray<int[123]>));
+  //Note: This due to bugs in clang and gcc, this line will
+  //always fail. See related comment in 'cx/idioms.h'
+  //EXPECT_TRUE((SizedArray<char[0]>));
+ }
+
+ TEST(SizedArray, unsized_array_and_non_array_types_do_not_satisfy_constraint) {
+  EXPECT_FALSE((SizedArray<double[]>));
+  EXPECT_FALSE((SizedArray<void>));
+ }
+
+ TEST(UnsizedArray, unsized_array_types_satisfy_constraint) {
+  EXPECT_TRUE((UnsizedArray<bool[]>));
+  EXPECT_TRUE((UnsizedArray<void *[]>));
+ }
+
+ TEST(UnsizedArray, sized_array_non_array_types_do_not_satisfy_constraint) {
+  EXPECT_FALSE((UnsizedArray<float[123]>));
+  EXPECT_FALSE((UnsizedArray<void (Dummy<>::*[5])()>));
+ }
+
  TEST(ArrayElementType, array_types_yield_array_element_type) {
-  using TypeA = char [123];
+  using TypeA = char[123];
   using ExpectedTypeA = char;
   EXPECT_TRUE((SameType<ArrayElementType<TypeA>, ExpectedTypeA>));
 

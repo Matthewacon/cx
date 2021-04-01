@@ -21,7 +21,7 @@ namespace CX {
 
   //Superset
   EXPECT_TRUE((CompatibleVariant<Variant<int, float>, Variant<int, float, char>>));
-  EXPECT_TRUE((CompatibleVariant<Variant<double, char, float>, Variant<float, double, char, int [1234]>>));
+  EXPECT_TRUE((CompatibleVariant<Variant<double, char, float>, Variant<float, double, char, int[1234]>>));
  }
 
  TEST(CompatibleVariant, superset_and_matched_set_with_mixed_const_variant_types_satisfy_constraint) {
@@ -35,7 +35,7 @@ namespace CX {
  }
 
  TEST(CompatibleVariant, subset_variant_types_do_not_satisfy_constraint) {
-  EXPECT_FALSE((CompatibleVariant<Variant<float [123]>, Variant<>>));
+  EXPECT_FALSE((CompatibleVariant<Variant<float[123]>, Variant<>>));
   EXPECT_FALSE((CompatibleVariant<Variant<double, char>, Variant<int, double>>));
   EXPECT_FALSE((CompatibleVariant<Variant<int, float, short>, Variant<int, short>>));
  }
@@ -57,6 +57,12 @@ namespace CX {
   EXPECT_FALSE((Specializable<Variant, A, A>));
  }
 
+ TEST(Variant, variant_type_disallows_unsized_array_elements) {
+  EXPECT_FALSE((Specializable<Variant, int[]>));
+  EXPECT_FALSE((Specializable<Variant, char, char[]>));
+  EXPECT_FALSE((Specializable<Variant, float, int, double[]>));
+ }
+
  //Constructor tests
  TEST(Constructor, element_copy_constructor_properly_initializes_variant) {
   //Test with integral type
@@ -68,25 +74,32 @@ namespace CX {
    EXPECT_EQ((v.get<ExpectedTypeA>()), expectedValueA);
   }()));
 
-  //Test with copyable type
+  //Test with copy constructible type
   //Ensure element copy constructor is properly invoked
   static bool copyConstructorInvoked;
-  //Reset static flag if test is re-run
+  //Reset static flag in case test is re-run
   copyConstructorInvoked = false;
-  using ExpectedTypeB = struct A {
+  using ExpectedTypeB = struct B {
    int i;
 
-   A(int i) :
+   B(int i) :
     i(i)
    {}
 
-   A(A const &a) :
+   //Explicitly delete move constructor
+   B(B&&) = delete;
+
+   B(B const &a) :
     i(a.i)
    {
     copyConstructorInvoked = true;
    }
+
+   //Explicitly copy and move assignment operators
+   B& operator=(B const&) = delete;
+   B& operator=(B&&) = delete;
   };
-  A const expectedValueB{54321098};
+  ExpectedTypeB const expectedValueB{54321098};
   Variant<double[1234], ExpectedTypeB> v2{expectedValueB};
   EXPECT_TRUE(copyConstructorInvoked);
   EXPECT_TRUE((v2.has<ExpectedTypeB>()));
@@ -105,30 +118,37 @@ namespace CX {
    EXPECT_EQ((v1.get<ExpectedTypeA>()), expectedValueA);
   }()));
 
-  //Test with movable type
+  //Test with move-constructible type
   //Ensure element move constructor is properly invoked
   static bool moveConstructorInvoked;
-  //Reset static flag if test is re-run
+  //Reset static flag in case test is re-run
   moveConstructorInvoked = false;
-  using ExpectedTypeB = struct A {
+  using ExpectedTypeB = struct B {
    int i;
 
-   A(int i) :
+   B(int i) :
     i(i)
    {}
 
-   A(A &&a) :
+   //Explicitly delete copy constructor
+   B(B const&) = delete;
+
+   B(B &&a) :
     i(a.i)
    {
     a.i = 0;
     moveConstructorInvoked = true;
    }
+
+   //Explicitly delete copy and move assignment operators
+   B& operator=(B const&) = delete;
+   B& operator=(B&&) = delete;
   };
   int const expectedValueB = 473829;
-  ExpectedTypeB temp{expectedValueB};
-  Variant<char, ExpectedTypeB> v2{(ExpectedTypeB&&)temp};
+  ExpectedTypeB containerB{expectedValueB};
+  Variant<char, ExpectedTypeB> v2{(ExpectedTypeB&&)containerB};
   EXPECT_TRUE((moveConstructorInvoked));
-  EXPECT_EQ(temp.i, 0);
+  EXPECT_EQ(containerB.i, 0);
   EXPECT_TRUE((v2.has<ExpectedTypeB>()));
   EXPECT_NO_THROW(([&] {
    EXPECT_EQ((v2.get<ExpectedTypeB>().i), expectedValueB);
@@ -139,7 +159,7 @@ namespace CX {
   using ExpectedType = int;
   constexpr ExpectedType const expectedValue = 314151617;
 
-  //Initialize first variant and ensure it was initialized correctly
+  //Construct first variant and ensure it was correctly initialized
   Variant<char, int> v1{expectedValue};
   EXPECT_TRUE((v1.has<ExpectedType>()));
   EXPECT_NO_THROW(([&] {
@@ -149,7 +169,7 @@ namespace CX {
   //Copy first variant into second variant
   Variant<float, int, char> v2{(decltype(v1)&)v1};
 
-  //Ensure all properties of the second variant were correctly initialized
+  //Ensure second variant was correctly initialized
   EXPECT_TRUE((v2.has<ExpectedType>()));
   EXPECT_NO_THROW(([&] {
    EXPECT_EQ((v2.get<ExpectedType>()), expectedValue);
@@ -160,7 +180,7 @@ namespace CX {
   using ExpectedType = short;
   constexpr ExpectedType const expectedValue = 1345;
 
-  //Initialize first variant and ensure it was initialized correctly
+  //Construct first variant and ensure it was initialized correctly
   Variant<double, char, short> v1{expectedValue};
   EXPECT_TRUE((v1.has<ExpectedType>()));
   EXPECT_NO_THROW(([&] {
@@ -170,18 +190,23 @@ namespace CX {
   //Move first variant into second variant
   Variant<short, double, char, int> v2{(decltype(v1)&&)v1};
 
-  //Ensure first variant was properly destructed
+  //Ensure first variant was destructed
   EXPECT_FALSE((v1.has<ExpectedType>()));
   EXPECT_THROW(
    ([&] { v1.get<ExpectedType>(); }()),
    VariantTypeError
   );
 
-  //Ensure all properties of second variant were correctly initialized
+  //Ensure second variant was correctly initialized
   EXPECT_TRUE((v2.has<ExpectedType>()));
   EXPECT_NO_THROW(([&] {
    EXPECT_EQ((v2.get<ExpectedType>()), expectedValue);
   }()));
+ }
+
+ TEST(Constructor, variant_supports_array_element_type_construction) {
+  //TODO test l-value, l-value ref and r-value ref
+  throw std::runtime_error{"Unimplemeted"};
  }
 
  TEST(Constructor, variant_const_member_supports_l_and_r_value_reference_construction) {
@@ -204,18 +229,154 @@ namespace CX {
 
  //Assignment operator tests
  TEST(Assignment, element_copy_assignment_properly_initializes_variant) {
-  throw std::runtime_error{"Unimplemented"};
+  //Test with integral type
+  using ExpectedTypeA = long double;
+  constexpr ExpectedTypeA expectedValueA = (ExpectedTypeA)3.1415926535897932384626433826795;
+  Variant<int, ExpectedTypeA, long, bool> v1;
+  v1 = (ExpectedTypeA&)expectedValueA;
+  EXPECT_TRUE((v1.has<ExpectedTypeA>()));
+  EXPECT_NO_THROW(([&] {
+   EXPECT_EQ((v1.get<ExpectedTypeA>()), expectedValueA);
+  }()));
+
+  //Test with copy assignable type
+  //Ensure element move assignment operator is properly invoked
+  static bool copyAssignmentOperatorInvoked;
+  //Reset static flag in case test is re-run
+  copyAssignmentOperatorInvoked = false;
+  using ExpectedTypeB =  struct B {
+   char c;
+   double d;
+
+   B() {}
+
+   B(char c, double d) :
+    c(c),
+    d(d)
+   {}
+
+   //Explicitly delete copy and move constructors
+   B(B const&) = delete;
+   B(B&&) = delete;
+
+   B& operator=(B const& other) {
+    copyAssignmentOperatorInvoked = true;
+    d = other.d;
+    return *this;
+   }
+
+   //Explicitly delete the move assignment operator
+   B& operator=(B&&) = delete;
+  };
+  ExpectedTypeB const expectedValueB{127, 6.28};
+  Variant<char, int, float, ExpectedTypeB> v2{(ExpectedTypeB&)expectedValueB};
+  EXPECT_TRUE(copyAssignmentOperatorInvoked);
+  EXPECT_TRUE((v2.has<ExpectedTypeB>()));
+  EXPECT_NO_THROW(([&] {
+   EXPECT_EQ((v2.get<ExpectedTypeB>().d), expectedValueB.d);
+  }()));
  }
 
  TEST(Assignment, element_move_assignment_properly_initializes_variant) {
-  throw std::runtime_error{"Unimplemented"};
+  //Test with integral type
+  using ExpectedTypeA = bool;
+  constexpr ExpectedTypeA expectedValueA = false;
+  Variant<float, ExpectedTypeA> v1;
+  v1 = (ExpectedTypeA&&)expectedValueA;
+  EXPECT_TRUE((v1.has<ExpectedTypeA>()));
+  EXPECT_NO_THROW(([&] {
+   EXPECT_EQ((v1.get<ExpectedTypeA>()), expectedValueA);
+  }()));
+
+  //Test with move-assignable type
+  static bool moveAssignmentOperatorInvoked;
+  //Reset static flag in case test is re-run
+  moveAssignmentOperatorInvoked = false;
+  using ExpectedTypeB = struct B {
+   float f;
+
+   B() {}
+
+   B(float f) :
+    f(f)
+   {}
+
+   //Explicitly delete copy and move construcors
+   B(B const&) = delete;
+   B(B&&) = delete;
+
+   //Explicitly delete copy assignment operator
+   B& operator=(B const&) = delete;
+
+   B& operator=(B &&other) {
+    moveAssignmentOperatorInvoked = true;
+    f = other.f;
+    other.f = 0;
+    return *this;
+   }
+  };
+  float const expectedValueB = 3.1415;
+  ExpectedTypeB containerB{expectedValueB};
+  Variant<double, ExpectedTypeB> v2{(ExpectedTypeB&&)containerB};
+  EXPECT_TRUE((moveAssignmentOperatorInvoked));
+  EXPECT_EQ((containerB.f), 0);
+  EXPECT_TRUE((v2.has<ExpectedTypeB>()));
+  EXPECT_NO_THROW(([&] {
+   EXPECT_EQ((v2.get<ExpectedTypeB>().f), expectedValueB);
+  }()));
  }
 
  TEST(Assignment, variant_copy_assignment_properly_initializes_variant) {
-  throw std::runtime_error{"Unimplemented"};
+  using ExpectedType = long double;
+  constexpr ExpectedType const expectedValue = 6.789012345678901234;
+
+  //Construct first variant and ensure it was correctly initialized
+  Variant<long long, ExpectedType, short> v1{expectedValue};
+  EXPECT_TRUE((v1.has<ExpectedType>()));
+  EXPECT_NO_THROW(([&] {
+   EXPECT_EQ((v1.get<ExpectedType>()), expectedValue);
+  }()));
+
+  //Construct second variant and ensure it was correctly initialized
+  Variant<ExpectedType, short, long long> v2 = (decltype(v1) const&)v1;
+  EXPECT_TRUE((v2.has<ExpectedType>()));
+  EXPECT_NO_THROW(([&] {
+   EXPECT_EQ((v2.get<ExpectedType>()), expectedValue);
+  }()));
  }
 
  TEST(Assignment, variant_move_assignment_properly_initializes_variant_and_destructs_moved_variant) {
+  using ExpectedType = char;
+  constexpr ExpectedType const expectedValue = 'F';
+
+  //Construct first variant and ensure it was correctly initialized
+  Variant<bool, ExpectedType, int[1]> v1{expectedValue};
+  EXPECT_TRUE((v1.has<ExpectedType>()));
+  EXPECT_NO_THROW(([&] {
+   EXPECT_EQ((v1.get<ExpectedType>()), expectedValue);
+  }()));
+
+  //Move first variant into second variant
+  Variant<ExpectedType, int[1], bool> v2 = (decltype(v1)&&)v1;
+
+  //Ensure first variant was destructed
+  EXPECT_FALSE((v1.has<ExpectedType>()));
+  EXPECT_THROW(
+   ([&] {
+    v1.get<ExpectedType>();
+   }()),
+   VariantTypeError
+  );
+
+  //Ensure second variant was corretly initialized
+  EXPECT_TRUE((v2.has<ExpectedType>()));
+  EXPECT_NO_THROW(([&] {
+   EXPECT_EQ((v2.get<ExpectedType>()), expectedValue);
+  }()));
+ }
+
+ TEST(Assignment, variant_supports_array_element_type_assignment) {
+  //Test l-value, l-value ref and r-value ref
   throw std::runtime_error{"Unimplemented"};
  }
 
@@ -233,14 +394,21 @@ namespace CX {
  template<typename V, typename E>
  concept VariantRdrainInvokable = requires (V v, E e) { v.template rdrain<E>(e); };
 
- TEST(Variant, member_templates_are_invalid_for_non_element_types) {
+ template<typename V, typename E>
+ concept VariantAssignmentOperatorInvokable = requires (V v, E e) { v.template operator=<E>(e); };
+
+ TEST(Variant, member_templates_are_invalid_for_non_element_and_incompatible_variant_types) {
   using VariantType = Variant<float, char>;
   EXPECT_FALSE((VariantHasInvokable<VariantType, void>));
-  EXPECT_FALSE((VariantDrainInvokable<VariantType, void>));
-  EXPECT_FALSE((VariantRdrainInvokable<VariantType, void>));
-  throw std::runtime_error{"Unfinished"};
-  //TODO element and variant assignment operators
-  //EXPECT_FALSE(());
+  EXPECT_FALSE((VariantDrainInvokable<VariantType, int>));
+  EXPECT_FALSE((VariantRdrainInvokable<VariantType, double>));
+
+  //Element and variant assignment operators
+  EXPECT_FALSE((VariantAssignmentOperatorInvokable<VariantType, long double>));
+  EXPECT_FALSE((VariantAssignmentOperatorInvokable<VariantType, short&>));
+  EXPECT_FALSE((VariantAssignmentOperatorInvokable<VariantType, long&&>));
+  EXPECT_FALSE((VariantAssignmentOperatorInvokable<VariantType, Variant<long, short>&>));
+  EXPECT_FALSE((VariantAssignmentOperatorInvokable<VariantType, Variant<bool, int, double>&&>));
  }
 
  //Tests for the empty variant specialization
@@ -255,11 +423,23 @@ namespace CX {
   throw std::runtime_error{"Unimplemented"};
  }
 
+ TEST(Variant, populated_variant_get_returns_reference_to_stored_element) {
+  throw std::runtime_error{"Unimplemented"};
+ }
+
  TEST(Variant, empty_variant_drain_throws_exception_for_all_element_types) {
   throw std::runtime_error{"Unimplemented"};
  }
 
+ TEST(Variant, populated_variant_drain_returns_copy_of_stored_element) {
+  throw std::runtime_error{"Unimplemented"};
+ }
+
  TEST(Variant, empty_variant_rdrain_throws_exception_for_all_element_types) {
+  throw std::runtime_error{"Unimplemented"};
+ }
+
+ TEST(Variant, populated_variant_rdrain_moves_stored_element_into_argument) {
   throw std::runtime_error{"Unimplemented"};
  }
 }

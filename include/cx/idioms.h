@@ -239,18 +239,27 @@ namespace CX {
   struct Array : FalseType {
    using ElementType = T;
    static constexpr auto const Size = -1;
+   static constexpr auto const Sized = false;
   };
 
   template<typename T>
-  struct Array<T []> : TrueType {
+  struct Array<T[]> : TrueType {
    using ElementType = T;
    static constexpr auto const Size = -1;
+   static constexpr auto const Sized = false;
   };
 
+  //Note: This idiom will not work for zero-length-arrays
+  //in either clang or gcc due to respective bugs in the
+  //zero-length-array extension implementations.
+  //See:
+  // - https://bugs.llvm.org/show_bug.cgi?id=49808
+  // - (TODO waiting on gcc bug report)
   template<auto N, typename T>
-  struct Array<T [N]> : TrueType {
+  struct Array<T[N]> : TrueType {
    using ElementType = T;
    static constexpr auto const Size = N;
+   static constexpr auto const Sized = true;
   };
 
   //lvalue reference identity
@@ -483,6 +492,17 @@ namespace CX {
  concept Array = MetaFunctions
   ::Array<T>
   ::Value;
+
+ template<typename T>
+ concept SizedArray = MetaFunctions
+   ::Array<T>
+   ::Sized;
+
+ template<typename T>
+ concept UnsizedArray = Array<T>
+  && !MetaFunctions
+   ::Array<T>
+   ::Sized;
 
  template<typename T>
  using ArrayElementType = typename MetaFunctions

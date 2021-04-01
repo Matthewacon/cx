@@ -60,43 +60,78 @@ namespace CX {
    >::Value;
   };
 
-  //Utilites for `MaxTypeSize` and `MinTypeSize`
+  //Utilites for: [MaxTypeSize, MinTypeSize, MaxTypeAlignment, MinTypeAlignment]
   namespace Internal {
-   template<template<auto...> typename Producer, typename... Types>
+   template<
+    template<typename> typename Operation,
+    template<auto...> typename Producer,
+    auto Default,
+    typename... Types
+   >
    struct TypeSizeCommon;
 
-   template<template<auto...> typename Producer, typename T, typename... Types>
-   struct TypeSizeCommon<Producer, T, Types...> {
+   template<
+    template<typename> typename Operation,
+    template<auto...> typename Producer,
+    auto Default,
+    typename T,
+    typename... Types
+    >
+   struct TypeSizeCommon<Operation, Producer, Default, T, Types...> {
     template<auto... Values>
     struct Collector {
-     static constexpr auto const Value = TypeSizeCommon<Producer, Types...>
-      ::template Collector<Values..., sizeof(T)>
+     static constexpr auto const Value = TypeSizeCommon<Operation, Producer, Default, Types...>
+      ::template Collector<Values..., Operation<T>::Value>
       ::Value;
     };
 
     static constexpr auto const Value = Collector<>::Value;
    };
 
-   template<template<auto...> typename Producer, typename T>
-   struct TypeSizeCommon<Producer, T> {
+   template<
+    template<typename> typename Operation,
+    template<auto...> typename Producer,
+    auto Default,
+    typename T
+   >
+   struct TypeSizeCommon<Operation, Producer, Default, T> {
     template<auto... Values>
     struct Collector {
-     //Add `0` to `MaxValue` parameter list to cover single type argument case
-     static constexpr auto const Value = MaxValue<Values..., 0, sizeof(T)>::Value;
+     static constexpr auto const Value = Producer<Values..., Operation<T>::Value>::Value;
     };
 
     static constexpr auto const Value = Collector<>::Value;
    };
 
-   template<template<auto...> typename Producer>
-   struct TypeSizeCommon<Producer> {
-    static constexpr auto const Value = 0;
+   template<
+    template<typename> typename Operation,
+    template<auto...> typename Producer,
+    auto Default
+   >
+   struct TypeSizeCommon<Operation, Producer, Default> {
+    static constexpr auto const Value = Default;
    };
   }
 
-  template<template<auto...> typename Producer, typename... Types>
-  constexpr auto const TypeSize = Internal
-   ::TypeSizeCommon<Producer, Types...>
+  //Operations for use with TypeEval (see below)
+  template<typename T>
+  struct TypeSize {
+   static constexpr auto const Value = sizeof(T);
+  };
+
+  template<typename T>
+  struct TypeAlignment {
+   static constexpr auto const Value = alignof(T);
+  };
+
+  template<
+   template<typename> typename Operation,
+   template<auto...> typename Producer,
+   auto Default,
+   typename... Types
+  >
+  constexpr auto const TypeEval = Internal
+   ::TypeSizeCommon<Operation, Producer, Default, Types...>
    ::Value;
 
   template<typename Match, typename... Types>
@@ -370,14 +405,34 @@ namespace CX {
   ::Value;
 
  template<typename... Types>
- constexpr auto const MaxTypeSize = MetaFunctions::TypeSize<
+ constexpr auto const MaxTypeSize = MetaFunctions::TypeEval<
+  MetaFunctions::TypeSize,
   MetaFunctions::MaxValue,
+  0,
   Types...
  >;
 
  template<typename... Types>
- constexpr auto const MinTypeSize = MetaFunctions::TypeSize<
+ constexpr auto const MinTypeSize = MetaFunctions::TypeEval<
+  MetaFunctions::TypeSize,
   MetaFunctions::MinValue,
+  0,
+  Types...
+ >;
+
+ template<typename... Types>
+ constexpr auto const MaxTypeAlignment = MetaFunctions::TypeEval<
+  MetaFunctions::TypeAlignment,
+  MetaFunctions::MaxValue,
+  1,
+  Types...
+ >;
+
+ template<typename... Types>
+ constexpr auto const MinTypeAlignment = MetaFunctions::TypeEval<
+  MetaFunctions::TypeAlignment,
+  MetaFunctions::MinValue,
+  1,
   Types...
  >;
 

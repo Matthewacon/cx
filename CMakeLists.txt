@@ -41,8 +41,13 @@ set(CX_HEADER_ONLY OFF CACHE BOOL "Builds CX as a header-only library")
 set(CX_UNIT_TESTS OFF CACHE BOOL "Builds CX unit tests")
 set(CX_BENCHMARKS OFF CACHE BOOL "Builds CX benchmarks")
 set(CX_COVERAGE OFF CACHE BOOL "Enable CX coverage profiling (ONLY WORKS WITH CLANG)")
+
+#Library support flags
 set(CX_STL_SUPPORT OFF CACHE BOOL "Enable CX->stl integration")
 set(CX_LIBC_SUPPORT ON CACHE BOOL "Enable CX->libc integration")
+
+#Behavioural flags
+set(CX_VARIANT_HARD_CLEAR OFF CACHE BOOL "Enable clearing of variant cache before initialization and after destruction")
 
 #Sanitize coverage flag
 if(
@@ -88,6 +93,13 @@ else()
   "'CX_LIBC_SUPPORT' is disabled; the following headers will be unavailable:\
    <cx/vararg.h>\
   "
+ )
+endif()
+
+if(${CX_VARIANT_HARD_CLEAR})
+ list(
+  APPEND CX_COMPILE_FLAGS
+  -DCX_VARIANT_HARD_CLEAR
  )
 endif()
 

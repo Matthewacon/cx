@@ -49,8 +49,8 @@ namespace CX {
  }
 
  TEST(MinTypeSize, type_pack_yields_expected_value) {
-  EXPECT_EQ((MinTypeSize<double, short, long long, int>), sizeof(long long));
-  EXPECT_EQ((MinTypeSize<void *, int, long double[123]>), sizeof(long double[123]));
+  EXPECT_EQ((MinTypeSize<double, short, long long, int>), sizeof(short));
+  EXPECT_EQ((MinTypeSize<void *, int, long double[123]>), sizeof(int));
  }
 
  TEST(MinTypeSize, special_cases_yield_expected_value) {
@@ -59,6 +59,32 @@ namespace CX {
 
   //Single argument pack should yield the type size
   EXPECT_EQ((MinTypeSize<void *>), sizeof(void *));
+ }
+
+ TEST(MaxTypeAlignment, type_pack_yields_expected_value) {
+  EXPECT_EQ((MaxTypeAlignment<char, float, long double, int>), alignof(long double));
+  EXPECT_EQ((MaxTypeAlignment<char[123], short, int, signed char>), alignof(int));
+ }
+
+ TEST(MaxTypeAlignment, special_cases_yield_expected_value) {
+  //Empty pack should yield `1`
+  EXPECT_EQ((MaxTypeAlignment<>), 1);
+
+  //Single argument pack should yield the type alignment
+  EXPECT_EQ((MaxTypeAlignment<int *>), alignof(int *));
+ }
+
+ TEST(MinTypeAlignment, type_pack_yields_expected_value) {
+  EXPECT_EQ((MinTypeAlignment<long long, float, double, char>), alignof(char));
+  EXPECT_EQ((MinTypeAlignment<float, long, double>), alignof(float));
+ }
+
+ TEST(MinTypeAlignment, special_cases_yield_expected_value) {
+  //Empty pack should yield `1`
+  EXPECT_EQ((MinTypeAlignment<>), 1);
+
+  //Single argument pack should yield the type alignment
+  EXPECT_EQ((MinTypeAlignment<short[123]>), alignof(short[123]));
  }
 
  TEST(IndexOfType, type_pack_yeilds_expected_value) {

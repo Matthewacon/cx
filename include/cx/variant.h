@@ -156,8 +156,10 @@ namespace CX {
 
   template<MatchAnyType<Elements...> E>
   requires (
-   CopyConstructible<Unqualified<E>>
-   || (Constructible<Unqualified<E>> && CopyAssignable<Unqualified<E>>)
+   !Array<ConstDecayed<E>>
+   && (CopyConstructible<Unqualified<E>>
+    || (Constructible<Unqualified<E>> && CopyAssignable<Unqualified<E>>)
+   )
   )
   void assign(E const &e) const {
    using EUnqualified = Unqualified<E>;
@@ -177,8 +179,10 @@ namespace CX {
 
   template<MatchAnyType<Elements...> E>
   requires (
-   MoveConstructible<Unqualified<E>>
-   || (Constructible<Unqualified<E>> && MoveAssignable<Unqualified<E>>)
+   !Array<ConstDecayed<E>>
+   && (MoveConstructible<Unqualified<E>>
+    || (Constructible<Unqualified<E>> && MoveAssignable<Unqualified<E>>)
+   )
   )
   //r-value assignments cannot have const operands
   void assign(Unqualified<E> &&e) const {
@@ -199,12 +203,13 @@ namespace CX {
   }
 
   //Array type assignment
-  void assign(SizedArray auto &array) const {
-   using ArrayType = Decayed<decltype(array)>;
-   static constexpr auto const Length = ArraySize<ArrayType>;
+  template<MatchAnyType<Elements...> E>
+  requires (SizedArray<E>)
+  void assign(E const &array) const {
+   static constexpr auto const Length = ArraySize<E>;
    auto &ref = const_cast<Variant&>(*this);
    destruct();
-   ref.tag = 1 << IndexOfType<ArrayType, Elements...>;
+   ref.tag = 1 << IndexOfType<E, Elements...>;
    #ifdef CX_LIBC_SUPPORT
     memcpy(&ref.data, array, Length);
    #else
@@ -291,6 +296,7 @@ namespace CX {
 
   //Return encapsulated element and clear variant
   template<MatchAnyType<Elements...> E>
+  requires (!Array<Unqualified<E>>)
   E drain() {
    if (has<E>()) {
     struct GC {
@@ -309,12 +315,14 @@ namespace CX {
   //accept a reference to the destination and move the
   //encapsulated element
   template<MatchAnyType<Elements...> E>
+  requires (MoveAssignable<Unqualified<E>>)
   void rdrain(E &e) {
    if (has<E>()) {
     e = (E&&)*(E *)&data;
     destruct();
+   } else {
+    throw VariantTypeError{};
    }
-   throw VariantTypeError{};
   }
 
   //Copy assignment operator
@@ -381,7 +389,8 @@ namespace CX {
   requires (UniqueTypes<void, Types...> && !(UnsizedArray<Types> || ...))
   friend struct Variant;
 
-  alignas(Alignment) char data[Size];
+  decltype(1 << 0) const tag = 0;
+  alignas(Alignment) char const data[Size];
 
   void runtimeElementOp(auto) {}
 
@@ -393,23 +402,87 @@ namespace CX {
   }
 
  public:
+  Variant() :
+   tag(0),
+   data{}
+  {};
+
+  //Variant copy constructor
+  Variant(CompatibleVariant<Variant> auto const&) :
+   tag(0),
+   data{}
+  {};
+
+  //Variant move constructor
+  Variant(CompatibleVariant<Variant> auto&&) :
+   tag(0),
+   data{}
+  {};
+
+  //Element copy constructor
+  template<typename E>
+  requires false
+  Variant(E const&) :
+   tag(0),
+   data{}
+  {
+   throw VariantTypeError{};
+  };
+
+  //Element move constructor
+  template<typename E>
+  requires false
+  Variant(E&&) :
+   tag(0),
+   data{}
+  {
+   throw VariantTypeError{};
+  };
+
   template<typename E>
   bool has() const noexcept {
    return false;
   }
 
   template<typename E>
+  requires false
   E& get() {
    throw VariantTypeError{};
   }
 
   template<typename E>
+  requires false
   E drain() {
    throw VariantTypeError{};
   }
 
   template<typename E>
+  requires false
   void rdrain(E&) {
+   throw VariantTypeError{};
+  }
+
+  //Copy assignment operator
+  Variant& operator=(CompatibleVariant<Variant> auto const&) {
+   return *this;
+  }
+
+  //Move assignment operator
+  Variant& operator=(CompatibleVariant<Variant> auto&&) {
+   return *this;
+  }
+
+  //Element copy assignment operator
+  template<typename E>
+  requires false
+  Variant& operator=(E const&) {
+   throw VariantTypeError{};
+  }
+
+  //Element move assignment operator
+  template<typename E>
+  requires false
+  Variant& operator=(E&&) {
    throw VariantTypeError{};
   }
  };

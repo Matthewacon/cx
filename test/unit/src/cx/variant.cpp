@@ -411,35 +411,153 @@ namespace CX {
   EXPECT_FALSE((VariantAssignmentOperatorInvokable<VariantType, Variant<bool, int, double>&&>));
  }
 
+ TEST(Variant, get_returns_reference_to_stored_element) {
+  using ExpectedType = char[123];
+  ExpectedType const expectedValue = "Goodbye world!";
+
+  //Construct variant and ensure it was correctly initialized
+  ExpectedType const value = "Hello world!";
+  Variant<double, bool, ExpectedType, float> v{value};
+  EXPECT_TRUE((v.has<ExpectedType>()));
+  EXPECT_NO_THROW(([&] {
+   EXPECT_STREQ((v.get<ExpectedType>()), value);
+  }()));
+
+  //Ensure returned reference is correct
+  EXPECT_NO_THROW(([&] {
+   auto &ref = v.get<ExpectedType>();
+   memcpy(&ref, expectedValue, strlen(expectedValue));
+   EXPECT_STREQ(ref, expectedValue);
+  }()));
+ }
+
+ TEST(Variant, drain_returns_copy_of_stored_element_and_destructs_variant) {
+  static bool copyConstructorInvoked;
+  using ExpectedType = struct A {
+   int i;
+
+   A(int i) :
+    i(i)
+   {}
+
+   A(A const &a) :
+    i(a.i)
+   {
+    copyConstructorInvoked = true;
+   }
+
+   //Explicitly delete move constructor and assignment operator
+   A(A&&) = delete;
+   A& operator=(A&&) = delete;
+  };
+  int const expectedValue = 9876543;
+
+  //Construct variant and ensure it was correctly initialized
+  Variant<ExpectedType, char, float, bool> v{A{expectedValue}};
+  EXPECT_TRUE((v.has<ExpectedType>()));
+  EXPECT_NO_THROW(([&] {
+   EXPECT_EQ((v.get<ExpectedType>().i), expectedValue);
+  }()));
+
+  //Reset flag in case test is re-run
+  copyConstructorInvoked = false;
+
+  //Drain varaint and ensure it was destructed
+  EXPECT_NO_THROW(([&] {
+   auto value = v.drain<ExpectedType>();
+
+   //Ensure returned value matches the expected value
+   EXPECT_TRUE(copyConstructorInvoked);
+   EXPECT_EQ(value.i, expectedValue);
+
+   //Ensure the variant was destructed
+   EXPECT_FALSE((v.has<ExpectedType>()));
+  }()));
+ }
+
+ TEST(Variant, rdrain_moves_stored_element_into_argument_and_destructs_variant) {
+  static bool moveAssignmentOperatorInvoked;
+  using ExpectedType = struct A {
+   float f;
+
+   A(float f = 1231324) :
+    f(f)
+   {}
+
+   //Explicitly delete copy constructor and assignment operator
+   A(A const&) = delete;
+   A& operator=(A const&) = delete;
+
+   A& operator=(A &&a) {
+    moveAssignmentOperatorInvoked = true;
+    f = a.f;
+    return *this;
+   }
+  };
+  float const expectedValue = 2.718281828459;
+
+  //Construct variant and ensure it was correctly initialized
+  Variant<double, short, char, void *, ExpectedType> v{A{expectedValue}};
+  EXPECT_TRUE((v.has<ExpectedType>()));
+  EXPECT_NO_THROW(([&] {
+   EXPECT_EQ((v.get<ExpectedType>().f), expectedValue);
+  }()));
+
+  //Reset flag in case test is re-run
+  moveAssignmentOperatorInvoked = false;
+
+  //Drain variant and ensure it was destructed
+  EXPECT_NO_THROW(([&] {
+   A value;
+   v.rdrain(value);
+
+   //Ensure value was correctly initialized
+   EXPECT_TRUE((moveAssignmentOperatorInvoked));
+   EXPECT_EQ(value.f, expectedValue);
+
+   //Ensure variant was destructed
+   EXPECT_FALSE((v.has<ExpectedType>()));
+  }()));
+ }
+
  //Tests for the empty variant specialization
- TEST(Variant, empty_variant_has_returns_false_for_all_element_types) {
+ TEST(EmptyVariant, has_returns_false_for_all_element_types) {
   Variant<char[124], int, double> empty;
   EXPECT_FALSE(empty.has<char[124]>());
   EXPECT_FALSE(empty.has<int>());
   EXPECT_FALSE(empty.has<double>());
  }
 
- TEST(Variant, empty_variant_get_throws_exception_for_all_element_types) {
-  throw std::runtime_error{"Unimplemented"};
+ TEST(EmptyVariant, member_templates_are_invalid_for_all_types_except_empty_variant) {
+  using VariantType = Variant<>;
+
+  //Member function templates
+  EXPECT_FALSE((VariantDrainInvokable<VariantType, int>));
+  EXPECT_FALSE((VariantRdrainInvokable<VariantType, float>));
+
+  //Element assignment operators
+  EXPECT_FALSE((VariantAssignmentOperatorInvokable<VariantType, short>));
+  EXPECT_FALSE((VariantAssignmentOperatorInvokable<VariantType, long&>));
+  EXPECT_FALSE((VariantAssignmentOperatorInvokable<VariantType, double&&>));
+
+  //Variant assignment operators
+  EXPECT_TRUE((VariantAssignmentOperatorInvokable<VariantType, VariantType const&>));
+  EXPECT_TRUE((VariantAssignmentOperatorInvokable<VariantType, VariantType&&>));
  }
 
- TEST(Variant, populated_variant_get_returns_reference_to_stored_element) {
-  throw std::runtime_error{"Unimplemented"};
- }
+ TEST(EmptyVariant, constructor_templates_are_invalid_for_all_types_except_empty_variant) {
+  using VariantType = Variant<>;
 
- TEST(Variant, empty_variant_drain_throws_exception_for_all_element_types) {
-  throw std::runtime_error{"Unimplemented"};
- }
+  //Default constructor
+  EXPECT_TRUE((Constructible<VariantType>));
 
- TEST(Variant, populated_variant_drain_returns_copy_of_stored_element) {
-  throw std::runtime_error{"Unimplemented"};
- }
+  //Element constructors
+  EXPECT_FALSE((Constructible<VariantType, char>));
+  EXPECT_FALSE((Constructible<VariantType, int const&>));
+  EXPECT_FALSE((Constructible<VariantType, float&&>));
 
- TEST(Variant, empty_variant_rdrain_throws_exception_for_all_element_types) {
-  throw std::runtime_error{"Unimplemented"};
- }
-
- TEST(Variant, populated_variant_rdrain_moves_stored_element_into_argument) {
-  throw std::runtime_error{"Unimplemented"};
+  //Variant constructors
+  EXPECT_TRUE((Constructible<VariantType, VariantType const&>));
+  EXPECT_TRUE((Constructible<VariantType, VariantType&&>));
  }
 }

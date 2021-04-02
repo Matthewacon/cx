@@ -571,6 +571,14 @@ namespace CX {
   throw std::runtime_error{"Unimplemented"};
  }
 
+ TEST(Struct, struct_types_satisfy_constraint) {
+  throw std::runtime_error{"Unimplemented"};
+ }
+
+ TEST(Struct, non_struct_types_do_not_satisfy_constraint) {
+  throw std::runtime_error{"Unimplemented"};
+ }
+
  TEST(Integral, integral_types_satisfy_constraint) {
   throw std::runtime_error{"Unimplemented"};
  }

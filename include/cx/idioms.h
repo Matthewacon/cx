@@ -664,6 +664,10 @@ namespace CX {
  template<typename T>
  concept Union = __is_union(T);
 
+ //Struct type identity
+ template<typename T>
+ concept Struct = __is_class(T);
+
  //Integral type identity
  //Defined by: https://en.cppreference.com/w/cpp/types/is_integral
  template<typename T>

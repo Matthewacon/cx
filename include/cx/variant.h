@@ -104,7 +104,7 @@ namespace CX {
 
  private:
   decltype(1 << sizeof...(Elements)) tag;
-  alignas(Alignment) char data[Size];
+  alignas(Alignment) unsigned char data[Size];
 
   //TODO this cannot be used yet due to a clang frontend bug.
   //See: https://bugs.llvm.org/show_bug.cgi?id=49743
@@ -123,55 +123,88 @@ namespace CX {
    }
   }
 
+  template<MatchAnyType<Elements...> E>
+  requires (Trivial<ConstDecayed<E>>)
+  void trivialCopy(E const &e) const {
+   static constexpr auto const Length = sizeof(E);
+   auto &ref = const_cast<Variant&>(*this);
+   #ifdef CX_LIBC_SUPPORT
+    memcpy(&ref.data, &e, Length);
+   #else
+    using LengthType = ConstDecayed<decltype(Length)>;
+    auto &array = *(decltype(ref.data)*)&e;
+    for (LengthType i = 0; i < Length; i++) {
+     ref.data[i] = array[i];
+    }
+   #endif
+  }
+
   void destruct() const {
    auto &ref = const_cast<Variant&>(*this);
+
    //Clean up stored data
-   /*TODO waiting for compiler bug to be fixed
-   runtimElementOp([&]<typename E> {
-    if constexpr(Destructible<E>) {
-     (*(E *)&ref.data).~E();
-    }
-   });
-   */
-   TypeIterator<Elements...>::run([&]<typename E> {
-    if (has<E>()) {
-     if constexpr (Destructible<E>) {
-      (*(E *)&ref.data).~E();
+   if (tag) {
+    //TODO use runtimeElementOp once the clang frontend
+    //bug has been fixed
+    TypeIterator<Elements...>::run([&]<typename E> {
+     if (has<E>()) {
+      if constexpr (Destructible<E>) {
+       //Destruct encapsulated element
+       (*(E *)&ref.data).~E();
+      } else if constexpr (Array<E> && Destructible<ArrayElementType<E>>) {
+       //Destruct all elements of encapsulated array
+       using ElementType = ArrayElementType<E>;
+       static constexpr auto const Length = ArraySize<E>;
+       using LengthType = ConstDecayed<decltype(Length)>;
+       auto &array = *(ElementType(*)[Length])&ref.data;
+
+       //Invoke destructor for every element type
+       for (LengthType i = 0; i < Length; i++) {
+        array[i].~ElementType();
+       }
+      }
+      return false;
      }
-     return false;
-    }
-    return true;
-   });
-   ref.tag = 0;
-   #ifdef CX_VARIANT_HARD_CLEAR
-    #ifdef CX_LIBC_SUPPORT
-     memset(ref.data, 0, Size);
-    #else
-     for (auto &c : ref.data) {
-      c = 0;
-     }
+     return true;
+    });
+    ref.tag = 0;
+    #ifdef CX_VARIANT_HARD_CLEAR
+     #ifdef CX_LIBC_SUPPORT
+      memset(&ref.data, 0, Size);
+     #else
+      for (auto &c : ref.data) {
+       c = 0;
+      }
+     #endif
     #endif
-   #endif
+   }
   }
 
   template<MatchAnyType<Elements...> E>
   requires (
    !Array<ConstDecayed<E>>
-   && (CopyConstructible<Unqualified<E>>
-    || (Constructible<Unqualified<E>> && CopyAssignable<Unqualified<E>>)
+   && (CopyConstructible<ConstDecayed<E>>
+    || (Constructible<ConstDecayed<E>> && CopyAssignable<ConstDecayed<E>>)
    )
   )
   void assign(E const &e) const {
-   using EUnqualified = Unqualified<E>;
+   using EDecayed = ConstDecayed<E>;
    auto &ref = const_cast<Variant&>(*this);
+
+   //Clean up current state
    destruct();
+
+   //Assign new tag for corresponding element type
    ref.tag = 1 << IndexOfType<E, Elements...>;
+
    //Prevent l-value decay by re-promoting
-   if constexpr (CopyConstructible<EUnqualified>) {
-    //If `EUnqualified` is copy-constructible, try constructing it
+   if constexpr (Trivial<EDecayed>) {
+    trivialCopy<E>((E const&)e);
+   } if constexpr (CopyConstructible<EDecayed>) {
+    //If `EDecayed` is copy-constructible, try constructing it
     new (&ref.data) E{(E const&)e};
-   } else if constexpr (Constructible<EUnqualified> && CopyAssignable<EUnqualified>) {
-    //If `EUnqualified` is default-constructible and copy-assignable
+   } else if constexpr (Constructible<EDecayed> && CopyAssignable<EDecayed>) {
+    //If `EDecayed` is default-constructible and copy-assignable
     //try constructing and assigning to it
     *new (&ref.data) E{} = (E const&)e;
    }
@@ -180,51 +213,77 @@ namespace CX {
   template<MatchAnyType<Elements...> E>
   requires (
    !Array<ConstDecayed<E>>
-   && (MoveConstructible<Unqualified<E>>
-    || (Constructible<Unqualified<E>> && MoveAssignable<Unqualified<E>>)
+   && (MoveConstructible<ConstDecayed<E>>
+    || (Constructible<ConstDecayed<E>> && MoveAssignable<ConstDecayed<E>>)
    )
   )
   //r-value assignments cannot have const operands
-  void assign(Unqualified<E> &&e) const {
-   using EUnqualified = Unqualified<E>;
+  void assign(ConstDecayed<E> &&e) const {
+   using EDecayed = ConstDecayed<E>;
    auto &ref = const_cast<Variant&>(*this);
+
+   //Clean up current state
    destruct();
+
+   //Assign new tag for corresponding element type
    ref.tag = 1 << IndexOfType<E, Elements...>;
+
    //Prevent r-value reference -> l-value reference decay by
    //re-promoting
-   if constexpr (MoveConstructible<EUnqualified>) {
-    //If `EUnqualified` is move constructible, try constructing it
-    new (&ref.data) E{(EUnqualified&&)e};
-   } else if constexpr (Constructible<EUnqualified> && MoveAssignable<EUnqualified>) {
-    //If `EUnqualified` is default constructible and move assignable,
+   if constexpr (Trivial<EDecayed>) {
+    //If `EDecayed` is a trivial type, no need to move construct
+    //or assign
+    trivialCopy<E>((EDecayed const&)e);
+   } if constexpr (MoveConstructible<EDecayed>) {
+    //If `EDecayed` is move constructible, try constructing it
+    new (&ref.data) E{(EDecayed&&)e};
+   } else if constexpr (Constructible<EDecayed> && MoveAssignable<EDecayed>) {
+    //If `EDecayed` is default constructible and move assignable,
     //try constructing and assigning to it
-    *new (&ref.data) E{} = (EUnqualified&&)e;
+    *new (&ref.data) E{} = (EDecayed&&)e;
    }
   }
 
-  //Array type assignment
+  //Array type copy assignment
   template<MatchAnyType<Elements...> E>
   requires (SizedArray<E>)
-  void assign(E const &array) const {
+  void assign(E const &src) const {
+   using ElementType = ArrayElementType<E>;
    static constexpr auto const Length = ArraySize<E>;
-   auto &ref = const_cast<Variant&>(*this);
+   using LengthType = ConstDecayed<decltype(Length)>;
+   auto &variantRef = const_cast<Variant&>(*this);
+
+   //Clean up current state
    destruct();
-   ref.tag = 1 << IndexOfType<E, Elements...>;
-   #ifdef CX_LIBC_SUPPORT
-    memcpy(&ref.data, array, Length);
-   #else
-    for (decltype(Length) i = 0; i < Length; i++) {
-     ref.data[i] = array[i];
+
+   //Assign new tag for corresponding element type
+   variantRef.tag = 1 << IndexOfType<E, Elements...>;
+
+   //Initialize encapsulated array
+   auto &dst = *(ElementType(*)[Length])&variantRef.data;
+   if constexpr(Trivial<ElementType>) {
+    //If `ElementType` is a trivial type, no need to copy construct
+    //or assign
+    trivialCopy<E>((E const&)src);
+   } else {
+    //Initialize every array element
+    for (LengthType i = 0; i < Length; i++) {
+     if constexpr(CopyConstructible<ElementType>) {
+      //Copy construct array element
+      new (&dst[i]) E{(ElementType const&)src[i]};
+     } else if constexpr(Constructible<ElementType> && CopyAssignable<ElementType>) {
+      //Default construct array element and copy assign new value
+      *new (&dst[i]) E{} = (ElementType const&)src[i];
+     }
     }
-   #endif
+   }
   }
 
+  //TODO Array type move assignment
+
  void convert(auto &otherVariant) {
-   /*TODO use when compiler bug has been fixed
-   runtimeElementOp([&]<typename E> {
-    otherVariant = get<E>();
-   });
-   */
+   //TODO use runtimeElementOp once the clang frontend
+   //bug has been fixed
    TypeIterator<Elements...>::run([&]<typename E> {
     if (has<E>()) {
      otherVariant = get<E>();
@@ -318,8 +377,14 @@ namespace CX {
   requires (MoveAssignable<Unqualified<E>>)
   void rdrain(E &e) {
    if (has<E>()) {
+    struct GC {
+     Variant const &v;
+
+     ~GC() {
+      v.destruct();
+     }
+    } gc{*this};
     e = (E&&)*(E *)&data;
-    destruct();
    } else {
     throw VariantTypeError{};
    }

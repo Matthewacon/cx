@@ -64,7 +64,7 @@ namespace CX {
  }
 
  //Constructor tests
- TEST(Constructor, element_copy_constructor_properly_initializes_variant) {
+ TEST(Constructor, element_copy_constructor_with_copy_constructible_type_properly_initializes_variant) {
   //Test with integral type
   using ExpectedTypeA = char;
   ExpectedTypeA const expectedValueA = 123;
@@ -95,7 +95,7 @@ namespace CX {
     copyConstructorInvoked = true;
    }
 
-   //Explicitly copy and move assignment operators
+   //Explicitly delete copy and move assignment operators
    B& operator=(B const&) = delete;
    B& operator=(B&&) = delete;
   };
@@ -108,11 +108,17 @@ namespace CX {
   }()));
  }
 
- TEST(Constructor, element_move_constructor_properly_initializes_variant) {
+ TEST(Constructor, element_copy_constructor_with_copy_assignable_type_properly_initializes_variant) {
+  //TODO test that variant invokes default constructor
+  //and copy assigns to element
+  throw std::runtime_error{"Unimplemented"};
+ }
+
+ TEST(Constructor, element_move_constructor_with_move_constructible_type_properly_initializes_variant) {
   //Test with integral type
   using ExpectedTypeA = short;
   ExpectedTypeA const expectedValueA = 534;
-  Variant<float, ExpectedTypeA> v1{expectedValueA};
+  Variant<float, ExpectedTypeA> v1{(ExpectedTypeA&&)expectedValueA};
   EXPECT_TRUE((v1.has<ExpectedTypeA>()));
   EXPECT_NO_THROW(([&] {
    EXPECT_EQ((v1.get<ExpectedTypeA>()), expectedValueA);
@@ -153,6 +159,21 @@ namespace CX {
   EXPECT_NO_THROW(([&] {
    EXPECT_EQ((v2.get<ExpectedTypeB>().i), expectedValueB);
   }()));
+ }
+
+ TEST(Constructor, element_move_constructor_with_move_assignable_type_properly_initializes_variant) {
+  //TODO test that variant invokes default constructor
+  //and move assigns to element
+  throw std::runtime_error{"Unimplemented"};
+ }
+
+ TEST(Constructor, element_copy_constructor_with_trivial_type_properly_initializes_variant) {
+  //TODO test that no element member functions are invoked
+  throw std::runtime_error{"Unimplemented"};
+ }
+
+ TEST(Constructor, element_move_constructor_with_trivial_type_properly_initializes_variant) {
+  throw std::runtime_error{"Unimplemented"};
  }
 
  TEST(Constructor, variant_copy_constructor_properly_initializes_variant) {
@@ -204,31 +225,66 @@ namespace CX {
   }()));
  }
 
+ //TODO remove
+ //Note: Replaced by tests below
  TEST(Constructor, variant_supports_array_element_type_construction) {
-  //TODO test l-value, l-value ref and r-value ref
-  throw std::runtime_error{"Unimplemeted"};
+  //l-value reference construction
+  using ExpectedTypeA = double[3];
+  double expectedValueA[3]{ 3, 2, 1 };
+
+  //Invoke Variant element copy constructor and ensure it was correctly
+  //initialized
+  Variant<ExpectedTypeA> v1{(ExpectedTypeA const&)expectedValueA};
+  EXPECT_TRUE((v1.has<ExpectedTypeA>()));
+  EXPECT_NO_THROW(([&] {
+   EXPECT_EQ(
+    (memcmp(v1.get<ExpectedTypeA>(), expectedValueA, ArraySize<ExpectedTypeA>)),
+    0
+   );
+  }()));
+
+  //r-value refernece construction
+  using ExpectedTypeB = int[2];
+  int expectedValueB[2]{ 542987, 3214 };
+
+  //Invoke Variant element move constructor and ensure it was correctly
+  //initialized
+  Variant<ExpectedTypeB> v2{(ExpectedTypeB&&)expectedValueB};
+  EXPECT_TRUE((v2.has<ExpectedTypeB>()));
+  EXPECT_NO_THROW(([&] {
+   EXPECT_EQ(
+    (memcmp(v2.get<ExpectedTypeB>(), expectedValueB, ArraySize<ExpectedTypeB>)),
+    0
+   );
+  }()));
  }
 
- TEST(Constructor, variant_const_member_supports_l_and_r_value_reference_construction) {
-  using ExpectedTypeA = int const;
-  constexpr int expectedValueA = 153125;
-  (void)(ExpectedTypeA)expectedValueA;
-  //Test with intgral types
-  //TODO deal with const element conversions within variant
-  /*
-  Variant<ExpectedTypeA> v1{(decltype(expectedValueA)&)expectedValueA};
-  Variant<ExpectedTypeA> v2{(decltype(expectedValueA)&&)expectedValueA};
-  */
+ TEST(Constructor, array_element_copy_constructor_with_copy_constructible_type_properly_initializes_variant) {
+  throw std::runtime_error{"Unimplemented"};
+ }
 
-  //Test with copyable and movable type
-  struct A {
-   int data[124];
-  };
+ TEST(Constructor, array_element_copy_constructor_with_copy_assignabe_type_properly_initializes_variant) {
+  throw std::runtime_error{"Unimplemented"};
+ }
+
+ TEST(Constructor, array_element_move_constructor_with_move_constructible_type_properly_initializes_variant) {
+  throw std::runtime_error{"Unimplemented"};
+ }
+
+ TEST(Constructor, array_element_move_constructor_with_move_assignable_type_properly_initializes_variant) {
+  throw std::runtime_error{"Unimplemented"};
+ }
+
+ TEST(Constructor, array_element_of_trivial_type_copy_constructor_properly_initializes_variant) {
+  throw std::runtime_error{"Unimplemented"};
+ }
+
+ TEST(Constructor, array_element_of_trivial_type_move_constructor_properly_initializes_variant) {
   throw std::runtime_error{"Unimplemented"};
  }
 
  //Assignment operator tests
- TEST(Assignment, element_copy_assignment_properly_initializes_variant) {
+ TEST(Assignment, element_copy_assignment_with_copy_constructible_type_properly_initializes_variant) {
   //Test with integral type
   using ExpectedTypeA = long double;
   constexpr ExpectedTypeA expectedValueA = (ExpectedTypeA)3.1415926535897932384626433826795;
@@ -277,7 +333,11 @@ namespace CX {
   }()));
  }
 
- TEST(Assignment, element_move_assignment_properly_initializes_variant) {
+ TEST(Assignment, element_copy_assignment_with_copy_assignable_type_properly_initializes_variant) {
+  throw std::runtime_error{"Unimplemented"};
+ }
+
+ TEST(Assignment, element_move_assignment_with_move_constructible_type_properly_initializes_variant) {
   //Test with integral type
   using ExpectedTypeA = bool;
   constexpr ExpectedTypeA expectedValueA = false;
@@ -324,6 +384,18 @@ namespace CX {
   EXPECT_NO_THROW(([&] {
    EXPECT_EQ((v2.get<ExpectedTypeB>().f), expectedValueB);
   }()));
+ }
+
+ TEST(Assignment, element_move_assignment_with_move_assignable_type_properly_initializes_variant) {
+  throw std::runtime_error{"Unimplemented"};
+ }
+
+ TEST(Assignment, element_copy_assignment_with_trivial_type_properly_initializes_variant) {
+  throw std::runtime_error{"Unimplemented"};
+ }
+
+ TEST(Assignment, element_move_assignment_with_trivial_type_properly_initializes_variant) {
+  throw std::runtime_error{"Unimplemented"};
  }
 
  TEST(Assignment, variant_copy_assignment_properly_initializes_variant) {
@@ -375,12 +447,69 @@ namespace CX {
   }()));
  }
 
+ //TODO remove
+ //Note: Replaced by tests below
  TEST(Assignment, variant_supports_array_element_type_assignment) {
-  //Test l-value, l-value ref and r-value ref
+  //l-value reference assignment
+  using ExpectedTypeA = double[3];
+  double expectedValueA[3]{ 3.14, 2.71, -1 };
+
+  //Invoke Variant element copy assignment operator and ensure it was correctly
+  //initialized
+  Variant<ExpectedTypeA> v1 = (ExpectedTypeA const&)expectedValueA;
+  EXPECT_TRUE((v1.has<ExpectedTypeA>()));
+  EXPECT_NO_THROW(([&] {
+   EXPECT_EQ(
+    (memcmp(v1.get<ExpectedTypeA>(), expectedValueA, ArraySize<ExpectedTypeA>)),
+    0
+   );
+  }()));
+
+  //r-value refernece assignment
+  using ExpectedTypeB = int[2];
+  int expectedValueB[2]{ 297854, 239876 };
+
+  //Invoke Variant element move assignment operator and ensure it was correctly
+  //initialized
+  Variant<ExpectedTypeB> v2 = (ExpectedTypeB&&)expectedValueB;
+  EXPECT_TRUE((v2.has<ExpectedTypeB>()));
+  EXPECT_NO_THROW(([&] {
+   EXPECT_EQ(
+    (memcmp(v2.get<ExpectedTypeB>(), expectedValueB, ArraySize<ExpectedTypeB>)),
+    0
+   );
+  }()));
+ }
+
+ TEST(Assignment, array_element_copy_assignment_with_copy_constructible_type_properly_initializes_variant) {
   throw std::runtime_error{"Unimplemented"};
  }
 
- TEST(Assignment, variant_const_member_supports_l_and_r_value_reference_assignment) {
+ TEST(Assignment, array_element_copy_assignment_with_copy_assignable_type_properly_initializes_variant) {
+  throw std::runtime_error{"Unimplemented"};
+ }
+
+ TEST(Assignment, array_element_move_assignment_with_move_constructible_type_properly_initializes_variant) {
+  throw std::runtime_error{"Unimplemented"};
+ }
+
+ TEST(Assignment, array_element_move_assignment_with_move_assignable_type_properly_initializes_variant) {
+  throw std::runtime_error{"Unimplemented"};
+ }
+
+ TEST(Assignment, array_element_assignment_of_trivial_type_copy_assignment_properly_initializes_variant) {
+  throw std::runtime_error{"Unimplemented"};
+ }
+
+ TEST(Assignment, array_element_assignment_of_trivial_type_move_assignment_properly_initializes_variant) {
+  throw std::runtime_error{"Unimplemented"};
+ }
+
+ TEST(Destructor, variant_correctly_invokes_element_type_destructor) {
+  throw std::runtime_error{"Unimplemented"};
+ }
+
+ TEST(Destructor, varaint_correctly_invokes_destructors_of_all_array_elements) {
   throw std::runtime_error{"Unimplemented"};
  }
 

@@ -209,6 +209,11 @@ namespace CX {
    using DecayedType = T;
   };
 
+  template<typename T>
+  struct Unqualified<T volatile> : Unqualified<T> {
+   using DecayedType = T;
+  };
+
   //Const identity
   template<typename T>
   struct Const : FalseType {
@@ -234,6 +239,18 @@ namespace CX {
    using ConstDecayed = T&&;
   };
 
+  template<typename T>
+  struct Volatile : FalseType {
+   using Type = T;
+   using VolatileDecayed = T;
+  };
+
+  template<typename T>
+  struct Volatile<T volatile> : TrueType {
+   using Type = T volatile;
+   using VolatileDecayed = T;
+  };
+
   //Array identity
   template<typename T>
   struct Array : FalseType {
@@ -249,18 +266,33 @@ namespace CX {
    static constexpr auto const Sized = false;
   };
 
-  //Note: This idiom will not work for zero-length-arrays
-  //in either clang or gcc due to respective bugs in the
-  //zero-length-array extension implementations.
-  //See:
-  // - https://bugs.llvm.org/show_bug.cgi?id=49808
-  // - (TODO waiting on gcc bug report)
   template<auto N, typename T>
   struct Array<T[N]> : TrueType {
    using ElementType = T;
    static constexpr auto const Size = N;
    static constexpr auto const Sized = true;
   };
+
+  //Note: This idiom will not work for zero-length-arrays
+  //in clang due to a bugs in the zero-length-array extension
+  //implementation
+  //See: https://bugs.llvm.org/show_bug.cgi?id=49808
+  template<typename T>
+  struct Array<T[0]> : TrueType {
+   using ElementType = T;
+   static constexpr auto const Size = 0;
+   static constexpr auto const Sized = true;
+  };
+
+  //Pointer idiom
+  template<typename>
+  struct Pointer : FalseType {};
+
+  template<typename T>
+  struct Pointer<T *> : TrueType {};
+
+  template<>
+  struct Pointer<decltype(nullptr)> : TrueType {};
 
   //lvalue reference identity
   template<typename T>
@@ -283,6 +315,40 @@ namespace CX {
   struct RValueReference<T&&> : TrueType {
    using ElementType = T;
   };
+
+  //Sign identity and decay/promotion
+  template<typename T>
+  struct Sign {
+   using SignedType = T;
+   using UnsingedType = T;
+   static constexpr auto const Signed = false;
+   static constexpr auto const Unsigned = false;
+  };
+
+  #define DEFINE_SIGN_SPECIALIZATION(signedType, unsignedType) \
+  template<>\
+  struct Sign<signedType> {\
+   using SignedType = signedType;\
+   using UnsignedType = unsignedType;\
+   static constexpr auto const Signed = true;\
+   static constexpr auto const Unsigned = false;\
+  };\
+  \
+  template<>\
+  struct Sign<unsignedType> {\
+   using SignedType = signedType;\
+   using UnsignedType = unsignedType;\
+   static constexpr auto const Signed = false;\
+   static constexpr auto const Unsigned = true;\
+  }
+
+  DEFINE_SIGN_SPECIALIZATION(signed char,      unsigned char);
+  DEFINE_SIGN_SPECIALIZATION(signed short,     unsigned short);
+  DEFINE_SIGN_SPECIALIZATION(signed int,       unsigned int);
+  DEFINE_SIGN_SPECIALIZATION(signed long,      unsigned long);
+  DEFINE_SIGN_SPECIALIZATION(signed long long, unsigned long long);
+
+  #undef DEFINE_SIGN_SPECIALIZATION
 
   //Function identity meta-functions
   //Member function idiom
@@ -489,6 +555,16 @@ namespace CX {
   ::ConstDecayed;
 
  template<typename T>
+ concept Volatile = MetaFunctions
+  ::Volatile<T>
+  ::Value;
+
+ template<typename T>
+ using VolatileDecayed = typename MetaFunctions
+  ::Volatile<T>
+  ::VolatileDecayed;
+
+ template<typename T>
  concept Array = MetaFunctions
   ::Array<T>
   ::Value;
@@ -515,25 +591,135 @@ namespace CX {
   ::Array<T>
   ::Size;
 
+ //Pointer identity
+ template<typename T>
+ concept Pointer = MetaFunctions
+  ::Pointer<T>
+  ::Value;
+
+ //Member pointer identity
+ template<typename T>
+ concept MemberPointer = MetaFunctions
+  ::MemberField<T>
+  ::Value
+  || MetaFunctions
+   ::MemberFunction<T>
+   ::Value;
+
+ //l-value reference identity
  template<typename T>
  concept LValueReference = MetaFunctions
   ::LValueReference<T>
   ::Value;
 
+ //Yields the element type of a l-value refernece;
+ //ie. `T const& -> T const`
  template<typename T>
  using LValueReferenceElementType = typename MetaFunctions
   ::LValueReference<T>
   ::ElementType;
 
+ //r-value reference identity
  template<typename T>
  concept RValueReference = MetaFunctions
   ::RValueReference<T>
   ::Value;
 
+ //Yields the element type of a r-value reference;
+ //ie. `T&& -> T`
  template<typename T>
  using RValueReferenceElementType = typename MetaFunctions
   ::RValueReference<T>
   ::ElementType;
+
+ //Signed identity
+ template<typename T>
+ concept Signed = MetaFunctions
+  ::Sign<T>
+  ::Signed;
+
+ //Unsigned identity
+ template<typename T>
+ concept Unsigned = !MetaFunctions
+  ::Sign<T>
+  ::Unsigned;
+
+ //Produce unsigned type equivalent
+ template<typename T>
+ using SignDecayed = typename MetaFunctions
+  ::Sign<T>
+  ::UnsignedType;
+
+ //Produce signed type equivalent
+ template<typename T>
+ using SignPromoted = typename MetaFunctions
+  ::Sign<T>
+  ::SignedType;
+
+ //Enum type identity
+ template<typename T>
+ concept Enum = __is_enum(T);
+
+ //Union type identity
+ template<typename T>
+ concept Union = __is_union(T);
+
+ //Integral type identity
+ //Defined by: https://en.cppreference.com/w/cpp/types/is_integral
+ template<typename T>
+ concept Integral = MatchAnyType<
+  SignDecayed<ConstDecayed<T>>,
+  bool,
+  char,
+  wchar_t,
+  char8_t,
+  char16_t,
+  char32_t,
+  short,
+  int,
+  long,
+  long long
+ >;
+
+ //Floating precision type identity
+ //Defined by: https://en.cppreference.com/w/cpp/types/is_floating_point
+ template<typename T>
+ concept Floating = MatchAnyType<
+  ConstDecayed<T>,
+  float,
+  double,
+  long double
+ >;
+
+ //Arithmetic type identity
+ //Defined by: https://en.cppreference.com/w/cpp/types/is_arithmetic
+ template<typename T>
+ concept Arithmetic = Integral<T>
+  || Floating<T>;
+
+ //Scalar type identity
+ //Defined by: https://en.cppreference.com/w/cpp/types/is_scalar
+ template<typename T>
+ concept Scalar = Arithmetic<T>
+  || Enum<T>
+  || Pointer<T>
+  || MemberPointer<T>;
+
+ //Trivially copyable type identity
+ //Defined by: https://en.cppreference.com/w/cpp/named_req/TriviallyCopyable
+ template<typename T>
+ concept TriviallyCopyable = Constructible<ArrayElementType<T>>
+  && Destructible<ArrayElementType<T>>
+  && CopyConstructible<ArrayElementType<T>>
+  && MoveConstructible<ArrayElementType<T>>
+  && CopyAssignable<ArrayElementType<T>>
+  && MoveAssignable<ArrayElementType<T>>;
+
+ //Trivial type identity
+ //Defined by: https://en.cppreference.com/w/cpp/named_req/TrivialType
+ template<typename T>
+ concept Trivial = Scalar<T>
+  || TriviallyCopyable<T>;
 
  //Function identity concepts
  template<typename F, typename R = ImpossibleType<>, typename... Args>

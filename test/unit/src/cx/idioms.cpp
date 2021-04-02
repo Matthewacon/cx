@@ -311,6 +311,30 @@ namespace CX {
   EXPECT_FALSE((Const<float&&>));
  }
 
+ TEST(ConstDecayed, const_types_lose_const_qualifier) {
+  throw std::runtime_error{"Unimplemented"};
+ }
+
+ TEST(ConstDecayed, non_const_types_are_unmodified) {
+  throw std::runtime_error{"Unimplemented"};
+ }
+
+ TEST(Volatile, volatile_types_satisfy_constraint) {
+  throw std::runtime_error{"Unimplemented"};
+ }
+
+ TEST(Volatile, non_volatile_tyeps_do_not_satisfy_constraint) {
+  throw std::runtime_error{"Unimplemented"};
+ }
+
+ TEST(VolatileDecayed, volatile_types_lose_volatile_qualifier) {
+  throw std::runtime_error{"Unimplemented"};
+ }
+
+ TEST(VolatileDecayed, non_volatile_types_are_unmodified) {
+  throw std::runtime_error{"Unimplemented"};
+ }
+
  TEST(Array, unsized_array_types_satisfy_constraint) {
   EXPECT_TRUE((Array<char[]>));
   EXPECT_TRUE((Array<float const[]>));
@@ -395,6 +419,22 @@ namespace CX {
   EXPECT_EQ((ArraySize<int const[]>), -1);
  }
 
+ TEST(Pointer, pointer_types_satisfy_constraint) {
+  throw std::runtime_error{"Unimplemented"};
+ }
+
+ TEST(Pointer, non_pointer_types_do_not_satisfy_constraint) {
+  throw std::runtime_error{"Unimplemented"};
+ }
+
+ TEST(MemberPointer, member_pointer_types_satisfy_constraint) {
+  throw std::runtime_error{"Unimplemented"};
+ }
+
+ TEST(MemberPointer, non_member_pointer_types_do_not_satisfy_constraint) {
+  throw std::runtime_error{"Unimplemented"};
+ }
+
  TEST(LValueReference, lvalue_reference_types_satisfy_constraint) {
   EXPECT_TRUE((LValueReference<int&>));
   EXPECT_TRUE((LValueReference<double const&>));
@@ -473,6 +513,110 @@ namespace CX {
   using TypeC = void *;
   using ExpectedTypeC = TypeC;
   EXPECT_TRUE((SameType<RValueReferenceElementType<TypeC>, ExpectedTypeC>));
+ }
+
+ TEST(Signed, signed_types_satisfy_constraint) {
+  throw std::runtime_error{"Unimplemented"};
+ }
+
+ TEST(Signed, non_signed_types_do_not_satisfy_constraint) {
+  throw std::runtime_error{"Unimplemented"};
+ }
+
+ TEST(Unsigned, unsigned_types_satisfy_constraint) {
+  throw std::runtime_error{"Unimplemented"};
+ }
+
+ TEST(Unsigned, non_unsigned_types_do_not_satisfy_constraint) {
+  throw std::runtime_error{"Unimplemented"};
+ }
+
+ TEST(SignDecayed, signed_types_lose_signed_qualifier) {
+  throw std::runtime_error{"Unimplemented"};
+ }
+
+ TEST(SignDecayed, unsigned_types_are_unmodified) {
+  throw std::runtime_error{"Unimplemented"};
+ }
+
+ TEST(SignDecayed, non_sign_types_are_unmodified) {
+  throw std::runtime_error{"Unimplemented"};
+ }
+
+ TEST(SignPromoted, unsingned_types_are_sign_qualified) {
+  throw std::runtime_error{"Unimplemented"};
+ }
+
+ TEST(SignPromoted, signed_types_are_unmodified) {
+  throw std::runtime_error{"Unimplemented"};
+ }
+
+ TEST(SignPromoted, non_signed_types_are_unmodified) {
+  throw std::runtime_error{"Unimplemented"};
+ }
+
+ TEST(Enum, enum_types_satisfy_constraint) {
+  throw std::runtime_error{"Unimplemented"};
+ }
+
+ TEST(Enum, non_enum_types_do_not_satisfy_constraint) {
+  throw std::runtime_error{"Unimplemented"};
+ }
+
+ TEST(Union, union_types_satisfy_constraint) {
+  throw std::runtime_error{"Unimplemented"};
+ }
+
+ TEST(Union, non_union_types_do_not_satisfy_constraint) {
+  throw std::runtime_error{"Unimplemented"};
+ }
+
+ TEST(Integral, integral_types_satisfy_constraint) {
+  throw std::runtime_error{"Unimplemented"};
+ }
+
+ TEST(Integral, non_integral_types_do_not_satisfy_constraint) {
+  throw std::runtime_error{"Unimplemented"};
+ }
+
+ TEST(Floating, floating_precision_types_satisfy_constraint) {
+  throw std::runtime_error{"Unimplemented"};
+ }
+
+ TEST(Floating, non_floating_precision_types_do_not_satisfy_constraint) {
+  throw std::runtime_error{"Unimplemented"};
+ }
+
+ TEST(Arithmetic, arithmetic_types_satisfy_constraint) {
+  throw std::runtime_error{"Unimplemented"};
+ }
+
+ TEST(Arithmetic, non_arithmetic_types_do_not_satisfy_constraint) {
+  throw std::runtime_error{"Unimplemented"};
+ }
+
+ TEST(Scalar, scalar_types_satisfy_constraint) {
+  throw std::runtime_error{"Unimplemented"};
+ }
+
+ TEST(Scalar, non_scalar_types_do_not_satisfy_constraint) {
+  throw std::runtime_error{"Unimplemented"};
+ }
+
+ TEST(TriviallyCopyable, trivially_copyable_types_satisfy_constraint) {
+  throw std::runtime_error{"Unimplemented"};
+ }
+
+ TEST(TriviallyCopyable, non_trivially_copyable_types_do_not_satisfy_constraint) {
+  throw std::runtime_error{"Unimplemented"};
+ }
+
+ TEST(Trivial, trivial_types_satisfy_constraint) {
+  throw std::runtime_error{"Unimplemented"};
+ }
+
+ TEST(Trivial, non_trivial_types_do_not_satisfy_constraint) {
+  throw std::runtime_error{"Unimplemented"};
  }
 
  struct S {

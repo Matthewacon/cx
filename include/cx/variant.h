@@ -587,6 +587,11 @@ namespace CX {
    throw VariantTypeError{};
   }
  };
+
+ //Deduction guides for Variant
+ Variant() -> Variant<>;
+ template<typename E>
+ Variant(E) -> Variant<E>;
 }
 
 //Clean up internal macros

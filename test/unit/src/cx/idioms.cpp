@@ -533,75 +533,125 @@ namespace CX {
  }
 
  TEST(SignDecayed, signed_types_lose_signed_qualifier) {
-  throw std::runtime_error{"Unimplemented"};
+  EXPECT_TRUE((SameType<SignDecayed<signed char>, unsigned char>));
+  EXPECT_TRUE((SameType<SignDecayed<signed int>, unsigned int>));
  }
 
  TEST(SignDecayed, unsigned_types_are_unmodified) {
-  throw std::runtime_error{"Unimplemented"};
+  EXPECT_TRUE((SameType<SignDecayed<float>, float>));
+  EXPECT_TRUE((SameType<SignDecayed<void *>, void *>));
  }
 
  TEST(SignDecayed, non_sign_types_are_unmodified) {
-  throw std::runtime_error{"Unimplemented"};
+  EXPECT_TRUE((SameType<SignDecayed<void (signed char)>, void (signed char)>));
+  EXPECT_TRUE((SameType<SignDecayed<unsigned int[]>, unsigned int[]>));
  }
 
  TEST(SignPromoted, unsingned_types_are_sign_qualified) {
-  throw std::runtime_error{"Unimplemented"};
+  EXPECT_TRUE((SameType<SignPromoted<unsigned int>, signed int>));
+  EXPECT_EQ(sizeof(SignPromoted<char8_t>), sizeof(char8_t));
+  EXPECT_TRUE((SameType<SignPromoted<unsigned long long>, signed long long>));
  }
 
  TEST(SignPromoted, signed_types_are_unmodified) {
-  throw std::runtime_error{"Unimplemented"};
+  EXPECT_TRUE((SameType<SignPromoted<signed int>, signed int>));
+  EXPECT_TRUE((SameType<SignPromoted<signed short>, signed short>));
  }
 
  TEST(SignPromoted, non_signed_types_are_unmodified) {
-  throw std::runtime_error{"Unimplemented"};
+  struct A {};
+  EXPECT_TRUE((SameType<SignPromoted<A>, A>));
+  EXPECT_TRUE((SameType<SignPromoted<float>, float>));
  }
 
  TEST(Enum, enum_types_satisfy_constraint) {
-  throw std::runtime_error{"Unimplemented"};
+  enum struct E1 {};
+  EXPECT_TRUE((Enum<E1>));
+  enum E2 { A };
+  EXPECT_TRUE((Enum<decltype(A)>));
  }
 
  TEST(Enum, non_enum_types_do_not_satisfy_constraint) {
-  throw std::runtime_error{"Unimplemented"};
+  struct A {};
+  EXPECT_FALSE((Enum<A>));
+  enum struct E {};
+  EXPECT_FALSE((Enum<E ()>));
  }
 
  TEST(Union, union_types_satisfy_constraint) {
-  throw std::runtime_error{"Unimplemented"};
+  union U {};
+  EXPECT_TRUE((Union<U>));
+  union {} u;
+  EXPECT_TRUE((Union<decltype(u)>));
  }
 
  TEST(Union, non_union_types_do_not_satisfy_constraint) {
-  throw std::runtime_error{"Unimplemented"};
+  struct A {};
+  EXPECT_FALSE((Union<A>));
+  EXPECT_FALSE((Union<int[]>));
  }
 
  TEST(Struct, struct_types_satisfy_constraint) {
-  throw std::runtime_error{"Unimplemented"};
+  EXPECT_TRUE((Struct<Dummy<>>));
+  struct A {};
+  EXPECT_TRUE((Struct<A>));
  }
 
  TEST(Struct, non_struct_types_do_not_satisfy_constraint) {
-  throw std::runtime_error{"Unimplemented"};
+  EXPECT_FALSE((Struct<float *>));
+  enum struct E {};
+  EXPECT_FALSE((Struct<E>));
  }
 
  TEST(Integral, integral_types_satisfy_constraint) {
-  throw std::runtime_error{"Unimplemented"};
+  EXPECT_TRUE((Integral<bool>));
+  EXPECT_TRUE((Integral<char>));
+  EXPECT_TRUE((Integral<wchar_t>));
+  EXPECT_TRUE((Integral<char8_t>));
+  EXPECT_TRUE((Integral<char16_t>));
+  EXPECT_TRUE((Integral<char32_t>));
+  EXPECT_TRUE((Integral<short>));
+  EXPECT_TRUE((Integral<int>));
+  EXPECT_TRUE((Integral<long>));
+  EXPECT_TRUE((Integral<long long>));
  }
 
  TEST(Integral, non_integral_types_do_not_satisfy_constraint) {
-  throw std::runtime_error{"Unimplemented"};
+  EXPECT_FALSE((Integral<float>));
+  EXPECT_FALSE((Integral<Dummy<>>));
+  EXPECT_FALSE((Integral<void *>));
  }
 
  TEST(Floating, floating_precision_types_satisfy_constraint) {
-  throw std::runtime_error{"Unimplemented"};
+  EXPECT_TRUE((Floating<float>));
+  EXPECT_TRUE((Floating<double>));
+  EXPECT_TRUE((Floating<long double>));
  }
 
  TEST(Floating, non_floating_precision_types_do_not_satisfy_constraint) {
-  throw std::runtime_error{"Unimplemented"};
+  EXPECT_FALSE((Floating<int>));
+  EXPECT_FALSE((Floating<char *>));
  }
 
  TEST(Arithmetic, arithmetic_types_satisfy_constraint) {
-  throw std::runtime_error{"Unimplemented"};
+  EXPECT_TRUE((Arithmetic<bool>));
+  EXPECT_TRUE((Arithmetic<char>));
+  EXPECT_TRUE((Arithmetic<wchar_t>));
+  EXPECT_TRUE((Arithmetic<char8_t>));
+  EXPECT_TRUE((Arithmetic<char16_t>));
+  EXPECT_TRUE((Arithmetic<char32_t>));
+  EXPECT_TRUE((Arithmetic<short>));
+  EXPECT_TRUE((Arithmetic<int>));
+  EXPECT_TRUE((Arithmetic<long>));
+  EXPECT_TRUE((Arithmetic<long long>));
+  EXPECT_TRUE((Arithmetic<float>));
+  EXPECT_TRUE((Arithmetic<double>));
+  EXPECT_TRUE((Arithmetic<long double>));
  }
 
  TEST(Arithmetic, non_arithmetic_types_do_not_satisfy_constraint) {
-  throw std::runtime_error{"Unimplemented"};
+  EXPECT_FALSE((Arithmetic<void *>));
+  EXPECT_FALSE((Arithmetic<int[]>));
  }
 
  TEST(Signed, signed_types_satisfy_constraint) {
@@ -670,27 +720,76 @@ namespace CX {
  }
 
  TEST(Scalar, scalar_types_satisfy_constraint) {
-  throw std::runtime_error{"Unimplemented"};
+  EXPECT_TRUE((Arithmetic<bool>));
+  EXPECT_TRUE((Arithmetic<char>));
+  EXPECT_TRUE((Arithmetic<wchar_t>));
+  EXPECT_TRUE((Arithmetic<char8_t>));
+  EXPECT_TRUE((Arithmetic<char16_t>));
+  EXPECT_TRUE((Arithmetic<char32_t>));
+  EXPECT_TRUE((Arithmetic<short>));
+  EXPECT_TRUE((Arithmetic<int>));
+  EXPECT_TRUE((Arithmetic<long>));
+  EXPECT_TRUE((Arithmetic<long long>));
+  EXPECT_TRUE((Arithmetic<float>));
+  EXPECT_TRUE((Arithmetic<double>));
+  EXPECT_TRUE((Arithmetic<long double>));
+  enum E {};
+  EXPECT_TRUE((Scalar<E>));
+  EXPECT_TRUE((Scalar<void *>));
+  EXPECT_TRUE((Scalar<int (Dummy<>::*)>));
  }
 
  TEST(Scalar, non_scalar_types_do_not_satisfy_constraint) {
-  throw std::runtime_error{"Unimplemented"};
+  struct A {};
+  EXPECT_FALSE((Scalar<A>));
+  EXPECT_FALSE((Scalar<char[123]>));
  }
 
  TEST(TriviallyCopyable, trivially_copyable_types_satisfy_constraint) {
-  throw std::runtime_error{"Unimplemented"};
+  EXPECT_TRUE((TriviallyCopyable<Dummy<>>));
+  union U {};
+  EXPECT_TRUE((TriviallyCopyable<U>));
+  EXPECT_TRUE((TriviallyCopyable<int[123]>));
  }
 
  TEST(TriviallyCopyable, non_trivially_copyable_types_do_not_satisfy_constraint) {
-  throw std::runtime_error{"Unimplemented"};
+  EXPECT_FALSE((TriviallyCopyable<char&>));
+  struct A {
+   virtual ~A() = default;
+  };
+  EXPECT_FALSE((TriviallyCopyable<A>));
  }
 
  TEST(Trivial, trivial_types_satisfy_constraint) {
-  throw std::runtime_error{"Unimplemented"};
+  EXPECT_TRUE((Arithmetic<bool>));
+  EXPECT_TRUE((Arithmetic<char>));
+  EXPECT_TRUE((Arithmetic<wchar_t>));
+  EXPECT_TRUE((Arithmetic<char8_t>));
+  EXPECT_TRUE((Arithmetic<char16_t>));
+  EXPECT_TRUE((Arithmetic<char32_t>));
+  EXPECT_TRUE((Arithmetic<short>));
+  EXPECT_TRUE((Arithmetic<int>));
+  EXPECT_TRUE((Arithmetic<long>));
+  EXPECT_TRUE((Arithmetic<long long>));
+  EXPECT_TRUE((Arithmetic<float>));
+  EXPECT_TRUE((Arithmetic<double>));
+  EXPECT_TRUE((Arithmetic<long double>));
+  enum E {};
+  EXPECT_TRUE((Scalar<E>));
+  EXPECT_TRUE((Scalar<void *>));
+  EXPECT_TRUE((Scalar<int (Dummy<>::*)>));
+  EXPECT_TRUE((TriviallyCopyable<Dummy<>>));
+  union U {};
+  EXPECT_TRUE((TriviallyCopyable<U>));
+  EXPECT_TRUE((TriviallyCopyable<int[123]>));
  }
 
  TEST(Trivial, non_trivial_types_do_not_satisfy_constraint) {
-  throw std::runtime_error{"Unimplemented"};
+  EXPECT_FALSE((TriviallyCopyable<int const&&>));
+  struct A {
+   virtual void doNothing();
+  };
+  EXPECT_FALSE((TriviallyCopyable<A>));
  }
 
  struct S {

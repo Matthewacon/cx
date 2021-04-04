@@ -353,7 +353,7 @@ namespace CX {
   >
   struct Sign {
    using SignedType = T;
-   using UnsingedType = T;
+   using UnsignedType = T;
   };
 
   #define DEFINE_SIGN_SPECIALIZATION(signedType, unsignedType) \
@@ -899,12 +899,7 @@ namespace CX {
  //Trivially copyable identity
  //Defined by: https://en.cppreference.com/w/cpp/named_req/TriviallyCopyable
  template<typename T>
- concept TriviallyCopyable = Constructible<ArrayElementType<T>>
-  && Destructible<ArrayElementType<T>>
-  && CopyConstructible<ArrayElementType<T>>
-  && MoveConstructible<ArrayElementType<T>>
-  && CopyAssignable<ArrayElementType<T>>
-  && MoveAssignable<ArrayElementType<T>>;
+ concept TriviallyCopyable = __is_trivially_copyable(T);
 
  //Trivial identity
  //Defined by: https://en.cppreference.com/w/cpp/named_req/TrivialType

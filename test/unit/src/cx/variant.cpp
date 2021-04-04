@@ -109,9 +109,50 @@ namespace CX {
  }
 
  TEST(Constructor, element_copy_constructor_with_copy_assignable_type_properly_initializes_variant) {
-  //TODO test that variant invokes default constructor
-  //and copy assigns to element
-  throw std::runtime_error{"Unimplemented"};
+  //Test with copy assignable type
+  static bool
+   copyAssignmentOperatorInvoked,
+   defaultConstructorInvoked;
+  //Reset flags in case test is re-run
+  copyAssignmentOperatorInvoked = false;
+  defaultConstructorInvoked = false;
+  using ExpectedTypeA = struct A {
+   int i;
+
+   A() :
+    i(789)
+   {
+    defaultConstructorInvoked = true;
+   }
+
+   A(int i) :
+    i(i)
+   {}
+
+   A& operator=(A const &a) {
+    copyAssignmentOperatorInvoked = true;
+    i = a.i;
+    return *this;
+   }
+
+   //Explicitly delete unused copy/move constructors/operators
+   A(A const &a) = delete;
+   A(A&&) = delete;
+   A& operator=(A&&) = delete;
+  };
+  A const expectedValueA{123};
+
+  //Construct variant and ensure it was correctly initialized
+  Variant<char8_t, ExpectedTypeA> v1{(ExpectedTypeA const&)expectedValueA};
+  EXPECT_TRUE((v1.has<ExpectedTypeA>()));
+  EXPECT_NO_THROW(([&] {
+   EXPECT_EQ((v1.get<ExpectedTypeA>().i), expectedValueA.i);
+  }()));
+
+  //Ensure element default constructor and copy assignment operator
+  //were invoked
+  EXPECT_TRUE((copyAssignmentOperatorInvoked));
+  EXPECT_TRUE((defaultConstructorInvoked));
  }
 
  TEST(Constructor, element_move_constructor_with_move_constructible_type_properly_initializes_variant) {
@@ -162,18 +203,95 @@ namespace CX {
  }
 
  TEST(Constructor, element_move_constructor_with_move_assignable_type_properly_initializes_variant) {
-  //TODO test that variant invokes default constructor
-  //and move assigns to element
-  throw std::runtime_error{"Unimplemented"};
+  //Test with move assignable type
+  static bool
+   moveAssignmentOperatorInvoked,
+   defaultConstructorInvoked;
+  //Reset flags in case test is re-run
+  moveAssignmentOperatorInvoked = false;
+  defaultConstructorInvoked = false;
+  using ExpectedTypeA = struct A {
+   float f;
+
+   A() :
+    f(3.141)
+   {
+    defaultConstructorInvoked = true;
+   }
+
+   A(float f) :
+    f(f)
+   {}
+
+   A& operator=(A &&a) {
+    moveAssignmentOperatorInvoked = true;
+    f = a.f;
+    a.f = 0;
+    return *this;
+   }
+
+   //Explicitly delete unused constructors / assignment operators
+   A(A const&) = delete;
+   A(A&&) = delete;
+   A& operator=(A const&) = delete;
+  };
+  float const expectedValueA = 2.71;
+  A temp{expectedValueA};
+
+  //Construct variant and ensure it was correctly initialized
+  Variant<void *, char, ExpectedTypeA> v1{(ExpectedTypeA&&)temp};
+  EXPECT_TRUE((v1.has<ExpectedTypeA>()));
+  EXPECT_NO_THROW(([&] {
+   EXPECT_EQ((v1.get<ExpectedTypeA>().f), expectedValueA);
+  }()));
+
+  //Ensure moved temporary has been reset
+  EXPECT_EQ(temp.f, 0);
+
+  //Ensure default constructor and move assignment operator
+  //were invoked
+  EXPECT_TRUE((defaultConstructorInvoked));
+  EXPECT_TRUE((moveAssignmentOperatorInvoked));
  }
 
  TEST(Constructor, element_copy_constructor_with_trivial_type_properly_initializes_variant) {
-  //TODO test that no element member functions are invoked
-  throw std::runtime_error{"Unimplemented"};
+  using ExpectedTypeA = struct A {
+   struct {
+    char c;
+   } b;
+  };
+  ExpectedTypeA expectedValueA{{'f'}};
+
+  //Ensure `ExpectedTypeA` is trivial
+  EXPECT_TRUE((Trivial<ExpectedTypeA>));
+
+  //Construct variant and ensure it was correctly initialized
+  Variant<ExpectedTypeA, int (Dummy<>::*)> v1{(ExpectedTypeA const&)expectedValueA};
+  EXPECT_TRUE((v1.has<ExpectedTypeA>()));
+  EXPECT_NO_THROW(([&] {
+   EXPECT_EQ((v1.get<ExpectedTypeA>().b.c), expectedValueA.b.c);
+  }()));
  }
 
  TEST(Constructor, element_move_constructor_with_trivial_type_properly_initializes_variant) {
-  throw std::runtime_error{"Unimplemented"};
+  using ExpectedTypeA = struct A {
+   float data[123];
+  };
+  float expectedValueA[123]{9.87654};
+  ExpectedTypeA temp{{9.87654}};
+
+  //Ensure `ExpectedTypeA` is trivial
+  EXPECT_TRUE((Trivial<ExpectedTypeA>));
+
+  //Construct variant and ensure it was correctly initialized
+  Variant<double, ExpectedTypeA, int> v1{(ExpectedTypeA&&)temp};
+  EXPECT_TRUE((v1.has<ExpectedTypeA>()));
+  EXPECT_NO_THROW(([&] {
+   EXPECT_EQ(
+    (memcmp(&v1.get<ExpectedTypeA>().data, &expectedValueA, sizeof(float) * 123)),
+    0
+   );
+  }()));
  }
 
  TEST(Constructor, variant_copy_constructor_properly_initializes_variant) {
@@ -225,62 +343,235 @@ namespace CX {
   }()));
  }
 
- //TODO remove
- //Note: Replaced by tests below
- TEST(Constructor, variant_supports_array_element_type_construction) {
-  //l-value reference construction
-  using ExpectedTypeA = double[3];
-  double expectedValueA[3]{ 3, 2, 1 };
+ TEST(Constructor, array_element_copy_constructor_with_copy_constructible_type_properly_initializes_variant) {
+  static int copyConstructorInvoked;
+  //Reset counter in case test is re-run
+  copyConstructorInvoked = 0;
+  using ExpectedTypeA = struct A {
+   double d;
 
-  //Invoke Variant element copy constructor and ensure it was correctly
-  //initialized
-  Variant<ExpectedTypeA> v1{(ExpectedTypeA const&)expectedValueA};
+   A(double d) :
+    d(d)
+   {}
+
+   A(A const &a) :
+    d(a.d)
+   {
+    copyConstructorInvoked++;
+   }
+
+   //Delete unused constructors / assignment operators
+   A(A&&) = delete;
+   A& operator=(A const&) = delete;
+   A& operator=(A&&) = delete;
+  }[2];
+  ExpectedTypeA const expectedValueA{
+   {3.21},
+   {1.23}
+  };
+
+  //Construct variant and ensure it was correctly initialized
+  Variant<ExpectedTypeA, char, void (Dummy<>::*)()> v1{(ExpectedTypeA const&)expectedValueA};
   EXPECT_TRUE((v1.has<ExpectedTypeA>()));
   EXPECT_NO_THROW(([&] {
    EXPECT_EQ(
-    (memcmp(v1.get<ExpectedTypeA>(), expectedValueA, ArraySize<ExpectedTypeA>)),
+    (memcmp(&v1.get<ExpectedTypeA>(), &expectedValueA, sizeof(ArrayElementType<ExpectedTypeA>) * 2)),
     0
    );
   }()));
 
-  //r-value refernece construction
-  using ExpectedTypeB = int[2];
-  int expectedValueB[2]{ 542987, 3214 };
-
-  //Invoke Variant element move constructor and ensure it was correctly
-  //initialized
-  Variant<ExpectedTypeB> v2{(ExpectedTypeB&&)expectedValueB};
-  EXPECT_TRUE((v2.has<ExpectedTypeB>()));
-  EXPECT_NO_THROW(([&] {
-   EXPECT_EQ(
-    (memcmp(v2.get<ExpectedTypeB>(), expectedValueB, ArraySize<ExpectedTypeB>)),
-    0
-   );
-  }()));
- }
-
- TEST(Constructor, array_element_copy_constructor_with_copy_constructible_type_properly_initializes_variant) {
-  throw std::runtime_error{"Unimplemented"};
+  //Ensure all array elements were copy constructed
+  EXPECT_EQ(copyConstructorInvoked, 2);
  }
 
  TEST(Constructor, array_element_copy_constructor_with_copy_assignabe_type_properly_initializes_variant) {
-  throw std::runtime_error{"Unimplemented"};
+  static int
+   defaultConstructorInvoked,
+   copyAssignmentOperatorInvoked;
+  //Reset counters in case test is re-run
+  defaultConstructorInvoked = 0;
+  copyAssignmentOperatorInvoked = 0;
+  using ExpectedTypeA = struct A {
+   int i;
+
+   A(int i) :
+    i(i)
+   {}
+
+   A() :
+    i(0)
+   {
+    defaultConstructorInvoked++;
+   }
+
+   A& operator=(A const &a) {
+    copyAssignmentOperatorInvoked++;
+    i = a.i;
+    return *this;
+   }
+
+   //Delete unused constructors / assignment operators
+   A(A const&) = delete;
+   A(A&&) = delete;
+   A& operator=(A&&) = delete;
+  }[3];
+  ExpectedTypeA const expectedValueA{
+   {7},
+   {8},
+   {9}
+  };
+
+  //Construct variant and ensure it was correctly initialized
+  Variant<float[12], ExpectedTypeA> v1{(ExpectedTypeA const&)expectedValueA};
+  EXPECT_TRUE((v1.has<ExpectedTypeA>()));
+  EXPECT_NO_THROW(([&] {
+   EXPECT_EQ(
+    (memcmp(&v1.get<ExpectedTypeA>(), &expectedValueA, sizeof(ArrayElementType<ExpectedTypeA>) * 3)),
+    0
+   );
+  }()));
+
+  //Ensure element default constructors and copy assignment operators
+  //were invoked
+  EXPECT_EQ(defaultConstructorInvoked, 3);
+  EXPECT_EQ(copyAssignmentOperatorInvoked, 3);
  }
 
  TEST(Constructor, array_element_move_constructor_with_move_constructible_type_properly_initializes_variant) {
-  throw std::runtime_error{"Unimplemented"};
+  static int moveConstructorsInvoked;
+  //Reset counter in case test is re-run
+  moveConstructorsInvoked = 0;
+  using ExpectedTypeA = struct A {
+   int i;
+
+   A(int i) :
+    i(i)
+   {}
+
+   A(A &&a) :
+    i(a.i)
+   {
+    moveConstructorsInvoked++;
+    a.i = 0;
+   }
+
+   //Delete unused constructors and assignment operators
+   A(A const&) = delete;
+   A& operator=(A const&) = delete;
+   A& operator=(A&&) = delete;
+  }[5];
+  ExpectedTypeA const expectedValueA{
+   {1}, {2}, {3}, {4}, {5}
+  };
+  ExpectedTypeA temp{
+   {1}, {2}, {3}, {4}, {5}
+  };
+
+  //Construct variant and ensure it was correctly initialized
+  Variant<int (Dummy<>::*), ExpectedTypeA> v1{(ExpectedTypeA&&)temp};
+  EXPECT_TRUE((v1.has<ExpectedTypeA>()));
+  EXPECT_NO_THROW(([&] {
+   EXPECT_EQ(
+    (memcmp(&v1.get<ExpectedTypeA>(), &expectedValueA, sizeof(ArrayElementType<ExpectedTypeA>) * 5)),
+    0
+   );
+  }()));
+
+  //Ensure temporary elements were moved
+  for (auto &t : temp) {
+   EXPECT_EQ(t.i, 0);
+  }
+
+  //Ensure all move constructors were invoked
+  EXPECT_EQ(moveConstructorsInvoked, 5);
  }
 
  TEST(Constructor, array_element_move_constructor_with_move_assignable_type_properly_initializes_variant) {
-  throw std::runtime_error{"Unimplemented"};
+  static int
+   defaultConstructorsInvoked,
+   moveAssignmentOperatorsInvoked;
+  //Reset counters in case test is re-run
+  defaultConstructorsInvoked = 0;
+  moveAssignmentOperatorsInvoked = 0;
+  using ExpectedTypeA = struct A {
+   char c;
+
+   A(char c) :
+    c(c)
+   {}
+
+   A() :
+    c(0)
+   {
+    defaultConstructorsInvoked++;
+   }
+
+   A& operator=(A &&a) {
+    moveAssignmentOperatorsInvoked++;
+    c = a.c;
+    a.c = 0;
+    return *this;
+   }
+
+   //Delete unused constructors and assignment operators
+   A(A const&) = delete;
+   A(A&&) = delete;
+   A& operator=(A const &) = delete;
+  }[2];
+  ExpectedTypeA const expectedValueA{
+   {'a'}, {'b'}
+  };
+  ExpectedTypeA temp{
+   {'a'}, {'b'}
+  };
+
+  //Construct variant and ensure it was correctly initialized
+  Variant<ExpectedTypeA> v1{(ExpectedTypeA&&)temp};
+  EXPECT_TRUE((v1.has<ExpectedTypeA>()));
+  EXPECT_NO_THROW(([&] {
+   EXPECT_EQ(
+    (memcmp(&v1.get<ExpectedTypeA>(), &expectedValueA, sizeof(ArrayElementType<ExpectedTypeA>) * 2)),
+    0
+   );
+  }()));
+
+  //Ensure temporary elements were moved
+  for (auto &e : temp) {
+   EXPECT_EQ(e.c, 0);
+  }
+
+  //Ensure default constructors and move assignment operators
+  //were invoked
+  EXPECT_EQ(defaultConstructorsInvoked, 2);
+  EXPECT_EQ(moveAssignmentOperatorsInvoked, 2);
  }
 
  TEST(Constructor, array_element_of_trivial_type_copy_constructor_properly_initializes_variant) {
-  throw std::runtime_error{"Unimplemented"};
+  using ExpectedTypeA = struct A {
+   float f;
+  };
+  ExpectedTypeA const expectedValueA{4.567};
+
+  //Construct variant and ensure it was correctly initialized
+  Variant<ExpectedTypeA, float> v1{(ExpectedTypeA const&)expectedValueA};
+  EXPECT_TRUE((v1.has<ExpectedTypeA>()));
+  EXPECT_NO_THROW(([&] {
+   EXPECT_EQ((v1.get<ExpectedTypeA>().f), expectedValueA.f);
+  }()));
  }
 
  TEST(Constructor, array_element_of_trivial_type_move_constructor_properly_initializes_variant) {
-  throw std::runtime_error{"Unimplemented"};
+  using ExpectedTypeA = struct A {
+   long double d;
+  };
+  ExpectedTypeA expectedValueA{823746.187624};
+
+  //Construct variant and ensure it was correctly initialized
+  Variant<ExpectedTypeA, float> v1{(ExpectedTypeA&&)expectedValueA};
+  EXPECT_TRUE((v1.has<ExpectedTypeA>()));
+  EXPECT_NO_THROW(([&] {
+   EXPECT_EQ((v1.get<ExpectedTypeA>().d), expectedValueA.d);
+  }()));
  }
 
  //Assignment operator tests
@@ -334,7 +625,53 @@ namespace CX {
  }
 
  TEST(Assignment, element_copy_assignment_with_copy_assignable_type_properly_initializes_variant) {
-  throw std::runtime_error{"Unimplemented"};
+  //Test with copy assignable type
+  static bool
+   copyAssignmentOperatorInvoked,
+   defaultConstructorInvoked;
+  //Reset flags in case test is re-run
+  copyAssignmentOperatorInvoked = false;
+  defaultConstructorInvoked = false;
+  using ExpectedTypeA = struct A {
+   char32_t c;
+
+   A() :
+    c(1927836)
+   {
+    defaultConstructorInvoked = true;
+   }
+
+   A(char32_t c) :
+    c(c)
+   {}
+
+   A& operator=(A const &a) {
+    copyAssignmentOperatorInvoked = true;
+    c = a.c;
+    return *this;
+   }
+
+   //Explicitly delete unused copy/move constructors/operators
+   A(A const &a) = delete;
+   A(A&&) = delete;
+   A& operator=(A&&) = delete;
+  };
+  A const expectedValueA{12314};
+
+  //Construct variant and ensure it was correctly initialized
+  Variant<char8_t, ExpectedTypeA> v1;
+  v1 = (ExpectedTypeA const&)expectedValueA;
+  EXPECT_TRUE((v1.has<ExpectedTypeA>()));
+  EXPECT_NO_THROW(([&] {
+   //Note can't use `EXPECT_EQ` since gtest does not support
+   //extended char types in its printer specializations
+   EXPECT_TRUE((v1.get<ExpectedTypeA>().c == expectedValueA.c));
+  }()));
+
+  //Ensure element default constructor and copy assignment operator
+  //were invoked
+  EXPECT_TRUE((copyAssignmentOperatorInvoked));
+  EXPECT_TRUE((defaultConstructorInvoked));
  }
 
  TEST(Assignment, element_move_assignment_with_move_constructible_type_properly_initializes_variant) {
@@ -377,7 +714,8 @@ namespace CX {
   };
   float const expectedValueB = 3.1415;
   ExpectedTypeB containerB{expectedValueB};
-  Variant<double, ExpectedTypeB> v2{(ExpectedTypeB&&)containerB};
+  Variant<double, ExpectedTypeB> v2;
+  v2 = (ExpectedTypeB&&)containerB;
   EXPECT_TRUE((moveAssignmentOperatorInvoked));
   EXPECT_EQ((containerB.f), 0);
   EXPECT_TRUE((v2.has<ExpectedTypeB>()));
@@ -387,15 +725,96 @@ namespace CX {
  }
 
  TEST(Assignment, element_move_assignment_with_move_assignable_type_properly_initializes_variant) {
-  throw std::runtime_error{"Unimplemented"};
+  //Test with move assignable type
+  static bool
+   moveAssignmentOperatorInvoked,
+   defaultConstructorInvoked;
+  //Reset flags in case test is re-run
+  moveAssignmentOperatorInvoked = false;
+  defaultConstructorInvoked = false;
+  using ExpectedTypeA = struct A {
+   short s;
+
+   A() :
+    s(132)
+   {
+    defaultConstructorInvoked = true;
+   }
+
+   A(short s) :
+    s(s)
+   {}
+
+   A& operator=(A &&a) {
+    moveAssignmentOperatorInvoked = true;
+    s = a.s;
+    a.s = 0;
+    return *this;
+   }
+
+   //Explicitly delete unused constructors / assignment operators
+   A(A const&) = delete;
+   A(A&&) = delete;
+   A& operator=(A const&) = delete;
+  };
+  short const expectedValueA = 23;
+  A temp{expectedValueA};
+
+  //Construct variant and assign to it; ensure it was correctly initialized
+  Variant<double[123], ExpectedTypeA> v1;
+  v1 = (ExpectedTypeA&&)temp;
+  EXPECT_TRUE((v1.has<ExpectedTypeA>()));
+  EXPECT_NO_THROW(([&] {
+   EXPECT_EQ((v1.get<ExpectedTypeA>().s), expectedValueA);
+  }()));
+
+  //Ensure moved temporary has been reset
+  EXPECT_EQ(temp.s, 0);
+
+  //Ensure default constructor and move assignment operator
+  //were invoked
+  EXPECT_TRUE((defaultConstructorInvoked));
+  EXPECT_TRUE((moveAssignmentOperatorInvoked));
  }
 
  TEST(Assignment, element_copy_assignment_with_trivial_type_properly_initializes_variant) {
-  throw std::runtime_error{"Unimplemented"};
+  using ExpectedTypeA = struct A {
+   char16_t c;
+  };
+  ExpectedTypeA expectedValueA{'f'};
+
+  //Ensure `ExpectedTypeA` is trivial
+  EXPECT_TRUE((Trivial<ExpectedTypeA>));
+
+  //Construct variant and assign to it; ensure it was correctly initialized
+  Variant<ExpectedTypeA, int (Dummy<>::*)> v1;
+  v1 = (ExpectedTypeA const&)expectedValueA;
+  EXPECT_TRUE((v1.has<ExpectedTypeA>()));
+  EXPECT_NO_THROW(([&] {
+   EXPECT_TRUE((v1.get<ExpectedTypeA>().c == expectedValueA.c));
+  }()));
  }
 
  TEST(Assignment, element_move_assignment_with_trivial_type_properly_initializes_variant) {
-  throw std::runtime_error{"Unimplemented"};
+  using ExpectedTypeA = struct A {
+   long double data[123];
+  };
+  long double expectedValueA[123]{1545364356.2342345};
+  ExpectedTypeA temp{{1545364356.2342345}};
+
+  //Ensure `ExpectedTypeA` is trivial
+  EXPECT_TRUE((Trivial<ExpectedTypeA>));
+
+  //Construct variant and assign to it; ensure it was correctly initialized
+  Variant<double, ExpectedTypeA, int> v1;
+  v1 = (ExpectedTypeA&&)temp;
+  EXPECT_TRUE((v1.has<ExpectedTypeA>()));
+  EXPECT_NO_THROW(([&] {
+   EXPECT_EQ(
+    (memcmp(&v1.get<ExpectedTypeA>().data, &expectedValueA, sizeof(long double) * 123)),
+    0
+   );
+  }()));
  }
 
  TEST(Assignment, variant_copy_assignment_properly_initializes_variant) {
@@ -410,7 +829,8 @@ namespace CX {
   }()));
 
   //Construct second variant and ensure it was correctly initialized
-  Variant<ExpectedType, short, long long> v2 = (decltype(v1) const&)v1;
+  Variant<ExpectedType, short, long long> v2;
+  v2 = (decltype(v1) const&)v1;
   EXPECT_TRUE((v2.has<ExpectedType>()));
   EXPECT_NO_THROW(([&] {
    EXPECT_EQ((v2.get<ExpectedType>()), expectedValue);
@@ -447,70 +867,284 @@ namespace CX {
   }()));
  }
 
- //TODO remove
- //Note: Replaced by tests below
- TEST(Assignment, variant_supports_array_element_type_assignment) {
-  //l-value reference assignment
-  using ExpectedTypeA = double[3];
-  double expectedValueA[3]{ 3.14, 2.71, -1 };
+ TEST(Assignment, array_element_copy_assignment_with_copy_constructible_type_properly_initializes_variant) {
+  static int copyConstructorInvoked;
+  //Reset counter in case test is re-run
+  copyConstructorInvoked = 0;
+  using ExpectedTypeA = struct A {
+   bool b;
 
-  //Invoke Variant element copy assignment operator and ensure it was correctly
-  //initialized
-  Variant<ExpectedTypeA> v1 = (ExpectedTypeA const&)expectedValueA;
+   A(bool b) :
+    b(b)
+   {}
+
+   A(A const &a) :
+    b(a.b)
+   {
+    copyConstructorInvoked++;
+   }
+
+   //Delete unused constructors / assignment operators
+   A(A&&) = delete;
+   A& operator=(A const&) = delete;
+   A& operator=(A&&) = delete;
+  }[2];
+  ExpectedTypeA const expectedValueA{
+   {true},
+   {false}
+  };
+
+  //Construct variant and assign to it; ensure it was correctly initialized
+  Variant<ExpectedTypeA, char, void (Dummy<>::*)()> v1;
+  v1 = (ExpectedTypeA const&)expectedValueA;
   EXPECT_TRUE((v1.has<ExpectedTypeA>()));
   EXPECT_NO_THROW(([&] {
    EXPECT_EQ(
-    (memcmp(v1.get<ExpectedTypeA>(), expectedValueA, ArraySize<ExpectedTypeA>)),
+    (memcmp(&v1.get<ExpectedTypeA>(), &expectedValueA, sizeof(ArrayElementType<ExpectedTypeA>) * 2)),
     0
    );
   }()));
 
-  //r-value refernece assignment
-  using ExpectedTypeB = int[2];
-  int expectedValueB[2]{ 297854, 239876 };
-
-  //Invoke Variant element move assignment operator and ensure it was correctly
-  //initialized
-  Variant<ExpectedTypeB> v2 = (ExpectedTypeB&&)expectedValueB;
-  EXPECT_TRUE((v2.has<ExpectedTypeB>()));
-  EXPECT_NO_THROW(([&] {
-   EXPECT_EQ(
-    (memcmp(v2.get<ExpectedTypeB>(), expectedValueB, ArraySize<ExpectedTypeB>)),
-    0
-   );
-  }()));
- }
-
- TEST(Assignment, array_element_copy_assignment_with_copy_constructible_type_properly_initializes_variant) {
-  throw std::runtime_error{"Unimplemented"};
+  //Ensure all array elements were copy constructed
+  EXPECT_EQ(copyConstructorInvoked, 2);
  }
 
  TEST(Assignment, array_element_copy_assignment_with_copy_assignable_type_properly_initializes_variant) {
-  throw std::runtime_error{"Unimplemented"};
+  static int
+   defaultConstructorInvoked,
+   copyAssignmentOperatorInvoked;
+  //Reset counters in case test is re-run
+  defaultConstructorInvoked = 0;
+  copyAssignmentOperatorInvoked = 0;
+  using ExpectedTypeA = struct A {
+   int i;
+
+   A(int i) :
+    i(i)
+   {}
+
+   A() :
+    i(0)
+   {
+    defaultConstructorInvoked++;
+   }
+
+   A& operator=(A const &a) {
+    copyAssignmentOperatorInvoked++;
+    i = a.i;
+    return *this;
+   }
+
+   //Delete unused constructors / assignment operators
+   A(A const&) = delete;
+   A(A&&) = delete;
+   A& operator=(A&&) = delete;
+  }[3];
+  ExpectedTypeA const expectedValueA{
+   {324987},
+   {38},
+   {547879}
+  };
+
+  //Construct variant and assign to it; ensure it was correctly initialized
+  Variant<float[12], ExpectedTypeA> v1;
+  v1 = (ExpectedTypeA const&)expectedValueA;
+  EXPECT_TRUE((v1.has<ExpectedTypeA>()));
+  EXPECT_NO_THROW(([&] {
+   EXPECT_EQ(
+    (memcmp(&v1.get<ExpectedTypeA>(), &expectedValueA, sizeof(ArrayElementType<ExpectedTypeA>) * 3)),
+    0
+   );
+  }()));
+
+  //Ensure element default constructors and copy assignment operators
+  //were invoked
+  EXPECT_EQ(defaultConstructorInvoked, 3);
+  EXPECT_EQ(copyAssignmentOperatorInvoked, 3);
  }
 
  TEST(Assignment, array_element_move_assignment_with_move_constructible_type_properly_initializes_variant) {
-  throw std::runtime_error{"Unimplemented"};
+  static int moveConstructorsInvoked;
+  //Reset counter in case test is re-run
+  moveConstructorsInvoked = 0;
+  using ExpectedTypeA = struct A {
+   int i;
+
+   A(int i) :
+    i(i)
+   {}
+
+   A(A &&a) :
+    i(a.i)
+   {
+    moveConstructorsInvoked++;
+    a.i = 0;
+   }
+
+   //Delete unused constructors and assignment operators
+   A(A const&) = delete;
+   A& operator=(A const&) = delete;
+   A& operator=(A&&) = delete;
+  }[5];
+  ExpectedTypeA const expectedValueA{
+   {1349875}, {2342}, {3}, {458}, {25}
+  };
+  ExpectedTypeA temp{
+   {1349875}, {2342}, {3}, {458}, {25}
+  };
+
+  //Construct variant and assign to it; ensure it was correctly initialized
+  Variant<int (Dummy<>::*), ExpectedTypeA> v1;
+  v1 = (ExpectedTypeA&&)temp;
+  EXPECT_TRUE((v1.has<ExpectedTypeA>()));
+  EXPECT_NO_THROW(([&] {
+   EXPECT_EQ(
+    (memcmp(&v1.get<ExpectedTypeA>(), &expectedValueA, sizeof(ArrayElementType<ExpectedTypeA>) * 5)),
+    0
+   );
+  }()));
+
+  //Ensure temporary elements were moved
+  for (auto &t : temp) {
+   EXPECT_EQ(t.i, 0);
+  }
+
+  //Ensure all move constructors were invoked
+  EXPECT_EQ(moveConstructorsInvoked, 5);
  }
 
  TEST(Assignment, array_element_move_assignment_with_move_assignable_type_properly_initializes_variant) {
-  throw std::runtime_error{"Unimplemented"};
+  static int
+   defaultConstructorsInvoked,
+   moveAssignmentOperatorsInvoked;
+  //Reset counters in case test is re-run
+  defaultConstructorsInvoked = 0;
+  moveAssignmentOperatorsInvoked = 0;
+  using ExpectedTypeA = struct A {
+   wchar_t c;
+
+   A(wchar_t c) :
+    c(c)
+   {}
+
+   A() :
+    c(0)
+   {
+    defaultConstructorsInvoked++;
+   }
+
+   A& operator=(A &&a) {
+    moveAssignmentOperatorsInvoked++;
+    c = a.c;
+    a.c = 0;
+    return *this;
+   }
+
+   //Delete unused constructors and assignment operators
+   A(A const&) = delete;
+   A(A&&) = delete;
+   A& operator=(A const &) = delete;
+  }[2];
+  ExpectedTypeA const expectedValueA{
+   {'H'}, {'Q'}
+  };
+  ExpectedTypeA temp{
+   {'H'}, {'Q'}
+  };
+
+  //Construct variant and assign to it; ensure it was correctly initialized
+  Variant<ExpectedTypeA> v1;
+  v1 = (ExpectedTypeA&&)temp;
+  EXPECT_TRUE((v1.has<ExpectedTypeA>()));
+  EXPECT_NO_THROW(([&] {
+   EXPECT_EQ(
+    (memcmp(&v1.get<ExpectedTypeA>(), &expectedValueA, sizeof(ArrayElementType<ExpectedTypeA>) * 2)),
+    0
+   );
+  }()));
+
+  //Ensure temporary elements were moved
+  for (auto &e : temp) {
+   EXPECT_EQ(e.c, 0);
+  }
+
+  //Ensure default constructors and move assignment operators
+  //were invoked
+  EXPECT_EQ(defaultConstructorsInvoked, 2);
+  EXPECT_EQ(moveAssignmentOperatorsInvoked, 2);
+
  }
 
  TEST(Assignment, array_element_assignment_of_trivial_type_copy_assignment_properly_initializes_variant) {
-  throw std::runtime_error{"Unimplemented"};
+  using ExpectedTypeA = struct A {
+   float f;
+  };
+  ExpectedTypeA const expectedValueA{283764.3};
+
+  //Construct variant and assign to it; ensure it was correctly initialized
+  Variant<ExpectedTypeA, float> v1;
+  v1 = (ExpectedTypeA const&)expectedValueA;
+  EXPECT_TRUE((v1.has<ExpectedTypeA>()));
+  EXPECT_NO_THROW(([&] {
+   EXPECT_EQ((v1.get<ExpectedTypeA>().f), expectedValueA.f);
+  }()));
  }
 
  TEST(Assignment, array_element_assignment_of_trivial_type_move_assignment_properly_initializes_variant) {
-  throw std::runtime_error{"Unimplemented"};
+  using ExpectedTypeA = struct A {
+   long double d;
+  };
+  ExpectedTypeA expectedValueA{1.2345678901};
+
+  //Construct variant and assign to it; ensure it was correctly initialized
+  Variant<ExpectedTypeA, float> v1;
+  v1 = (ExpectedTypeA&&)expectedValueA;
+  EXPECT_TRUE((v1.has<ExpectedTypeA>()));
+  EXPECT_NO_THROW(([&] {
+   EXPECT_EQ((v1.get<ExpectedTypeA>().d), expectedValueA.d);
+  }()));
  }
 
  TEST(Destructor, variant_correctly_invokes_element_type_destructor) {
-  throw std::runtime_error{"Unimplemented"};
+  static bool destructorInvoked;
+  //Reset flag in case test is re-run
+  destructorInvoked = false;
+  using ExpectedTypeA = struct A {
+   ~A() {
+    destructorInvoked = true;
+   }
+  };
+  ExpectedTypeA const expectedValueA{};
+
+  //Construct variant
+  [&] {
+   Variant<ExpectedTypeA> v{(ExpectedTypeA const&)expectedValueA};
+  }();
+
+  //Ensure variant element type was destructed along with variant
+  EXPECT_TRUE(destructorInvoked);
  }
 
  TEST(Destructor, varaint_correctly_invokes_destructors_of_all_array_elements) {
-  throw std::runtime_error{"Unimplemented"};
+  static int destructorsInvoked;
+  //Reset counter in case test is re-run
+  destructorsInvoked = 0;
+  using ExpectedTypeA = struct A {
+   ~A() {
+    destructorsInvoked++;
+   }
+  }[4];
+  ExpectedTypeA const expectedValueA{
+   {}, {}, {}, {}
+  };
+
+  //Construct variant
+  [&] {
+   Variant<ExpectedTypeA> v{(ExpectedTypeA const&)expectedValueA};
+  }();
+
+  //Ensure all array elements were destructed along with variant
+  EXPECT_EQ(destructorsInvoked, 4);
  }
 
  //Member function tests

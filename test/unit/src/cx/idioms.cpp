@@ -167,12 +167,12 @@ namespace CX {
  }
 
  TEST(CopyConstructible, non_copy_constructible_types_do_not_satisfy_constraint) {
-  EXPECT_FALSE((Constructible<void>));
-  EXPECT_FALSE((Constructible<int[]>));
+  EXPECT_FALSE((CopyConstructible<void>));
+  EXPECT_FALSE((CopyConstructible<int[]>));
   struct A {
    A(A const&) = delete;
   };
-  EXPECT_FALSE((Constructible<A>));
+  EXPECT_FALSE((CopyConstructible<A>));
  }
 
  TEST(MoveConstructible, move_constructible_types_satisfy_constraint) {

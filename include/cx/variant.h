@@ -124,7 +124,7 @@ namespace CX {
   }
 
   template<MatchAnyType<Elements...> E>
-  requires (Trivial<ConstDecayed<E>>)
+  requires (Trivial<ConstVolatileDecayed<E>>)
   void trivialCopy(E const &e) const {
    static constexpr auto const Length = sizeof(E);
    auto &ref = const_cast<Variant&>(*this);
@@ -155,7 +155,7 @@ namespace CX {
        //Destruct all elements of encapsulated array
        using ElementType = ArrayElementType<E>;
        static constexpr auto const Length = ArraySize<E>;
-       using LengthType = ConstDecayed<decltype(Length)>;
+       using LengthType = ConstVolatileDecayed<decltype(Length)>;
        auto &array = *(ElementType(*)[Length])&ref.data;
 
        //Invoke destructor for every element type
@@ -183,9 +183,9 @@ namespace CX {
   template<MatchAnyType<Elements...> E>
   requires (
    !Array<ConstDecayed<E>>
-   && (CopyConstructible<ConstDecayed<E>>
-    || (Constructible<ConstDecayed<E>> && CopyAssignable<ConstDecayed<E>>)
-   )
+    && (CopyConstructible<ConstDecayed<E>>
+     || (Constructible<ConstDecayed<E>> && CopyAssignable<ConstDecayed<E>>)
+    )
   )
   void assign(E const &e) const {
    using EDecayed = ConstDecayed<E>;
@@ -213,9 +213,9 @@ namespace CX {
   template<MatchAnyType<Elements...> E>
   requires (
    !Array<ConstDecayed<E>>
-   && (MoveConstructible<ConstDecayed<E>>
-    || (Constructible<ConstDecayed<E>> && MoveAssignable<ConstDecayed<E>>)
-   )
+    && (MoveConstructible<ConstDecayed<E>>
+     || (Constructible<ConstDecayed<E>> && MoveAssignable<ConstDecayed<E>>)
+    )
   )
   //r-value assignments cannot have const operands
   void assign(ConstDecayed<E> &&e) const {
@@ -246,11 +246,17 @@ namespace CX {
 
   //Array type copy assignment
   template<MatchAnyType<Elements...> E>
-  requires (SizedArray<E>)
+  requires (
+   SizedArray<E>
+    && (Trivial<ArrayElementType<E>>
+     || CopyConstructible<ArrayElementType<E>>
+     || (Constructible<ArrayElementType<E>> && CopyAssignable<ArrayElementType<E>>)
+    )
+  )
   void assign(E const &src) const {
    using ElementType = ArrayElementType<E>;
    static constexpr auto const Length = ArraySize<E>;
-   using LengthType = ConstDecayed<decltype(Length)>;
+   using LengthType = ConstVolatileDecayed<decltype(Length)>;
    auto &variantRef = const_cast<Variant&>(*this);
 
    //Clean up current state
@@ -261,27 +267,61 @@ namespace CX {
 
    //Initialize encapsulated array
    auto &dst = *(ElementType(*)[Length])&variantRef.data;
-   if constexpr(Trivial<ElementType>) {
+   if constexpr (Trivial<ElementType>) {
     //If `ElementType` is a trivial type, no need to copy construct
     //or assign
     trivialCopy<E>((E const&)src);
    } else {
     //Initialize every array element
     for (LengthType i = 0; i < Length; i++) {
-     if constexpr(CopyConstructible<ElementType>) {
+     if constexpr (CopyConstructible<ElementType>) {
       //Copy construct array element
-      new (&dst[i]) E{(ElementType const&)src[i]};
-     } else if constexpr(Constructible<ElementType> && CopyAssignable<ElementType>) {
+      new (&dst[i]) ElementType{(ElementType const&)src[i]};
+     } else if constexpr (Constructible<ElementType> && CopyAssignable<ElementType>) {
       //Default construct array element and copy assign new value
-      *new (&dst[i]) E{} = (ElementType const&)src[i];
+      *new (&dst[i]) ElementType{} = (ElementType const&)src[i];
      }
     }
    }
   }
 
-  //TODO Array type move assignment
+  //Array type move assignment
+  template<MatchAnyType<Elements...> E>
+  requires (
+   SizedArray<E>
+    && (Trivial<ArrayElementType<E>>
+     || MoveConstructible<ArrayElementType<E>>
+     || (Constructible<ArrayElementType<E>> && MoveAssignable<ArrayElementType<E>>)
+    )
+  )
+  void assign(ConstDecayed<E> &&src) {
+   using ElementType = ArrayElementType<E>;
+   static constexpr auto const Length = ArraySize<E>;
+   using LengthType = ConstVolatileDecayed<decltype(Length)>;
+   auto &variantRef = const_cast<Variant&>(*this);
 
- void convert(auto &otherVariant) {
+   //Clean up current state
+   destruct();
+
+   //Assign new tag for corresponding element type
+   variantRef.tag = 1 << IndexOfType<E, Elements...>;
+
+   //Initialize encapsulated array
+   auto &dst = *(ElementType(*)[Length])&variantRef.data;
+   if constexpr (Trivial<ElementType>) {
+    trivialCopy<E>((E const&)src);
+   } else {
+    for (LengthType i = 0; i < Length; i++) {
+     if constexpr (MoveConstructible<ElementType>) {
+      new (&dst[i]) ElementType{(ElementType&&)src[i]};
+     } else if constexpr (Constructible<ElementType> && MoveAssignable<ElementType>) {
+      *new (&dst[i]) ElementType{} = (ElementType&&)src[i];
+     }
+    }
+   }
+  }
+
+  void convert(auto &otherVariant) {
    //TODO use runtimeElementOp once the clang frontend
    //bug has been fixed
    TypeIterator<Elements...>::run([&]<typename E> {
@@ -392,13 +432,7 @@ namespace CX {
 
   //Copy assignment operator
   Variant& operator=(CompatibleVariant<Variant> auto const &v) {
-   destruct();
-   /*TODO use when compiler bug has been fixed
-   v.runtimeElementOp([&]<typename E> {
-    destruct();
-    assign(*(E *)&v.data);
-   });
-   */
+   //TODO use runtimeElementOp when clang frontend bug has been fixed
    TypeParameterDeducer<TypeIterator, Unqualified<decltype(v)>>::run([&]<typename E> {
     if (v.template has<E>()) {
      destruct();
@@ -418,14 +452,16 @@ namespace CX {
   }
 
   //Element copy assignment operator
-  Variant& operator=(MatchAnyType<Elements...> auto const &e) {
-   assign((decltype(e)&)e);
+  template<MatchAnyType<Elements...> E>
+  Variant& operator=(E const &e) {
+   assign<E>((E const&)e);
    return *this;
   }
 
   //Element move assignment operator
-  Variant& operator=(MatchAnyType<Elements...> auto &&e) {
-   assign((decltype(e)&&)e);
+  template<MatchAnyType<Elements...> E>
+  Variant& operator=(E &&e) {
+   assign<E>((E&&)e);
    return *this;
   }
 

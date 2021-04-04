@@ -214,42 +214,71 @@ namespace CX {
    using DecayedType = T;
   };
 
-  //Const identity
+  //Const qualifier identity
   template<typename T>
   struct Const : FalseType {
    using Type = T;
    using ConstDecayed = T;
+
+   //Does not propagate const qualifier to `T2`
+   template<typename T2>
+   using Propagate = T2;
   };
 
   template<typename T>
   struct Const<T const> : TrueType {
    using Type = T const;
    using ConstDecayed = T;
+
+   //Propagates const qualifier to `T2`
+   template<typename T2>
+   using Propagate = T2 const;
   };
 
   template<typename T>
-  struct Const<T const&> : TrueType {
+  struct Const<T const&> : Const<T const> {
    using Type = T const&;
    using ConstDecayed = T&;
   };
 
   template<typename T>
-  struct Const<T const&&> : TrueType {
+  struct Const<T const&&> : Const<T const> {
    using Type = T const&&;
    using ConstDecayed = T&&;
   };
 
+  //Volatile qualifier identity
   template<typename T>
   struct Volatile : FalseType {
    using Type = T;
    using VolatileDecayed = T;
+
+   //Does not propagate volatile qualifier to `T2`
+   template<typename T2>
+   using Propagate = T2;
   };
 
   template<typename T>
   struct Volatile<T volatile> : TrueType {
    using Type = T volatile;
    using VolatileDecayed = T;
+
+   //Propagates volatile qualifier to `T2`
+   template<typename T2>
+   using Propagate = T2 volatile;
   };
+
+  //Decays both const and volatile qualifiers
+  template<typename T>
+  using ConstVolatileDecayed = typename Const<
+   typename Volatile<T>::VolatileDecayed
+  >::ConstDecayed;
+
+  //Propagates both const and volatile qualifiers
+  template<typename T1, typename T2>
+  using ConstVolatilePropagated = typename Const<T1>::template Propagate<
+   typename Volatile<T1>::template Propagate<T2>
+  >;
 
   //Array identity
   template<typename T>
@@ -316,32 +345,31 @@ namespace CX {
    using ElementType = T;
   };
 
-  //Sign identity and decay/promotion
-  template<typename T>
+  //Signed type conversions; decay/promotion
+  template<
+   typename T,
+   typename CVDecayed = ConstVolatileDecayed<T>,
+   bool = __is_enum(CVDecayed)
+  >
   struct Sign {
    using SignedType = T;
    using UnsingedType = T;
-   static constexpr auto const Signed = false;
-   static constexpr auto const Unsigned = false;
   };
 
   #define DEFINE_SIGN_SPECIALIZATION(signedType, unsignedType) \
-  template<>\
-  struct Sign<signedType> {\
-   using SignedType = signedType;\
-   using UnsignedType = unsignedType;\
-   static constexpr auto const Signed = true;\
-   static constexpr auto const Unsigned = false;\
+  template<typename T>\
+  struct Sign<T, signedType, false> {\
+   using SignedType = ConstVolatilePropagated<T, signedType>;\
+   using UnsignedType = ConstVolatilePropagated<T, unsignedType>;\
   };\
   \
-  template<>\
-  struct Sign<unsignedType> {\
-   using SignedType = signedType;\
-   using UnsignedType = unsignedType;\
-   static constexpr auto const Signed = false;\
-   static constexpr auto const Unsigned = true;\
+  template<typename T>\
+  struct Sign<T, unsignedType, false> {\
+   using SignedType = ConstVolatilePropagated<T, signedType>;\
+   using UnsignedType = ConstVolatilePropagated<T, unsignedType>;\
   }
 
+  //Signed integer specializations
   DEFINE_SIGN_SPECIALIZATION(signed char,      unsigned char);
   DEFINE_SIGN_SPECIALIZATION(signed short,     unsigned short);
   DEFINE_SIGN_SPECIALIZATION(signed int,       unsigned int);
@@ -349,6 +377,102 @@ namespace CX {
   DEFINE_SIGN_SPECIALIZATION(signed long long, unsigned long long);
 
   #undef DEFINE_SIGN_SPECIALIZATION
+
+  //Char specialization
+  template<typename T>
+  struct Sign<T, char, false> {
+   using SignedType = ConstVolatilePropagated<T, signed char>;
+   using UnsignedType = ConstVolatilePropagated<T, unsigned char>;
+   static constexpr auto const Signed = char(-1) < char(0);
+   static constexpr auto const Unsigned = !Signed;
+  };
+
+  //Utility for `Sign<...>`
+  template<typename Target, typename...>
+  struct SmallestMatchingTypeSize;
+
+  template<typename Target, typename T, typename... Types>
+  struct SmallestMatchingTypeSize<Target, T, Types...> {
+   template<bool Match = sizeof(Target) == sizeof(T), auto = 0>
+   struct Producer;
+  };
+
+  template<typename Target, typename T, typename... Types>
+  template<auto _>
+  struct SmallestMatchingTypeSize<Target, T, Types...>::Producer<false, _> {
+   using Type = typename SmallestMatchingTypeSize<Target, Types...>
+    ::template Producer<>
+    ::Type;
+  };
+
+  template<typename Target, typename T, typename... Types>
+  template<auto _>
+  struct SmallestMatchingTypeSize<Target, T, Types...>::Producer<true, _> {
+   using Type = T;
+  };
+
+  template<typename Target>
+  struct SmallestMatchingTypeSize<Target> {
+   template<bool>
+   struct Producer {
+    using Type = void;
+   };
+  };
+
+  //Utility for `Sign<...>`
+  template<typename Target>
+  using EquivalentIntegerType = typename SmallestMatchingTypeSize<
+   Target,
+   char,
+   short,
+   int,
+   long,
+   long long
+  >
+   ::template Producer<>
+   ::Type;
+
+  #define DEFINE_SPECIAL_CASE_SIGN_SPECIALIZATION(specialType) \
+  template<typename T>\
+  struct Sign<T, specialType, false> {\
+  private:\
+   using SignEquivalent = Sign<EquivalentIntegerType<specialType>>;\
+  \
+  public:\
+   using SignedType = ConstVolatilePropagated<\
+    T,\
+    typename SignEquivalent::SignedType\
+   >;\
+   using UnsignedType = ConstVolatilePropagated<\
+    T,\
+    typename SignEquivalent::UnsignedType\
+   >;\
+  }
+
+  //Extension char specializations
+  DEFINE_SPECIAL_CASE_SIGN_SPECIALIZATION(wchar_t);
+  DEFINE_SPECIAL_CASE_SIGN_SPECIALIZATION(char8_t);
+  DEFINE_SPECIAL_CASE_SIGN_SPECIALIZATION(char16_t);
+  DEFINE_SPECIAL_CASE_SIGN_SPECIALIZATION(char32_t);
+
+  #undef DEFINE_SPECIAL_CASE_SIGN_SPECIALIZATION
+
+  //Enum specialization
+  template<typename T>
+  struct Sign<T, ConstVolatileDecayed<T>, true> {
+  private:
+   using SignEquivalent = Sign<EquivalentIntegerType<T>>;
+
+  public:
+   using SignedType = ConstVolatilePropagated<
+    T,
+    typename SignEquivalent::SignedType
+   >;
+   using UnsignedType = ConstVolatilePropagated<
+    T,
+    typename SignEquivalent::UnsignedType
+   >;
+  };
 
   //Function identity meta-functions
   //Member function idiom
@@ -464,58 +588,96 @@ namespace CX {
  }
 
  //Concept/alias/value definitions
+ //Yields result of type expresion: `T1 == T2`
  template<typename T1, typename T2>
- concept SameType = MetaFunctions::SameType<T1, T2>::Value;
+ concept SameType = MetaFunctions
+  ::SameType<T1, T2>
+  ::Value;
 
+ //True for type expression: `((Types[0] == Types) || ...)`
  template<typename... Types>
- concept MatchAnyType = MetaFunctions::MatchAnyType<Types...>::Value;
+ concept MatchAnyType = MetaFunctions
+  ::MatchAnyType<Types...>
+  ::Value;
 
+ //Yields result of type expression: `T1 == T2`
  template<template<typename...> typename T1, template<typename...> typename T2>
- concept SameTemplateType = MetaFunctions::SameTemplateType<T1, T2>::Value;
+ concept SameTemplateType = MetaFunctions
+  ::SameTemplateType<T1, T2>
+  ::Value;
 
+ //True for type expression: `((Types[0] == Types) || ...)`
  template<template<typename...> typename... Types>
- concept MatchAnyTemplateType = MetaFunctions::MatchAnyTemplateType<Types...>::Value;
+ concept MatchAnyTemplateType = MetaFunctions
+  ::MatchAnyTemplateType<Types...>
+  ::Value;
 
+ //Yields result of: `V1 == V2`
  template<auto V1, auto V2>
- concept SameValue = MetaFunctions::SameValue<V1, V2>::Value;
+ concept SameValue = MetaFunctions
+  ::SameValue<V1, V2>
+  ::Value;
 
+ //True for result of expression: `((Values[0] == Values) || ...)`
  template<auto... Values>
- concept MatchAnyValue = MetaFunctions::MatchAnyValue<Values...>::Value;
+ concept MatchAnyValue = MetaFunctions
+  ::MatchAnyValue<Values...>
+  ::Value;
 
- template<typename... Args>
- concept UniqueTypes = MetaFunctions::UniqueTypes<Args...>::Value;
+ //True for type expression: `!((Types[0] == Types) || ...)`
+ template<typename... Types>
+ concept UniqueTypes = MetaFunctions
+  ::UniqueTypes<Types...>
+  ::Value;
 
- template<template<typename...> typename... Args>
- concept UniqueTemplateTypes = MetaFunctions::UniqueTemplateTypes<Args...>::Value;
+ //True for type expression: `!((Types[0] == Types) || ...)`
+ template<template<typename...> typename... Types>
+ concept UniqueTemplateTypes = MetaFunctions
+  ::UniqueTemplateTypes<Types...>
+  ::Value;
 
+ //True for expression: `!((Values[0] == Values) || ...)`
  template<auto... Values>
- concept UniqueValues = MetaFunctions::UniqueValues<Values...>::Value;
+ concept UniqueValues = MetaFunctions
+  ::UniqueValues<Values...>
+  ::Value;
 
+ //True if `T1` is implicitly, or explicitly, convertible to `T2`
  template<typename T1, typename T2>
  concept ConvertibleTo = requires (T1 t1) {
   { (T2)t1 } -> SameType<T2>;
  };
 
+ //True for types that contain a constructor definition with
+ //the signature: `T::T(Args...)`
  template<typename T, typename... Args>
  concept Constructible = __is_constructible(T, Args...);
 
+ //True for types with a non-deleted destructor
+ //Note: False for array types
  template<typename T>
  concept Destructible = requires (T t) {
   { t.~T() } -> SameType<void>;
  };
 
+ //True for types that contain a constructor definition with
+ //the signature: `T::T(T const&)`
  template<typename T>
  concept CopyConstructible = __is_constructible(T, T const&)
   && requires (T * t1, T t2) {
    { new (t1) T {(T const&)t2} } -> SameType<T *>;
   };
 
+ //True for types that contain a constructor definition with
+ //the signature: `T::T(T&&)`
  template<typename T>
  concept MoveConstructible = __is_constructible(T, T&&)
   && requires (T * t1, T t2) {
    { new (t1) T {(T&&)t2} } -> SameType<T *>;
   };
 
+ //True for types that contain an assignment operator definition
+ //with the signature: `T& T::operator=(T const&)`
  template<typename T>
  concept CopyAssignable =
   requires (T t1, T t2) {
@@ -525,6 +687,8 @@ namespace CX {
    { t1 = (T&)t2 } -> SameType<T&>;
   };
 
+ //True for types that contain an assignment operator definition
+ //with the signature: `T& operator=(T&&)`
  template<typename T>
  concept MoveAssignable =
   requires (T t1, T t2) {
@@ -534,57 +698,81 @@ namespace CX {
    { t1 = (T&&)t2 } -> SameType<T&>;
   };
 
+ //Yields the type `T`, stripped of all cv, pointer, reference
+ //and array qualifiers
  template<typename T>
  using Unqualified = typename MetaFunctions
   ::Unqualified<T>
   ::Type;
 
+ //Yields the type `T`, stripped of the rightmost cv, pointer,
+ //reference or array qualifier
  template<typename T>
  using Decayed = typename MetaFunctions
   ::Unqualified<T>
   ::DecayedType;
 
+ //Const identity
  template<typename T>
  concept Const = MetaFunctions
   ::Const<T>
   ::Value;
 
+ //Yields the type `T` stripped of a const qualifier, if present
  template<typename T>
  using ConstDecayed = typename MetaFunctions
   ::Const<T>
   ::ConstDecayed;
 
+ //Volatile identity
  template<typename T>
  concept Volatile = MetaFunctions
   ::Volatile<T>
   ::Value;
 
+ //Yields the type `T` stripped of a volatile qualifier, if present
  template<typename T>
  using VolatileDecayed = typename MetaFunctions
   ::Volatile<T>
   ::VolatileDecayed;
 
+ //Yields the type `T` stripped of cv qualifiers, if present
+ template<typename T>
+ using ConstVolatileDecayed = typename MetaFunctions::ConstVolatileDecayed<T>;
+
+ //Yields the type `T2` with the same cv qualifiers as `T1`, if present
+ template<typename T1, typename T2>
+ using ConstVolatilePropagated = typename MetaFunctions::ConstVolatilePropagated<T1, T2>;
+
+ //Array identity
+ //Note: Supports both sized and unsized arrays
  template<typename T>
  concept Array = MetaFunctions
   ::Array<T>
   ::Value;
 
+ //Sized array identity
  template<typename T>
  concept SizedArray = MetaFunctions
    ::Array<T>
    ::Sized;
 
+ //Unsized array identity
  template<typename T>
  concept UnsizedArray = Array<T>
   && !MetaFunctions
    ::Array<T>
    ::Sized;
 
+ //Yields element type of an array type
+ //ie. `T[...] -> T`
  template<typename T>
  using ArrayElementType = typename MetaFunctions
   ::Array<T>
   ::ElementType;
 
+ //Yields the size of an array type
+ //Note: For unsized arrays, yields `-1`
  template<typename T>
  requires (Array<T>)
  constexpr auto const ArraySize = MetaFunctions
@@ -632,18 +820,6 @@ namespace CX {
   ::RValueReference<T>
   ::ElementType;
 
- //Signed identity
- template<typename T>
- concept Signed = MetaFunctions
-  ::Sign<T>
-  ::Signed;
-
- //Unsigned identity
- template<typename T>
- concept Unsigned = !MetaFunctions
-  ::Sign<T>
-  ::Unsigned;
-
  //Produce unsigned type equivalent
  template<typename T>
  using SignDecayed = typename MetaFunctions
@@ -656,52 +832,63 @@ namespace CX {
   ::Sign<T>
   ::SignedType;
 
- //Enum type identity
+ //Enum identity
  template<typename T>
  concept Enum = __is_enum(T);
 
- //Union type identity
+ //Union identity
  template<typename T>
  concept Union = __is_union(T);
 
- //Struct type identity
+ //Struct identity
  template<typename T>
  concept Struct = __is_class(T);
 
- //Integral type identity
+ //Integral identity
  //Defined by: https://en.cppreference.com/w/cpp/types/is_integral
  template<typename T>
  concept Integral = MatchAnyType<
-  SignDecayed<ConstDecayed<T>>,
+  SignDecayed<ConstVolatileDecayed<T>>,
   bool,
-  char,
+  unsigned char,
   wchar_t,
   char8_t,
   char16_t,
   char32_t,
-  short,
-  int,
-  long,
-  long long
+  unsigned short,
+  unsigned int,
+  unsigned long,
+  unsigned long long
  >;
 
- //Floating precision type identity
+ //Floating precision identity
  //Defined by: https://en.cppreference.com/w/cpp/types/is_floating_point
  template<typename T>
  concept Floating = MatchAnyType<
-  ConstDecayed<T>,
+  ConstVolatileDecayed<T>,
   float,
   double,
   long double
  >;
 
- //Arithmetic type identity
+ //Arithmetic identity
  //Defined by: https://en.cppreference.com/w/cpp/types/is_arithmetic
  template<typename T>
  concept Arithmetic = Integral<T>
   || Floating<T>;
 
- //Scalar type identity
+ //Signed identity
+ //Defined by: https://en.cppreference.com/w/cpp/types/is_signed
+ template<typename T>
+ concept Signed = Arithmetic<T> && T(-1) < T(0);
+
+ //Unsigned identity
+ //Defined by: https://en.cppreference.com/w/cpp/types/is_unsigned
+ template<typename T>
+ concept Unsigned = (Arithmetic<T> && T(0) < T(-1))
+  || SameType<Unqualified<T>, bool>;
+
+ //Scalar identity
  //Defined by: https://en.cppreference.com/w/cpp/types/is_scalar
  template<typename T>
  concept Scalar = Arithmetic<T>
@@ -709,7 +896,7 @@ namespace CX {
   || Pointer<T>
   || MemberPointer<T>;
 
- //Trivially copyable type identity
+ //Trivially copyable identity
  //Defined by: https://en.cppreference.com/w/cpp/named_req/TriviallyCopyable
  template<typename T>
  concept TriviallyCopyable = Constructible<ArrayElementType<T>>
@@ -719,13 +906,15 @@ namespace CX {
   && CopyAssignable<ArrayElementType<T>>
   && MoveAssignable<ArrayElementType<T>>;
 
- //Trivial type identity
+ //Trivial identity
  //Defined by: https://en.cppreference.com/w/cpp/named_req/TrivialType
  template<typename T>
  concept Trivial = Scalar<T>
   || TriviallyCopyable<T>;
 
  //Function identity concepts
+ //Member function identity
+ //Note: Has optional return type and argument type matching
  template<typename F, typename R = ImpossibleType<>, typename... Args>
  concept MemberFunction = MetaFunctions::MemberFunction<Unqualified<F>>::Value
   //Match member function against return type, if specified
@@ -743,6 +932,8 @@ namespace CX {
    true
   );
 
+ //Static function identity
+ //Note: Has optional return type and argument type matching
  template<typename F, typename R = ImpossibleType<>, typename... Args>
  concept StaticFunction = MetaFunctions::StaticFunction<Unqualified<F>>::Value
   //Match static function against return type, if specified
@@ -760,11 +951,28 @@ namespace CX {
    true
   );
 
+ //Virtual function identity
  template<auto F>
- concept VirtualFunction = MetaFunctions::VirtualFunction<F>::Value;
+ concept VirtualFunction = MetaFunctions
+  ::VirtualFunction<F>
+  ::Value;
 
- template<typename T>
- concept MemberField = MetaFunctions::MemberField<T>::Value;
+ //Member field identity
+ //Note: Has optional field type and class type matching
+ template<typename F, typename T = ImpossibleType<>, typename C = ImpossibleType<>>
+ concept MemberField = MetaFunctions::MemberField<F>::Value
+  //Match member field against field type
+  && CX_CONDITIONAL_CONSTRAINT(
+   (!SameType<T, ImpossibleType<>>),
+   (SameType<T, typename MetaFunctions::MemberField<F>::FieldType>),
+   true
+  )
+  //Match member field against class type
+  && CX_CONDITIONAL_CONSTRAINT(
+   (!SameType<C, ImpossibleType<>>),
+   (SameType<C, typename MetaFunctions::MemberField<F>::Type>),
+   true
+  );
 
  //Operator detection concepts
  #define DEFINE_OPERATOR_CONCEPT(name, op) \

@@ -312,27 +312,37 @@ namespace CX {
  }
 
  TEST(ConstDecayed, const_types_lose_const_qualifier) {
-  throw std::runtime_error{"Unimplemented"};
+  EXPECT_TRUE((SameType<ConstDecayed<float const>, float>));
+  EXPECT_TRUE((SameType<ConstDecayed<char const (Dummy<>::* const)>, char const (Dummy<>::*)>));
  }
 
  TEST(ConstDecayed, non_const_types_are_unmodified) {
-  throw std::runtime_error{"Unimplemented"};
+  EXPECT_TRUE((SameType<ConstDecayed<int *>, int *>));
+  EXPECT_TRUE((SameType<ConstDecayed<char volatile>, char volatile>));
  }
 
  TEST(Volatile, volatile_types_satisfy_constraint) {
-  throw std::runtime_error{"Unimplemented"};
+  EXPECT_TRUE((Volatile<int volatile>));
+  EXPECT_TRUE((Volatile<bool * volatile>));
+  EXPECT_TRUE((Volatile<void (Dummy<>::* volatile)()>));
  }
 
  TEST(Volatile, non_volatile_tyeps_do_not_satisfy_constraint) {
-  throw std::runtime_error{"Unimplemented"};
+  EXPECT_FALSE((Volatile<void>));
+  EXPECT_FALSE((Volatile<char8_t>));
+  EXPECT_FALSE((Volatile<int>));
  }
 
  TEST(VolatileDecayed, volatile_types_lose_volatile_qualifier) {
-  throw std::runtime_error{"Unimplemented"};
+  EXPECT_TRUE((SameType<VolatileDecayed<char volatile>, char>));
+  EXPECT_TRUE((SameType<VolatileDecayed<void * volatile>, void *>));
+  EXPECT_TRUE((SameType<VolatileDecayed<int (Dummy<>::* volatile)>, int (Dummy<>::*)>));
  }
 
  TEST(VolatileDecayed, non_volatile_types_are_unmodified) {
-  throw std::runtime_error{"Unimplemented"};
+  EXPECT_TRUE((SameType<VolatileDecayed<float>, float>));
+  EXPECT_TRUE((SameType<VolatileDecayed<ImpossibleType<>[]>, ImpossibleType<>[]>));
+  EXPECT_TRUE((SameType<VolatileDecayed<int&>, int&>));
  }
 
  TEST(Array, unsized_array_types_satisfy_constraint) {
@@ -420,19 +430,26 @@ namespace CX {
  }
 
  TEST(Pointer, pointer_types_satisfy_constraint) {
-  throw std::runtime_error{"Unimplemented"};
+  EXPECT_TRUE((Pointer<int *>));
+  EXPECT_TRUE((Pointer<void ***>));
  }
 
  TEST(Pointer, non_pointer_types_do_not_satisfy_constraint) {
-  throw std::runtime_error{"Unimplemented"};
+  EXPECT_FALSE((Pointer<int[]>));
+  EXPECT_FALSE((Pointer<bool&>));
+  EXPECT_FALSE((Pointer<void (Dummy<>::*)()>));
+  EXPECT_FALSE((Pointer<char (Dummy<>::*)>));
  }
 
  TEST(MemberPointer, member_pointer_types_satisfy_constraint) {
-  throw std::runtime_error{"Unimplemented"};
+  EXPECT_TRUE((MemberPointer<char (Dummy<>::*)>));
+  EXPECT_TRUE((MemberPointer<void (ImpossibleType<>::*)()>));
  }
 
  TEST(MemberPointer, non_member_pointer_types_do_not_satisfy_constraint) {
-  throw std::runtime_error{"Unimplemented"};
+  EXPECT_FALSE((MemberPointer<void *>));
+  EXPECT_FALSE((MemberPointer<int>));
+  EXPECT_FALSE((MemberPointer<float (*)()>));
  }
 
  TEST(LValueReference, lvalue_reference_types_satisfy_constraint) {
@@ -515,22 +532,6 @@ namespace CX {
   EXPECT_TRUE((SameType<RValueReferenceElementType<TypeC>, ExpectedTypeC>));
  }
 
- TEST(Signed, signed_types_satisfy_constraint) {
-  throw std::runtime_error{"Unimplemented"};
- }
-
- TEST(Signed, non_signed_types_do_not_satisfy_constraint) {
-  throw std::runtime_error{"Unimplemented"};
- }
-
- TEST(Unsigned, unsigned_types_satisfy_constraint) {
-  throw std::runtime_error{"Unimplemented"};
- }
-
- TEST(Unsigned, non_unsigned_types_do_not_satisfy_constraint) {
-  throw std::runtime_error{"Unimplemented"};
- }
-
  TEST(SignDecayed, signed_types_lose_signed_qualifier) {
   throw std::runtime_error{"Unimplemented"};
  }
@@ -603,6 +604,71 @@ namespace CX {
   throw std::runtime_error{"Unimplemented"};
  }
 
+ TEST(Signed, signed_types_satisfy_constraint) {
+  EXPECT_TRUE((Signed<signed char>));
+  EXPECT_TRUE((Signed<signed short>));
+  EXPECT_TRUE((Signed<signed int>));
+  EXPECT_TRUE((Signed<signed long>));
+  EXPECT_TRUE((Signed<signed long long>));
+  EXPECT_TRUE((Signed<float>));
+  EXPECT_TRUE((Signed<double>));
+  EXPECT_TRUE((Signed<long double>));
+  EXPECT_TRUE((Signed<wchar_t>));
+ }
+
+ TEST(Signed, unsigned_types_do_not_satisfy_constraint) {
+  EXPECT_FALSE((Signed<unsigned char>));
+  EXPECT_FALSE((Signed<unsigned short>));
+  EXPECT_FALSE((Signed<unsigned int>));
+  EXPECT_FALSE((Signed<unsigned long>));
+  EXPECT_FALSE((Signed<unsigned long long>));
+  EXPECT_FALSE((Signed<char8_t>));
+  EXPECT_FALSE((Signed<char16_t>));
+  EXPECT_FALSE((Signed<char32_t>));
+  enum struct E : unsigned int {};
+  EXPECT_FALSE((Signed<E>));
+  //Bool is a special case
+  EXPECT_FALSE((Signed<bool>));
+ }
+
+ TEST(Signed, non_signed_types_do_not_satisfy_constraint) {
+  EXPECT_FALSE((Signed<signed int[]>));
+  EXPECT_FALSE((Signed<signed char *>));
+  struct A {};
+  EXPECT_FALSE((Signed<A>));
+ }
+
+ TEST(Unsigned, unsigned_types_satisfy_constraint) {
+  EXPECT_TRUE((Unsigned<unsigned char>));
+  EXPECT_TRUE((Unsigned<unsigned short>));
+  EXPECT_TRUE((Unsigned<unsigned int>));
+  EXPECT_TRUE((Unsigned<unsigned long>));
+  EXPECT_TRUE((Unsigned<unsigned long long>));
+  //bool is a special case
+  EXPECT_TRUE((Unsigned<bool>));
+ }
+
+ TEST(Unsigned, signed_types_do_not_satisfy_constraint) {
+  EXPECT_FALSE((Unsigned<signed char>));
+  EXPECT_FALSE((Unsigned<signed short>));
+  EXPECT_FALSE((Unsigned<signed int>));
+  EXPECT_FALSE((Unsigned<signed long>));
+  EXPECT_FALSE((Unsigned<signed long long>));
+  EXPECT_FALSE((Unsigned<float>));
+  EXPECT_FALSE((Unsigned<double>));
+  EXPECT_FALSE((Unsigned<long double>));
+  EXPECT_FALSE((Unsigned<wchar_t>));
+  enum struct E : int {};
+  EXPECT_FALSE((Unsigned<E>));
+ }
+
+ TEST(Unsigned, non_signed_types_do_not_satisfy_constraint) {
+  EXPECT_FALSE((Unsigned<unsigned int[]>));
+  EXPECT_FALSE((Unsigned<void *>));
+  struct A {};
+  EXPECT_FALSE((Unsigned<A>));
+ }
+
  TEST(Scalar, scalar_types_satisfy_constraint) {
   throw std::runtime_error{"Unimplemented"};
  }
@@ -639,6 +705,7 @@ namespace CX {
 
   int m1;
   static float m2;
+  char8_t m3;
   static void f8() noexcept {}
  };
 
@@ -713,6 +780,11 @@ namespace CX {
 
  TEST(MemberField, member_fields_satisfy_constraint) {
   EXPECT_TRUE((MemberField<decltype(&S::m1)>));
+ }
+
+ TEST(MemberField, conditional_constraint_satisfied_for_expected_fields) {
+  EXPECT_TRUE((MemberField<decltype(&S::m3), char8_t>));
+  EXPECT_TRUE((MemberField<decltype(&S::m1), int, S>));
  }
 
  TEST(MemberField, non_member_fields_do_not_satisfy_constraint) {

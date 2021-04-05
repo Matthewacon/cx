@@ -16,14 +16,29 @@ if("${PROJECT_SOURCE_DIR}" STREQUAL "${PROJECT_BINARY_DIR}")
  )
 endif()
 
-#Display error if compiler is not clang or gcc
-if(NOT (${CMAKE_CXX_COMPILER_ID} STREQUAL "Clang"
- OR ${CMAKE_C_COMPILER_ID} STREQUAL "Clang"
- OR ${CMAKE_CXX_COMPILER_ID} STREQUAL "GNU"
- OR ${CMAKE_C_COMPILER_ID} STREQUAL "GNU"))
+#Display error if compiler is not clang, gcc, icc/icx or msvc
+list(
+ APPEND CX_SUPPORTED_COMPILERS
+ "Clang"
+ "AppleClang"
+ "GNU"
+ "Intel"
+ "IntelLLVM"
+ "MSVC"
+)
+set(_CX_SUPPORTED_COMPILER_DETECTED FALSE)
+foreach(COMPILER ${CX_SUPPORTED_COMPILERS})
+ if(CMAKE_C_COMPILER_ID STREQUAL COMPILER AND CMAKE_CXX_COMPILER_ID STREQUAL COMPILER)
+  set(_CX_SUPPORTED_COMPILER_DETECTED TRUE)
+ endif()
+endforeach()
+
+if(NOT ${_CX_SUPPORTED_COMPILER_DETECTED})
  message(
   FATAL_ERROR
-  "You are using an unsupported compiler, please build with Clang or GCC."
+  "You are using an unsupported compiler, please build with any of:\
+  ${CX_SUPPORTED_COMPILERS}\
+  "
  )
 endif()
 
@@ -48,11 +63,16 @@ set(CX_LIBC_SUPPORT ON CACHE BOOL "Enable CX->libc integration")
 
 #Behavioural flags
 set(CX_VARIANT_HARD_CLEAR OFF CACHE BOOL "Enable clearing of variant cache before initialization and after destruction")
+set(CX_VARARG_INTRENSICS OFF CACHE BOOL
+ "Enable definition of va_list function intrensics in 'cx/vararg.h', that would \
+  otherwise be defined by '<cstdarg>'\
+ "
+)
 
 #Sanitize coverage flag
 if(
  ${CX_COVERAGE}
- AND NOT (${CMAKE_CXX_COMPILER_ID} STREQUAL "Clang" AND ${CMAKE_C_COMPILER_ID} STREQUAL "Clang"))
+ AND NOT (CMAKE_CXX_COMPILER_ID STREQUAL "Clang" AND CMAKE_C_COMPILER_ID STREQUAL "Clang"))
  message(
   FATAL_ERROR
   "'CX_COVERAGE' can only be used when building with Clang"
@@ -88,18 +108,25 @@ if(${CX_LIBC_SUPPORT})
  )
 else()
  #Warn user of unavailable headers when building without `-DCX_LIBC_SUPPORT`
- message(
-  WARNING
-  "'CX_LIBC_SUPPORT' is disabled; the following headers will be unavailable:\
-   <cx/vararg.h>\
-  "
- )
+ #message(
+ # WARNING
+ # "'CX_LIBC_SUPPORT' is disabled; the following headers will be unavailable:\
+ #  <cx/vararg.h>\
+ # "
+ #)
 endif()
 
 if(${CX_VARIANT_HARD_CLEAR})
  list(
   APPEND CX_COMPILE_FLAGS
   -DCX_VARIANT_HARD_CLEAR
+ )
+endif()
+
+if(${CX_VARARG_INTRENSICS})
+ list(
+  APPEND CX_VARARG_INTRENSICS
+  -DCX_VARARG_INTRENSICS
  )
 endif()
 

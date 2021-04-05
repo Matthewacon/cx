@@ -663,7 +663,6 @@ namespace CX {
   EXPECT_TRUE((Signed<float>));
   EXPECT_TRUE((Signed<double>));
   EXPECT_TRUE((Signed<long double>));
-  EXPECT_TRUE((Signed<wchar_t>));
  }
 
  TEST(Signed, unsigned_types_do_not_satisfy_constraint) {
@@ -707,7 +706,6 @@ namespace CX {
   EXPECT_FALSE((Unsigned<float>));
   EXPECT_FALSE((Unsigned<double>));
   EXPECT_FALSE((Unsigned<long double>));
-  EXPECT_FALSE((Unsigned<wchar_t>));
   enum struct E : int {};
   EXPECT_FALSE((Unsigned<E>));
  }

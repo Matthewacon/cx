@@ -309,12 +309,16 @@ namespace CX {
    //Initialize encapsulated array
    auto &dst = *(ElementType(*)[Length])&variantRef.data;
    if constexpr (Trivial<ElementType>) {
+    //If `ElementType` is a trivial type, no need to copy construct
+    //or assign
     trivialCopy<E>((E const&)src);
    } else {
     for (LengthType i = 0; i < Length; i++) {
      if constexpr (MoveConstructible<ElementType>) {
+      //Move construct array element
       new (&dst[i]) ElementType{(ElementType&&)src[i]};
      } else if constexpr (Constructible<ElementType> && MoveAssignable<ElementType>) {
+      //Default construct array element and move assign new value
       *new (&dst[i]) ElementType{} = (ElementType&&)src[i];
      }
     }

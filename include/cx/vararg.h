@@ -64,7 +64,7 @@ namespace CX {
  namespace Internal {
   //Default type promotions for va_list argument types
   namespace Meta {
-   template<typename T>
+   template<typename T, typename = ConstVolatileDecayed<T>>
    struct VarargPromoted {
     using Type = T;
    };
@@ -72,13 +72,12 @@ namespace CX {
    template<typename T>
    requires (Integral<T> && sizeof(T) <= sizeof(int))
    struct VarargPromoted<T> {
-    using Type = int;
+    using Type = ConstVolatilePropagated<T, int>;
    };
 
    template<typename T>
-   requires (SameType<ConstVolatileDecayed<T>, float>)
-   struct VarargPromoted<T> {
-    using Type = double;
+   struct VarargPromoted<T, float> {
+    using Type = ConstVolatilePropagated<T, double>;
    };
   }
 
@@ -110,7 +109,7 @@ namespace CX {
    }
   };
 
-  //AArch64
+  //clang, gcc, icx: AArch64
   template<auto Unused>
   struct VaListWrapper<Unused, Unqualified<va_list>> final {
    using UnderlyingListType = Unqualified<va_list>;
@@ -147,7 +146,7 @@ namespace CX {
    }
   };
 
-  //AMD64
+  //clang, gcc, icx: AMD64
   template<auto Unused>
   struct VaListWrapper<Unused, Unqualified<va_list>[1]> {
    using UnderlyingListType = Unqualified<va_list>;
@@ -192,11 +191,42 @@ namespace CX {
    }
   };
 
-  //x86
+  //clang, gcc, icx: x86
+  //msvc: arm64, x64, x86
   template<auto Unused>
-  struct VaListWrapper<Unused, Unqualified<va_list> *> :
-   VaListWrapper<Unused, Unqualified<va_list>[1]>
-  {};
+  struct VaListWrapper<Unused, char *> {
+   using UnderlyingListType = char *;
+   using PlatformListType = UnderlyingListType;
+
+   UnderlyingListType list;
+
+   VaListWrapper() = default;
+
+   VaListWrapper(PlatformListType list) :
+    list(list)
+   {}
+
+   ~VaListWrapper() {
+    CX_VA_END(toPlatform());
+   }
+
+   [[gnu::always_inline]]
+   PlatformListType& toPlatform() {
+    return list;
+   }
+
+   [[gnu::always_inline]]
+   operator PlatformListType&() {
+    return toPlatform();
+   }
+
+   template<typename T>
+   [[gnu::always_inline]]
+   T arg() {
+    using Promoted = VarargPromoted<T>;
+    return (T)CX_VA_ARG(toPlatform(), Promoted);
+   }
+  };
  }
 
  using VaList = Internal::VaListWrapper<0>;

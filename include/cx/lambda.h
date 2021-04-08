@@ -57,8 +57,8 @@
   "compensate for internal overhead."
  );
 #else
- #define CX_LAMBDA_BUF_ALIGN 64
- #define CX_LAMBDA_BUF_SIZE 64
+ #define CX_LAMBDA_BUF_ALIGN (sizeof(void *) * 8)
+ #define CX_LAMBDA_BUF_SIZE (sizeof(void *) * 8)
 #endif
 
 namespace CX {
@@ -76,25 +76,277 @@ namespace CX {
  template<typename>
  struct AllocLambda;
 
- //TODO lambda meta-functions
- namespace MetaFunctions {
-  //TODO:
-  // - qualified lambda -> unqualified lambda
-  // - no-alloc lambda -> alloc lambda
-  // - alloc lambda (w/ size & align restrictions met) -> no-alloc lambda
+ //Lambda meta-functions
+ namespace LambdaMetaFunctions {
+  namespace Internal {
+   template<template<typename> typename T>
+   concept IsLambdaTemplate = CX::MatchAnyTemplateType<
+    T,
+    Lambda,
+    AllocLambda
+   >;
+  }
+
   template<typename>
-  struct CompatibleLambda;
+  struct IsLambda : FalseType {};
+
+  template<template<typename> typename L, typename R, typename... Args>
+  struct IsLambda<L<R (Args...)>> {
+   static constexpr auto const Value = Internal::IsLambdaTemplate<L>;
+  };
+
+  template<template<typename> typename L, typename R, typename... Args>
+  struct IsLambda<L<R (Args...) noexcept>> : IsLambda<L<R (Args...)>> {};
+
+  template<template<typename> typename L, typename R, typename... Args>
+  struct IsLambda<L<R (Args..., ...)>> : IsLambda<L<R (Args...)>> {};
+
+  template<template<typename> typename L, typename R, typename... Args>
+  struct IsLambda<L<R (Args..., ...) noexcept>> : IsLambda<L<R (Args...)>> {};
+
+  //True conditions:
+  // - qualified lambda -> unqualified lambda (both alloc and non-alloc)
+  // - no-alloc lambda <-> alloc lambda
+  template<typename, typename>
+  struct CompatibleLambda : FalseType {};
+
+  //Matching lambda prototype
+  template<
+   template<typename> typename L1,
+   typename R1,
+   typename... Args1,
+   template<typename> typename L2,
+   typename R2,
+   typename... Args2
+  >
+  requires (Internal::IsLambdaTemplate<L1> && Internal::IsLambdaTemplate<L2>)
+  struct CompatibleLambda<L1<R1 (Args1...)>, L2<R2 (Args2...)>> {
+   static constexpr auto const Value = CX::SameType<R1 (Args1...), R2 (Args2...)>;
+  };
+
+  //Matching lambda prototype w/ c-varargs
+  template<
+   template<typename> typename L1,
+   typename R1,
+   typename... Args1,
+   template<typename> typename L2,
+   typename R2,
+   typename... Args2
+  >
+  requires (Internal::IsLambdaTemplate<L1> && Internal::IsLambdaTemplate<L2>)
+  struct CompatibleLambda<L1<R1 (Args1..., ...)>, L2<R2 (Args2..., ...)>> {
+   static constexpr auto const Value = CX::SameType<R1 (Args1..., ...), R2 (Args2..., ...)>;
+  };
+
+  //Qualified lambda to unqualified lambda
+  template<
+   template<typename> typename L1,
+   typename R1,
+   typename... Args1,
+   template<typename> typename L2,
+   typename R2,
+   typename... Args2
+  >
+  requires (Internal::IsLambdaTemplate<L1> && Internal::IsLambdaTemplate<L2>)
+  struct CompatibleLambda<L1<R1 (Args1...) noexcept>, L2<R2 (Args2...)>> {
+   static constexpr auto const Value = CX::SameType<R1 (Args1...), R2 (Args2...)>;
+  };
+
+  //Qualified c-variadic lambda to unualified c-variadic lambda
+  template<
+   template<typename> typename L1,
+   typename R1,
+   typename... Args1,
+   template<typename> typename L2,
+   typename R2,
+   typename... Args2
+  >
+  requires (Internal::IsLambdaTemplate<L1> && Internal::IsLambdaTemplate<L2>)
+  struct CompatibleLambda<L1<R1 (Args1..., ...) noexcept>, L2<R2 (Args2..., ...)>> {
+   static constexpr auto const Value = CX::SameType<R1 (Args1..., ...), R2 (Args2..., ...)>;
+  };
  }
 
- //TODO
+ //Lambda identity
  template<typename T>
- concept CompatibleLambda = false;
+ concept IsLambda = LambdaMetaFunctions
+  ::IsLambda<T>
+  ::Value;
+
+ //Compatible lambda types identity (see above)
+ template<typename L2, typename L1>
+ concept CompatibleLambda = LambdaMetaFunctions
+  ::CompatibleLambda<L1, L2>
+  ::Value;
+
+ //Lambda utilities
+ namespace Internal {
+  //The base of all lambda buffers
+  template<typename>
+  struct LambdaBase;
+
+  //Base of unqualified and `noexcept` qualified function types
+  template<typename R, typename... Args>
+  struct LambdaBase<R (Args...)> {
+   virtual ~LambdaBase() = default;
+
+   virtual R op(Args...) {
+    throw UninitializedLambdaError{};
+   }
+
+   virtual R noexceptOp(Args...) noexcept {
+    throw UninitializedLambdaError{};
+   }
+  };
+
+  //Base of unqualified and `noexcept` qualified c-variadic function types
+  template<typename R, typename... Args>
+  struct LambdaBase<R (Args..., ...)> {
+   using FuncType = R (Args..., ...);
+   using NoexceptFuncType = R (Args..., ...) noexcept;
+
+   virtual ~LambdaBase() = default;
+
+   virtual FuncType * get() {
+    throw UninitializedLambdaError{};
+   }
+
+   virtual NoexceptFuncType * getNoexcept() {
+    throw UninitializedLambdaError{};
+   }
+
+   template<typename... Varargs>
+   R op(Args... args, Varargs... varargs) {
+    return get()(args..., varargs...);
+   }
+
+   template<typename... Varargs>
+   R noexceptOp(Args... args, Varargs... varargs) {
+    return getNoexcept()(args..., varargs...);
+   }
+  };
+
+  //Base of all lambda internal operations
+  template<typename>
+  struct LambdaOperationBase;
+
+  //LambdaOperationBase implementation for non-c-variadic functions
+  template<typename R, typename... Args>
+  struct LambdaOperationBase<R (Args...)> {
+   using LambdaBase = LambdaBase<R (Args...)>;
+
+   //Initializes buffer with empty `LambdaBase` obj
+   template<auto Size>
+   [[gnu::always_inline]]
+   static void init(unsigned char (&buffer)[Size]) {
+    new (&buffer) LambdaBase{};
+   }
+
+   //Destructs current `LambdaBase` obj in buffer
+   template<auto Size>
+   [[gnu::always_inline]]
+   static void destroy(unsigned char (&buffer)[Size]) {
+    (*(LambdaBase *)&buffer).~LambdaBase();
+   }
+
+   //FunctionOperator/StaticFunction copy assignment
+   template<auto Size, typename F>
+   requires (
+    StaticFunction<F, R, Args...>
+    || (FunctionOperator<F, R, Args...>
+     && (CopyConstructible<F> || (Constructible<F> && CopyAssignable<F>))
+    )
+   )
+   [[gnu::always_inline]]
+   static void copyAssignFunction(unsigned char (&buffer)[Size], F const &f) {
+    //Clean up current state
+    destroy(buffer);
+
+    //Wrapper for encapsulated type
+    struct LambdaSpecialized : LambdaBase {
+     F f;
+
+     LambdaSpecialized() = default;
+
+     LambdaSpecialized(F const &f) :
+      f((F const&)f)
+     {}
+
+     R op(Args... args) override {
+      return f(args...);
+     }
+
+     R noexceptOp(Args... args) noexcept override {
+      return f(args...);
+     }
+    };
+
+    //Initialize buffer
+    if constexpr (CopyConstructible<F>) {
+     //Copy construct encapsulated type
+     new (&buffer) LambdaSpecialized{(F const&)f};
+    } else if constexpr (Constructible<F> && CopyAssignable<F>) {
+     //Default construct encapsulated type and copy assign to it
+     (*new (&buffer) LambdaSpecialized{}).f = (F const&)f;
+    }
+   }
+
+   //FunctionOperator move assignment
+   template<auto Size, FunctionOperator<R, Args...> F>
+   requires (!Const<F>
+    && (MoveConstructible<F> || (Constructible<F> && MoveAssignable<F>))
+   )
+   [[gnu::always_inline]]
+   static void moveAssignFunction(unsigned char (&buffer)[Size], F &&f) {
+    //Clean up current state
+    destroy(buffer);
+
+    //Wrapper for encapsulated type
+    struct LambdaSpecialized : LambdaBase {
+     F f;
+
+     LambdaSpecialized() = default;
+
+     LambdaSpecialized(F &&f) :
+      f((F&&)f)
+     {}
+
+     R op(Args... args) override {
+      return f(args...);
+     }
+
+     R noexceptOp(Args... args) noexcept override {
+      return f(args...);
+     }
+    };
+
+    //Initialize buffer
+    if constexpr (MoveConstructible<F>) {
+     new (&buffer) LambdaSpecialized{(F&&)f};
+    } else if constexpr (Constructible<F> && MoveAssignable<F>) {
+     (*new (&buffer) LambdaSpecialized{}).f = (F&&)f;
+    }
+   }
+
+   //TODO lambda copy and move assignment
+  };
+
+  //TODO LambdaOperationBase implementation for c-variadic functions
+  // - Lambda <-> Lambda
+  // -
+ }
 
  //Unqualified lambda type
  template<typename R, typename... Args>
  struct Lambda<R (Args...)> {
   template<typename>
   friend struct Lambda;
+
+  template<typename>
+  friend struct AllocLambda;
+
+  template<typename>
+  friend struct Internal::LambdaOperationBase;
 
   using ReturnType = R;
   using ArgumentTypes = Dummy<Args...>;
@@ -103,25 +355,23 @@ namespace CX {
   static constexpr auto const Size = CX_LAMBDA_BUF_SIZE;
 
  private:
-  struct LambdaBase {
-   virtual ~LambdaBase() = default;
-   virtual R operator()(Args...) {
-    throw UninitializedLambdaError{};
-   }
-  };
+  using OperationBase = Internal::LambdaOperationBase<R (Args...)>;
+  using LambdaBase = typename OperationBase::LambdaBase;
 
   alignas(Alignment) unsigned char buffer[Size];
 
-  void destruct() const {
+  //Return mutable reference to `buffer`
+  auto& buf() const noexcept {
    auto &ref = const_cast<Lambda&>(*this);
-   (*(LambdaBase *)&ref.buffer).~LambdaBase();
+   return ref.buffer;
   }
 
   //Ensure `T` will fit within `buffer`
   template<typename T>
-  void check() const noexcept {
+  static void check() noexcept {
+   //Note: Add `sizeof(void *)` to account for vtable ptr
    static_assert(
-    sizeof(T) <= Alignment,
+    (sizeof(T) + sizeof(void *)) <= Alignment,
     "The required alignment of the given functor is larger than the "
     "current 'CX_LAMBDA_BUF_ALIGN' value. Consider increasing it to "
     "the next power of 2."
@@ -134,123 +384,102 @@ namespace CX {
    );
   }
 
-  //Copy function pointer/lambda assignment
-  template<typename F>
-  requires (
-   StaticFunction<F, R, Args...>
-   || (FunctionOperator<F, R, Args...>
-    && (CopyConstructible<F> || (Constructible<F> && CopyAssignable<F>))
-   )
-  )
-  void assign(F const &f) const {
-   auto &ref = const_cast<Lambda&>(*this);
-
-   //Clean up current state
-   destruct();
-
-   //Wrapper for encapsulated type
-   struct LambdaSpecialized : LambdaBase {
-    F f;
-
-    LambdaSpecialized(F const &f) :
-     f(f)
-    {}
-
-    R operator()(Args... args) override {
-     return f(args...);
-    }
-   };
-
-   //Ensure `LambdaSpecialized` will fit within `buffer`
-   check<LambdaSpecialized>();
-
-   //Initialize buffer
-   if constexpr (CopyConstructible<F>) {
-    //Copy construct encapsulated type
-    new (&ref.buffer) LambdaSpecialized{f};
-   } else if constexpr (Constructible<F> && CopyConstructible<F>) {
-    //Default construct encapsulated type and then copy assign to it
-    (*new (&ref.buffer) LambdaSpecialized{}).f = (F const&)f;
-   }
-  }
-
-  //Move lambda assignment
-  template<FunctionOperator<R, Args...> F>
-  requires (!Const<F>
-   && (MoveConstructible<F> || (Constructible<F> && MoveAssignable<F>))
-  )
-  void assign(F &&f) const {
-   auto &ref = const_cast<Lambda&>(*this);
-
-   //Clean up current state
-   destruct();
-
-   //Wrapper for encapsulated type
-   struct LambdaSpecialized : LambdaBase {
-    F f;
-
-    LambdaSpecialized() = default;
-
-    LambdaSpecialized(F &&f) :
-     f((F&&)f)
-    {}
-
-    R operator()(Args... args) override {
-     return f(args...);
-    }
-   };
-
-   //Ensure 'LambdaSpecialized' will fit within 'buffer'
-   check<LambdaSpecialized>();
-
-   //Initialize buffer
-   if constexpr (MoveConstructible<F>) {
-    //Move construct encapsulated type
-    new (&ref.buffer) LambdaSpecialized{(F&&)f};
-   } else if constexpr (Constructible<F> && MoveAssignable<F>) {
-    //Default construct encapsulated type and move assign to it
-    (*new (&ref.buffer) LambdaSpecialized{}).f = (F&&)f;
-   }
-  }
-
  public:
+  //Default constructor
   Lambda() {
-   new (&buffer) LambdaBase {};
+   //Default initialize buffer for empty lambda
+   OperationBase::init(buf());
   }
 
+  //Function pointer constructor
   template<StaticFunction<R, Args...> F>
   Lambda(F * f) : Lambda() {
-   assign<F *>((F * const&)f);
+   operator=<F>(f);
   }
 
+  //FunctionOperator copy constructor
   template<FunctionOperator<R, Args...> F>
   Lambda(F const &f) : Lambda() {
-   assign<F>((F const&)f);
+   operator=<F>((F const&)f);
   }
 
+  //FunctionOperator move constructor
   template<FunctionOperator<R, Args...> F>
   Lambda(F &&f) : Lambda() {
-   assign<F>((F&&)f);
+   operator=<F>((F&&)f);
   }
 
-  //TODO
-  // - lambda copy constructor
-  // - lambda move constructor
+  //Lambda copy constructor
+  template<CompatibleLambda<Lambda> L>
+  Lambda(L const &l) : Lambda() {
+   operator=<L>((L const&)l);
+  }
+
+  //Lambda move constructor
+  template<CompatibleLambda<Lambda> L>
+  Lambda(L &&l) : Lambda() {
+   operator=<L>((L&&)l);
+  }
 
   ~Lambda() {
-   destruct();
+   //Destruct current buffer (guaranteed to be initialized)
+   OperationBase::destroy(buf());
   }
 
+  //Lambda function operator
   R operator()(Args... args) const {
-   return (*(LambdaBase *)&buffer)(args...);
+   return (*(typename OperationBase::LambdaBase *)&buffer).op(args...);
   }
 
-  //TODO
-  // - fptr copy assignment
-  // - function copy assignment
-  // - function move assignment
-  // - lambda copy assignment
-  // - lambda move assignment
+  //Function pointer assignment operator
+  template<StaticFunction<R, Args...> F>
+  Lambda& operator=(F * f) {
+   //Ensure `F` will fit within `buffer`
+   check<F *>();
+
+   //Initalize buffer
+   OperationBase::copyAssignFunction(buf(), (F * const&)f);
+
+   return *this;
+  }
+
+  //FunctionOperator copy assignment
+  template<FunctionOperator<R, Args...> F>
+  Lambda& operator=(F const &f) {
+   //Ensure `F` will fit within `buffer`
+   check<F>();
+
+   //Initialize buffer
+   OperationBase::copyAssignFunction(buf(), (F const&)f);
+
+   return *this;
+  }
+
+  //FunctionOperator move assignment
+  template<FunctionOperator<R, Args...> F>
+  Lambda& operator=(F &&f) {
+   //Ensure `F` will fit within `buffer`
+   check<F>();
+
+   //Initialize buffer
+   OperationBase::moveAssignFunction(buf(), (F&&)f);
+
+   return *this;
+  }
+
+  //TODO Lambda copy assignment
+  template<CompatibleLambda<Lambda> L>
+  Lambda& operator=(L const &l) {
+   throw l;
+   return *this;
+  }
+
+  //TODO Lambda move assignment
+  template<CompatibleLambda<Lambda> L>
+  Lambda& operator=(L &&l) {
+   throw l;
+   return *this;
+  }
  };
 
  template<typename R, typename... Args>

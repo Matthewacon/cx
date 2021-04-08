@@ -120,8 +120,18 @@ namespace CX {
   };
 
   template<typename T>
+  struct TypeSize<T&> {
+   static constexpr auto const Value = sizeof(T*);
+  };
+
+  template<typename T>
   struct TypeAlignment {
    static constexpr auto const Value = alignof(T);
+  };
+
+  template<typename T>
+  struct TypeAlignment<T&> {
+   static constexpr auto const Value = alignof(T*);
   };
 
   template<
@@ -404,6 +414,11 @@ namespace CX {
   ::MinValue<Values...>
   ::Value;
 
+ template<typename T>
+ constexpr auto const TypeSize = MetaFunctions
+  ::TypeSize<T>
+  ::Value;
+
  template<typename... Types>
  constexpr auto const MaxTypeSize = MetaFunctions::TypeEval<
   MetaFunctions::TypeSize,
@@ -419,6 +434,11 @@ namespace CX {
   0,
   Types...
  >;
+
+ template<typename T>
+ constexpr auto const TypeAlignment = MetaFunctions
+  ::TypeAlignment<T>
+  ::Value;
 
  template<typename... Types>
  constexpr auto const MaxTypeAlignment = MetaFunctions::TypeEval<

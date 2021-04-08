@@ -80,13 +80,13 @@ namespace CX {
 
  //Supporting exceptions
  struct VariantTypeError CX_STL_SUPPORT_EXPR(: std::exception) {
-  char const * what() const noexcept {
+  char const * what() const noexcept CX_STL_SUPPORT_EXPR(override) {
    return "Variant type not present";
   }
  };
 
  struct IncompatibleVariantError CX_STL_SUPPORT_EXPR(: std::exception) {
-  char const * what() const noexcept {
+  char const * what() const noexcept CX_STL_SUPPORT_EXPR(override) {
    return "Variant types are not convertible";
   }
  };

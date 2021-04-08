@@ -89,6 +89,7 @@ list(
  -ftemplate-backtrace-limit=0
  -fno-common
  -Wno-zero-length-array
+ "-Wno-#pragma-messages"
 )
 
 #Conditional compile flags

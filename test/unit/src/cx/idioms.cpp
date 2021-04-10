@@ -864,6 +864,38 @@ namespace CX {
   EXPECT_FALSE((StaticFunction<int& (Dummy<>::*)()>));
  }
 
+ TEST(FunctionPrototype, static_function_types_yield_function_prototype) {
+  throw std::runtime_error{"Unimplemented"};
+ }
+
+ TEST(FunctionPrototype, member_function_ptr_types_yield_function_prototype) {
+  throw std::runtime_error{"Unimplemented"};
+ }
+
+ TEST(FunctionPrototype, non_function_types_yield_default_value) {
+  throw std::runtime_error{"Unimplemented"};
+ }
+
+ TEST(MemberFunctionPrototype, member_function_types_yield_member_function_prototype) {
+  throw std::runtime_error{"Unimplemented"};
+ }
+
+ TEST(MemberFunctionPrototype, non_member_functions_yield_default_value) {
+  throw std::runtime_error{"Unimplemented"};
+ }
+
+ TEST(NoexceptFunction, noexcept_qualified_functions_satisfy_constraint) {
+  throw std::runtime_error{"Unimplemented"};
+ }
+
+ TEST(NoexceptFunction, non_noexcept_functions_do_not_satisfy_constraint) {
+  throw std::runtime_error{"Unimplemented"};
+ }
+
+ TEST(NoexceptFunction, non_function_types_do_not_satisfy_constraint) {
+  throw std::runtime_error{"Unimplemented"};
+ }
+
  TEST(VirtualFunction, virtual_functions_satisfy_constraint) {
   EXPECT_TRUE((VirtualFunction<&S::f5>));
   EXPECT_TRUE((VirtualFunction<&S::f6>));

@@ -481,6 +481,8 @@ namespace CX {
    using Type = ImpossibleType<>;
    using ReturnType = ImpossibleType<>;
    using ArgumentTypes = Dummy<>;
+   using FunctionPrototype = ImpossibleType<>;
+   using MemberFunctionPrototype = ImpossibleType<>;
    static constexpr auto const Const = false;
    static constexpr auto const Noexcept = false;
    static constexpr auto const Variadic = false;
@@ -491,6 +493,8 @@ namespace CX {
    using Type = T;
    using ReturnType = R;
    using ArgumentTypes = Dummy<Args...>;
+   using FunctionPrototype = R (Args...);
+   using MemberFunctionPrototype = R (T::*)(Args...);
    static constexpr auto const Const = false;
    static constexpr auto const Noexcept = false;
    static constexpr auto const Variadic = false;
@@ -498,36 +502,47 @@ namespace CX {
 
   template<typename T, typename R, typename... Args>
   struct MemberFunction<R (T::*)(Args...) const> : MemberFunction<R (T::*)(Args...)> {
+   using MemberFunctionPrototype = R (T::*)(Args...) const;
    static constexpr auto const Const = true;
   };
 
   template<typename T, typename R, typename... Args>
   struct MemberFunction<R (T::*)(Args..., ...)> : MemberFunction<R (T::*)(Args...)> {
+   using FunctionPrototype = R (Args..., ...);
+   using MemberFunctionPrototype = R (T::*)(Args..., ...);
    static constexpr auto const Variadic = true;
   };
 
   template<typename T, typename R, typename... Args>
   struct MemberFunction<R (T::*)(Args..., ...) const> : MemberFunction<R (T::*)(Args...) const> {
+   using FunctionPrototype = R (Args..., ...);
+   using MemberFunctionPrototype = R (T::*)(Args..., ...) const;
    static constexpr auto const Variadic = true;
   };
 
   template<typename T, typename R, typename... Args>
   struct MemberFunction<R (T::*)(Args...) noexcept> : MemberFunction<R (T::*)(Args...)> {
+   using FunctionPrototype = R (Args...) noexcept;
+   using MemberFunctionPrototype = R (T::*)(Args...) noexcept;
    static constexpr auto const Noexcept = true;
   };
 
   template<typename T, typename R, typename... Args>
   struct MemberFunction<R (T::*)(Args..., ...) noexcept> : MemberFunction<R (T::*)(Args...) noexcept> {
+   using FunctionPrototype = R (Args..., ...) noexcept;
+   using MemberFunctionPrototype = R (T::*)(Args..., ...) noexcept;
    static constexpr auto const Variadic = true;
   };
 
   template<typename T, typename R, typename... Args>
   struct MemberFunction<R (T::*)(Args...) const noexcept> : MemberFunction<R (T::*)(Args...) noexcept> {
+   using MemberFunctionPrototype = R (T::*)(Args...) const noexcept;
    static constexpr auto const Const = true;
   };
 
   template<typename T, typename R, typename... Args>
   struct MemberFunction<R (T::*)(Args..., ...) const noexcept> : MemberFunction<R (T::*)(Args...) const noexcept> {
+   using MemberFunctionPrototype = R (T::*)(Args..., ...) const noexcept;
    static constexpr auto const Variadic = true;
   };
 
@@ -536,6 +551,7 @@ namespace CX {
   struct StaticFunction : FalseType {
    using ReturnType = ImpossibleType<>;
    using ArgumentTypes = Dummy<>;
+   using FunctionPrototype = ImpossibleType<>;
    static constexpr auto const Noexcept = false;
    static constexpr auto const Variadic = false;
   };
@@ -544,23 +560,45 @@ namespace CX {
   struct StaticFunction<R (Args...)> : TrueType {
    using ReturnType = R;
    using ArgumentTypes = Dummy<Args...>;
+   using FunctionPrototype = R (Args...);
    static constexpr auto const Noexcept = false;
    static constexpr auto const Variadic = false;
   };
 
   template<typename R, typename... Args>
   struct StaticFunction<R (Args..., ...)> : StaticFunction<R (Args...)> {
+   using FunctionPrototype = R (Args..., ...);
    static constexpr auto const Variadic = true;
   };
 
   template<typename R, typename... Args>
   struct StaticFunction<R (Args...) noexcept> : StaticFunction<R (Args...)> {
+   using FunctionPrototype = R (Args...) noexcept;
    static constexpr auto const Noexcept = true;
   };
 
   template<typename R, typename... Args>
   struct StaticFunction<R (Args..., ...) noexcept> : StaticFunction<R (Args...) noexcept > {
+   using FunctionPrototype = R (Args..., ...) noexcept;
    static constexpr auto const Variadic = true;
+  };
+
+  //Function prototype meta-function
+  template<typename F>
+  struct FunctionPrototype {
+   using FunctionType = ImpossibleType<>;
+  };
+
+  template<typename F>
+  requires (StaticFunction<F>::Value)
+  struct FunctionPrototype<F> {
+   using FunctionType = typename StaticFunction<F>::FunctionPrototype;
+  };
+
+  template<typename F>
+  requires (MemberFunction<F>::Value)
+  struct FunctionPrototype<F> {
+   using FunctionType = typename MemberFunction<F>::FunctionPrototype;
   };
 
   //Virtual member function idiom
@@ -944,6 +982,34 @@ namespace CX {
    (!SameType<R, ImpossibleType<>> && sizeof...(Args) > 0),
    (SameType<Dummy<Args...>, typename MetaFunctions::StaticFunction<Unqualified<F>>::ArgumentTypes>),
    true
+  );
+
+ //TODO should these type meta-function propagate pointer, l/r-value ref
+ //and CV qualifiers? (FunctionPrototype, MemberFunctionPrototype)
+
+ //Yields the prototype of a given function type;
+ //For member functions, the member pointer is stripped from the type
+ template<typename F>
+ using FunctionPrototype = typename MetaFunctions
+  ::FunctionPrototype<Unqualified<F>>
+  ::FunctionType;
+
+ //Yields the prototype of a ginen member function type;
+ //For static functios, yields `ImpossibleType<>`
+ template<typename F>
+ using MemberFunctionPrototype = typename MetaFunctions
+  ::MemberFunction<Unqualified<F>>
+  ::MemberFunctionPrototype;
+
+ //Noexcept function identity
+ template<typename F, typename R = ImpossibleType<>, typename... Args>
+ concept NoexceptFunction = (StaticFunction<F, R, Args...> && MetaFunctions
+  ::StaticFunction<F>
+  ::Noexcept
+ )
+  || (MemberFunction<F, R, Args...> && MetaFunctions
+   ::MemberFunction<F>
+   ::Noexcept
   );
 
  //Virtual function identity

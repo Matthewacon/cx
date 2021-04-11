@@ -239,6 +239,10 @@ namespace CX {
    virtual void copy(void *) {
     throw UninitializedLambdaError{};
    }
+
+   virtual bool present() const noexcept {
+    return false;
+   }
   };
 
   //Uninitialized `LambdaBase` for unqualified and `noexcept` qualified
@@ -362,6 +366,10 @@ namespace CX {
 
    virtual void copy(void *) {
     throw UninitializedLambdaError{};
+   }
+
+   virtual bool present() const noexcept {
+    return false;
    }
   };
 
@@ -516,6 +524,10 @@ namespace CX {
     //Copy encapsulated function to new buffer
     copyLambdaBuffer<LambdaSpecialized>(buf, (F const&)f);
    }
+
+   bool present() const noexcept override {
+    return true;
+   }
   };
 
   //Lambda wrapper for `F` (c-variadic)
@@ -555,6 +567,10 @@ namespace CX {
 
     //Copy encapsulated function to new buffer
     copyLambdaBuffer<LambdaSpecialized>(buf, (F const&)f);
+   }
+
+   bool present() const noexcept override {
+    return true;
    }
   };
 
@@ -647,7 +663,7 @@ namespace CX {
   // -
  }
 
- //Unqualified lambda type
+ //Unqualified lambda specialization
  template<typename R, typename... Args>
  struct Lambda<R (Args...)> {
   template<typename>
@@ -660,7 +676,8 @@ namespace CX {
   friend struct Internal::LambdaOperationBase;
 
   using ReturnType = R;
-  using ArgumentTypes = Dummy<Args...>;
+  template<template<typename...> typename Receiver = Dummy>
+  using ArgumentTypes = Receiver<Args...>;
   using FunctonType = R (Args...);
 
   static constexpr auto const Alignment = CX_LAMBDA_BUF_ALIGN;
@@ -727,6 +744,17 @@ namespace CX {
    return (*(LambdaBase *)&buffer).op(args...);
   }
 
+  //Presence conversion operator
+  operator bool() const noexcept {
+   return (*(LambdaBase *)&buffer).present();
+  }
+
+  //Implicit lambda conversion operator
+  template<CompatibleLambda<Lambda> L>
+  operator L() const {
+   return L{*this};
+  }
+
   //Function pointer assignment operator
   template<StaticFunction<R, Args...> F>
   Lambda& operator=(F * f) {
@@ -739,7 +767,7 @@ namespace CX {
    return *this;
   }
 
-  //FunctionOperator copy assignment
+  //FunctionOperator / function pointer copy assignment
   template<FunctionOperator<R, Args...> F>
   requires (!IsLambda<F>)
   Lambda& operator=(F const &f) {
@@ -781,6 +809,7 @@ namespace CX {
   }
  };
 
+ //Noexcept qualified lambda specialization
  template<typename R, typename... Args>
  struct Lambda<R (Args...) noexcept> {
   template<typename>
@@ -793,7 +822,8 @@ namespace CX {
   friend struct Internal::LambdaOperationBase;
 
   using ReturnType = R;
-  using ArgumentTypes = Dummy<Args...>;
+  template<template<typename...> typename Receiver = Dummy>
+  using ArgumentTypes = Receiver<Args...>;
   using FunctionType = R (Args...) noexcept;
 
   static constexpr auto const Alignment = CX_LAMBDA_BUF_ALIGN;
@@ -860,17 +890,160 @@ namespace CX {
    return (*(LambdaBase *)&buffer).noexceptOp(args...);
   }
 
-  //TODO all assignment operators
+  //Presence conversion operator
+  operator bool() const noexcept {
+   return (*(LambdaBase *)&buffer).present();
+  }
+
+  //Implicit lambda conversion operator
+  template<CompatibleLambda<Lambda> L>
+  operator L() const {
+   return {*this};
+  }
+
+  //FunctionOperator / function pointer copy assignment
+  template<FunctionOperator<R, Args...> F>
+  requires (!IsLambda<F> && NoexceptFunction<F>)
+  Lambda& operator=(F const &f) {
+   //Ensure `F` will fit within `buffer`
+   Internal::lambdaAssignBufferCheck<F, Size, Alignment>();
+
+   //Initialize buffer
+   OperationBase::copyAssignFunction(buf(), (F const&)f);
+
+   return *this;
+  }
+
+  //FunctionOperator move assignment
+  template<FunctionOperator<R, Args...> F>
+  requires (!IsLambda<F> && NoexceptFunction<F>)
+  Lambda& operator=(ConstDecayed<F> &&f) {
+   //Ensure `F` will fit within `buffer`
+   Internal::lambdaAssignBufferCheck<F, Size, Alignment>();
+
+   //Initialize buffer
+   OperationBase::moveAssignFunction(buf(), (ConstDecayed<F>&&)f);
+
+   return *this;
+  }
+
+  //Lambda copy assignment
+  template<CompatibleLambda<Lambda> L>
+  Lambda& operator=(L const &l) {
+   OperationBase::copyAssignLambda(buf(), l.buf());
+   return *this;
+  }
+
+  //Lambda move assignment
+  template<CompatibleLambda<Lambda> L>
+  Lambda& operator=(ConstDecayed<L> &&l) {
+   OperationBase::moveAssignLambda(buf(), l.buf());
+   return *this;
+  }
  };
 
- //TODO C-Variadic lambda support
+ //Unqualified c-variadic lambda specialization
  template<typename R, typename... Args>
- struct Lambda<R (Args..., ...)> {};
+ struct Lambda<R (Args..., ...)> {
+  template<typename>
+  friend struct Lambda;
 
+  template<typename>
+  friend struct AllocLambda;
+
+  template<typename>
+  friend struct Internal::LambdaOperationBase;
+
+  using ReturnType = R;
+  template<template<typename...> typename Receiver = Dummy>
+  using ArgumentTypes = Receiver<Args...>;
+  using FunctionType = R (Args..., ...);
+
+  static constexpr auto const Alignment = CX_LAMBDA_BUF_ALIGN;
+  static constexpr auto const Size = CX_LAMBDA_BUF_SIZE;
+
+ private:
+  using OperationBase = Internal::LambdaOperationBase<R (Args..., ...)>;
+  using LambdaBase = Internal::LambdaBase<R (Args..., ...)>;
+
+  alignas(Alignment) unsigned char buffer[Size];
+
+  //Return mutable reference to `buffer`
+  auto& buf() const noexcept {
+   return const_cast<Lambda&>(*this).buffer;
+  }
+
+ public:
+  //Default constructor
+  Lambda() {
+   //Default initialize buffer for empty lambda
+   OperationBase::init(buf(), Alignment);
+  }
+
+  //Function pointer constructor
+  template<StaticFunction<R, Args...> F>
+  Lambda(F * f) : Lambda() {
+   operator=<F>(f);
+  }
+
+  //FunctionOperator copy constructor
+  template<FunctionOperator<R, Args...> F>
+  requires (!IsLambda<F> && VariadicFunction<F>)
+  Lambda(F const &f) : Lambda() {
+   operator=<F>((F const&)f);
+  }
+
+  //FunctionOperator move constructor
+  template<FunctionOperator<R, Args...> F>
+  requires (!IsLambda<F> && VariadicFunction<F>)
+  Lambda(ConstDecayed<F> &&f) : Lambda() {
+   operator=<F>((ConstDecayed<F> &&)f);
+  }
+
+  //Lambda copy constructor
+  template<CompatibleLambda<Lambda> L>
+  Lambda(L const &l) : Lambda() {
+   operator=<L>((L const&)l);
+  }
+
+  //Lambda move constructor
+  template<CompatibleLambda<Lambda> L>
+  Lambda(ConstDecayed<L> &&l) : Lambda() {
+   operator=<L>((ConstDecayed<L>&&)l);
+  }
+
+  ~Lambda() {
+   //Destruct current buffer (guaranteed to be initialized)
+   OperationBase::destroy(buf());
+  }
+
+  //Lambda function operator
+  template<typename... Varargs>
+  R operator()(Args... args, Varargs... varargs) {
+   return (*(LambdaBase *)&buffer).op(args..., varargs...);
+  }
+
+  //Presence conversion operator
+  operator bool() const noexcept {
+   return (*(LambdaBase *)&buffer).present();
+  }
+
+  //Implicit lambda conversion operator
+  template<CompatibleLambda<Lambda> L>
+  operator L() const {
+   L{*this};
+  }
+
+  //TODO assignment operators
+ };
+
+ //TODO Noexcept qualified c-variadic lambda specialization
  template<typename R, typename... Args>
  struct Lambda<R (Args..., ...) noexcept> {};
 
  //Deduction guides for Lambda
+ Lambda() -> Lambda<void ()>;
+
  template<typename F>
  requires (StaticFunction<F>)
  Lambda(F const&) -> Lambda<FunctionPrototype<F>>;
@@ -895,23 +1068,28 @@ namespace CX {
  requires (IsLambda<L>)
  Lambda(L&&) -> Lambda<typename L::FunctionType>;
 
- //TODO AllocLambda implementation
+ //AllocLambda implementation
  #ifdef CX_STL_SUPPORT
+  //TODO Unqualified lambda specialization
   template<typename R, typename... Args>
   struct AllocLambda<R (Args...)> {};
 
+  //TODO Noexcept qualified lambda specialization
   template<typename R, typename... Args>
   struct AllocLambda<R (Args...) noexcept > {};
 
+  //TODO Unqualified c-variadic lambda specialization
   template<typename R, typename... Args>
   struct AllocLambda<R (Args..., ...)> {};
 
+  //TODO Noexcept qualified c-variadic lambda specialization
   template<typename R, typename... Args>
   struct AllocLambda<R (Args..., ...) noexcept> {};
-
  #endif //CX_STL_SUPPORT
 
  //Deduction guides for AllocLambda
+ AllocLambda() -> AllocLambda<void ()>;
+
  template<typename F>
  requires (StaticFunction<F>)
  AllocLambda(F const&) -> AllocLambda<FunctionPrototype<F>>;
@@ -935,4 +1113,11 @@ namespace CX {
  template<typename L>
  requires (IsLambda<L>)
  AllocLambda(L&&) -> AllocLambda<typename L::FunctionType>;
+
+ //TODO conversion from c-variadic lambda to function pointer
+ //Note: Use `CX::VaList` as the prototype requirement instead
 }
+
+//Clean up lambda macros
+#undef CX_LAMBDA_BUF_ALIGN
+#undef CX_LAMBDA_BUF_SIZE

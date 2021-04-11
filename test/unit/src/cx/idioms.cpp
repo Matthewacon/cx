@@ -864,6 +864,18 @@ namespace CX {
   EXPECT_FALSE((StaticFunction<int& (Dummy<>::*)()>));
  }
 
+ TEST(VariadicFunction, c_variadic_function_types_satisfy_constriant) {
+  throw std::runtime_error{"Unimplemented"};
+ }
+
+ TEST(VariadicFunction, non_c_variadic_function_types_do_not_satisfy_constraint) {
+  throw std::runtime_error{"Unimplemented"};
+ }
+
+ TEST(VariadicFunction, non_function_types_do_not_satisfy_constraint) {
+  throw std::runtime_error{"Unimplemented"};
+ }
+
  TEST(FunctionPrototype, static_function_types_yield_function_prototype) {
   throw std::runtime_error{"Unimplemented"};
  }

@@ -583,6 +583,10 @@ namespace CX {
    static constexpr auto const Variadic = true;
   };
 
+  //Variadic function idiom
+  template<typename F, typename R, typename... Args>
+  struct VariadicFunction : FalseType {};
+
   //Function prototype meta-function
   template<typename F>
   struct FunctionPrototype {
@@ -984,7 +988,29 @@ namespace CX {
    true
   );
 
- //TODO should these type meta-function propagate pointer, l/r-value ref
+ //Supporting specializations for `VariadicFunction` idiom
+ namespace MetaFunctions {
+  template<typename F, typename R, typename... Args>
+  requires (CX::StaticFunction<F, R, Args...>)
+  struct VariadicFunction<F, R, Args...> {
+   static constexpr auto const Value = StaticFunction<Unqualified<F>>::Variadic;
+  };
+
+  template<typename F, typename R, typename... Args>
+  requires (CX::MemberFunction<F, R, Args...>)
+  struct VariadicFunction<F, R, Args...> {
+   static constexpr auto const Value = MemberFunction<Unqualified<F>>::Variadic;
+  };
+ }
+
+ //Variadic function identity
+ //Note: Has optional return type and argument type matching
+ template<typename F, typename R = ImpossibleType<>, typename... Args>
+ concept VariadicFunction = MetaFunctions
+  ::VariadicFunction<F, R, Args...>
+  ::Value;
+
+ //TODO should these type meta-functions propagate pointer, l/r-value ref
  //and CV qualifiers? (FunctionPrototype, MemberFunctionPrototype)
 
  //Yields the prototype of a given function type;
@@ -1002,6 +1028,7 @@ namespace CX {
   ::MemberFunctionPrototype;
 
  //Noexcept function identity
+ //Note: Has optional return type and argument type matching
  template<typename F, typename R = ImpossibleType<>, typename... Args>
  concept NoexceptFunction = (StaticFunction<F, R, Args...> && MetaFunctions
   ::StaticFunction<F>

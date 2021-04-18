@@ -126,58 +126,28 @@ namespace CX {
   //Matching lambda prototype
   template<
    template<typename> typename L1,
-   typename R1,
-   typename... Args1,
+   typename Prototype1,
    template<typename> typename L2,
-   typename R2,
-   typename... Args2
+   typename Prototype2
   >
   requires (Internal::IsLambdaTemplate<L1> && Internal::IsLambdaTemplate<L2>)
-  struct CompatibleLambda<L1<R1 (Args1...)>, L2<R2 (Args2...)>> {
-   static constexpr auto const Value = CX::SameType<R1 (Args1...), R2 (Args2...)>;
+  struct CompatibleLambda<L1<Prototype1>, L2<Prototype2>> {
+   static constexpr auto const Value = CX::SameType<Prototype1, Prototype2>;
   };
 
-  //Matching lambda prototype w/ c-varargs
+  //Noexcept-qualified lambda to unqualified lambda
   template<
    template<typename> typename L1,
-   typename R1,
-   typename... Args1,
+   typename Prototype1,
    template<typename> typename L2,
-   typename R2,
-   typename... Args2
+   typename Prototype2
   >
-  requires (Internal::IsLambdaTemplate<L1> && Internal::IsLambdaTemplate<L2>)
-  struct CompatibleLambda<L1<R1 (Args1..., ...)>, L2<R2 (Args2..., ...)>> {
-   static constexpr auto const Value = CX::SameType<R1 (Args1..., ...), R2 (Args2..., ...)>;
-  };
-
-  //Qualified lambda to unqualified lambda
-  template<
-   template<typename> typename L1,
-   typename R1,
-   typename... Args1,
-   template<typename> typename L2,
-   typename R2,
-   typename... Args2
-  >
-  requires (Internal::IsLambdaTemplate<L1> && Internal::IsLambdaTemplate<L2>)
-  struct CompatibleLambda<L1<R1 (Args1...) noexcept>, L2<R2 (Args2...)>> {
-   static constexpr auto const Value = CX::SameType<R1 (Args1...), R2 (Args2...)>;
-  };
-
-  //Qualified c-variadic lambda to unualified c-variadic lambda
-  template<
-   template<typename> typename L1,
-   typename R1,
-   typename... Args1,
-   template<typename> typename L2,
-   typename R2,
-   typename... Args2
-  >
-  requires (Internal::IsLambdaTemplate<L1> && Internal::IsLambdaTemplate<L2>)
-  struct CompatibleLambda<L1<R1 (Args1..., ...) noexcept>, L2<R2 (Args2..., ...)>> {
-   static constexpr auto const Value = CX::SameType<R1 (Args1..., ...), R2 (Args2..., ...)>;
-  };
+  requires (Internal::IsLambdaTemplate<L1>
+   && Internal::IsLambdaTemplate<L2>
+   && !CX::NoexceptFunction<Prototype1>
+   && CX::NoexceptFunction<Prototype2>
+  )
+  struct CompatibleLambda<L1<Prototype1>, L2<Prototype2>> : TrueType {};
  }
 
  //Lambda identity

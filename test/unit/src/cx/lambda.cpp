@@ -4,36 +4,62 @@
 
 namespace CX {
  TEST(IsLambda, lambda_types_satisfy_constraint) {
-  throw std::runtime_error{"Unimplemented"};
- }
-
- TEST(IsLambda, std_function_satisfies_constraint) {
-  throw std::runtime_error{"Unimplemented"};
+  EXPECT_TRUE((IsLambda<Lambda<void ()>>));
+  EXPECT_TRUE((IsLambda<Lambda<void () noexcept>>));
+  EXPECT_TRUE((IsLambda<Lambda<void (...)>>));
+  EXPECT_TRUE((IsLambda<Lambda<void (...) noexcept>>));
+  EXPECT_TRUE((IsLambda<AllocLambda<void ()>>));
+  EXPECT_TRUE((IsLambda<AllocLambda<void () noexcept>>));
+  EXPECT_TRUE((IsLambda<AllocLambda<void (...)>>));
+  EXPECT_TRUE((IsLambda<AllocLambda<void (...) noexcept>>));
  }
 
  TEST(IsLambda, non_lambda_types_do_not_satisfy_constraint) {
-  throw std::runtime_error{"Unimplemented"};
+  EXPECT_FALSE((IsLambda<void>));
+  EXPECT_FALSE((IsLambda<std::function<void ()>>));
+  EXPECT_FALSE((IsLambda<Lambda<void (*)()>>));
  }
 
  TEST(CompatibleLambda, qualified_lambda_to_unqualified_lambda_satisfies_constraint) {
-  //TODO the following cases should be true
-  // Lambda<void () noexcept> -> Lambda<void ()>
-  // AllocLambda<void () const noexcept> -> AllocLambda<void ()>
-  // Lambda<void () noexcept> -> AllocLambda<void ()>
-  throw std::runtime_error{"Unimplemented"};
+  //Qualifier demotions
+  EXPECT_TRUE((CompatibleLambda<Lambda<void () noexcept>, Lambda<void ()>>));
+  EXPECT_TRUE((CompatibleLambda<AllocLambda<void () noexcept>, AllocLambda<void ()>>));
+  EXPECT_TRUE((CompatibleLambda<Lambda<void (...) noexcept>, Lambda<void (...)>>));
+  EXPECT_TRUE((CompatibleLambda<AllocLambda<void (...) noexcept>, AllocLambda<void (...)>>));
+
+  //Qualifier demotions + conversion between lambda types
+  EXPECT_TRUE((CompatibleLambda<Lambda<void () noexcept>, AllocLambda<void ()>>));
+  EXPECT_TRUE((CompatibleLambda<Lambda<void (...) noexcept>, AllocLambda<void (...)>>));
+  EXPECT_TRUE((CompatibleLambda<AllocLambda<void () noexcept>, Lambda<void ()>>));
+  EXPECT_TRUE((CompatibleLambda<AllocLambda<void (...) noexcept>, Lambda<void (...)>>));
  }
 
  TEST(CompatibleLambda, unqualified_lambda_to_qualified_lambda_does_not_satisfy_constraint) {
-  //TODO invert cases from true-equivalent test
-  throw std::runtime_error{"Unimplemented"};
+  //Qualifier promotions
+  EXPECT_FALSE((CompatibleLambda<Lambda<void ()>, Lambda<void () noexcept>>));
+  EXPECT_FALSE((CompatibleLambda<AllocLambda<void ()>, AllocLambda<void () noexcept>>));
+  EXPECT_FALSE((CompatibleLambda<Lambda<void (...)>, Lambda<void (...) noexcept>>));
+  EXPECT_FALSE((CompatibleLambda<AllocLambda<void (...)>, AllocLambda<void (...) noexcept>>));
+
+  //Qualifier promotions + conversion between lambda types
+  EXPECT_FALSE((CompatibleLambda<Lambda<void ()>, AllocLambda<void () noexcept>>));
+  EXPECT_FALSE((CompatibleLambda<Lambda<void (...)>, AllocLambda<void (...) noexcept>>));
+  EXPECT_FALSE((CompatibleLambda<AllocLambda<void ()>, Lambda<void () noexcept>>));
+  EXPECT_FALSE((CompatibleLambda<AllocLambda<void (...)>, Lambda<void (...) noexcept>>));
  }
 
  TEST(CompatibleLambda, alloc_lambda_conversion_to_non_alloc_lambda_satisfies_constraint) {
-  throw std::runtime_error{"Unimplemented"};
+  EXPECT_TRUE((CompatibleLambda<AllocLambda<void ()>, Lambda<void ()>>));
+  EXPECT_TRUE((CompatibleLambda<AllocLambda<void (...)>, Lambda<void (...)>>));
+  EXPECT_TRUE((CompatibleLambda<AllocLambda<void () noexcept>, Lambda<void () noexcept>>));
+  EXPECT_TRUE((CompatibleLambda<AllocLambda<void (...) noexcept>, Lambda<void (...) noexcept>>));
  }
 
  TEST(CompatibleLambda, non_alloc_lambda_conversion_to_alloc_lambda_satisfies_constraint) {
-  throw std::runtime_error{"Unimplemented"};
+  EXPECT_TRUE((CompatibleLambda<Lambda<void ()>, AllocLambda<void ()>>));
+  EXPECT_TRUE((CompatibleLambda<Lambda<void (...)>, AllocLambda<void (...)>>));
+  EXPECT_TRUE((CompatibleLambda<Lambda<void () noexcept>, AllocLambda<void () noexcept>>));
+  EXPECT_TRUE((CompatibleLambda<Lambda<void (...) noexcept>, AllocLambda<void (...) noexcept>>));
  }
 
  TEST(LambdaConstructor, lambda_default_constructor_initializes_empty_lambda) {

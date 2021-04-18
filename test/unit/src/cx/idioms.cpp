@@ -804,6 +804,9 @@ namespace CX {
   static float m2;
   char8_t m3;
   static void f8() noexcept {}
+
+  int f9() const & { return 0; }
+  void f10() && noexcept {}
  };
 
  TEST(MemberFunction, member_functions_satisfy_constraint) {
@@ -814,6 +817,8 @@ namespace CX {
   EXPECT_TRUE((MemberFunction<decltype(&S::f5)>));
   EXPECT_TRUE((MemberFunction<decltype(&S::f6)>));
   EXPECT_TRUE((MemberFunction<decltype(&S::f7<long>)>));
+  EXPECT_TRUE((MemberFunction<decltype(&S::f9)>));
+  EXPECT_TRUE((MemberFunction<decltype(&S::f10)>));
   EXPECT_TRUE((MemberFunction<void (Dummy<>::*)()>));
  }
 
@@ -865,47 +870,69 @@ namespace CX {
  }
 
  TEST(VariadicFunction, c_variadic_function_types_satisfy_constriant) {
-  throw std::runtime_error{"Unimplemented"};
+  EXPECT_TRUE((VariadicFunction<void (...)>));
+  EXPECT_TRUE((VariadicFunction<void (*)(...)>));
+  EXPECT_TRUE((VariadicFunction<void (Dummy<>::*)(...) const & noexcept>));
+  EXPECT_TRUE((VariadicFunction<float (...) noexcept>));
  }
 
  TEST(VariadicFunction, non_c_variadic_function_types_do_not_satisfy_constraint) {
-  throw std::runtime_error{"Unimplemented"};
+  EXPECT_FALSE((VariadicFunction<void ()>));
+  EXPECT_FALSE((VariadicFunction<char (Dummy<>::*)(int)>));
+  EXPECT_FALSE((VariadicFunction<int (*)() noexcept>));
  }
 
  TEST(VariadicFunction, non_function_types_do_not_satisfy_constraint) {
-  throw std::runtime_error{"Unimplemented"};
+  EXPECT_FALSE((VariadicFunction<float>));
+  EXPECT_FALSE((VariadicFunction<char[]>));
+  EXPECT_FALSE((VariadicFunction<int *>));
  }
 
  TEST(FunctionPrototype, static_function_types_yield_function_prototype) {
-  throw std::runtime_error{"Unimplemented"};
+  EXPECT_TRUE((SameType<FunctionPrototype<void ()>, void ()>));
+  EXPECT_TRUE((SameType<FunctionPrototype<char (...)>, char (...)>));
+  EXPECT_TRUE((SameType<FunctionPrototype<float (*)(int, ...) noexcept>, float (int, ...) noexcept>));
  }
 
  TEST(FunctionPrototype, member_function_ptr_types_yield_function_prototype) {
-  throw std::runtime_error{"Unimplemented"};
+  EXPECT_TRUE((SameType<FunctionPrototype<void (Dummy<>::*)()>, void ()>));
+  EXPECT_TRUE((SameType<FunctionPrototype<int (Dummy<>::*)(int, ...) const && noexcept>, int (int, ...) noexcept>));
+  EXPECT_TRUE((SameType<FunctionPrototype<float (Dummy<>::*)() &>, float ()>));
  }
 
  TEST(FunctionPrototype, non_function_types_yield_default_value) {
-  throw std::runtime_error{"Unimplemented"};
+  EXPECT_TRUE((SameType<FunctionPrototype<void>, ImpossibleType<>>));
+  EXPECT_TRUE((SameType<FunctionPrototype<char *>, ImpossibleType<>>));
+  EXPECT_TRUE((SameType<FunctionPrototype<float[123]>, ImpossibleType<>>));
  }
 
  TEST(MemberFunctionPrototype, member_function_types_yield_member_function_prototype) {
-  throw std::runtime_error{"Unimplemented"};
+  EXPECT_TRUE((SameType<MemberFunctionPrototype<void (Dummy<>::*)()>, void (Dummy<>::*)()>));
+  EXPECT_TRUE((SameType<MemberFunctionPrototype<void (Dummy<>::*)(...) const &>, void (Dummy<>::*)(...) const &>));
+  EXPECT_TRUE((SameType<MemberFunctionPrototype<float * (Dummy<>::*)(int) &&>, float * (Dummy<>::*)(int) &&>));
  }
 
  TEST(MemberFunctionPrototype, non_member_functions_yield_default_value) {
-  throw std::runtime_error{"Unimplemented"};
+  EXPECT_TRUE((SameType<MemberFunctionPrototype<void>, ImpossibleType<>>));
+  EXPECT_TRUE((SameType<MemberFunctionPrototype<int ()>, ImpossibleType<>>));
+  EXPECT_TRUE((SameType<MemberFunctionPrototype<float (*)(...) noexcept>, ImpossibleType<>>));
  }
 
  TEST(NoexceptFunction, noexcept_qualified_functions_satisfy_constraint) {
-  throw std::runtime_error{"Unimplemented"};
+  EXPECT_TRUE((NoexceptFunction<void () noexcept>));
+  EXPECT_TRUE((NoexceptFunction<int (*)(...) noexcept>));
+  EXPECT_TRUE((NoexceptFunction<float (Dummy<>::*)(...) const noexcept>));
  }
 
  TEST(NoexceptFunction, non_noexcept_functions_do_not_satisfy_constraint) {
-  throw std::runtime_error{"Unimplemented"};
+  EXPECT_FALSE((NoexceptFunction<void (*)()>));
+  EXPECT_FALSE((NoexceptFunction<char (Dummy<>::*)(float, ...) const &>));
  }
 
  TEST(NoexceptFunction, non_function_types_do_not_satisfy_constraint) {
-  throw std::runtime_error{"Unimplemented"};
+  EXPECT_FALSE((NoexceptFunction<float>));
+  EXPECT_FALSE((NoexceptFunction<long double>));
+  EXPECT_FALSE((NoexceptFunction<void *>));
  }
 
  TEST(VirtualFunction, virtual_functions_satisfy_constraint) {
@@ -917,6 +944,44 @@ namespace CX {
   EXPECT_FALSE((VirtualFunction<&S::f1>));
   EXPECT_FALSE((VirtualFunction<&nonMemberFunction>));
   EXPECT_FALSE((VirtualFunction<5678>));
+ }
+
+ TEST(FunctionWithPrototype, matching_function_prototypes_satisfy_constraint) {
+  EXPECT_TRUE((FunctionWithPrototype<void (), void ()>));
+  EXPECT_TRUE((FunctionWithPrototype<void (Dummy<>::*)() const && noexcept, void (Dummy<>::*)() const && noexcept>));
+  EXPECT_TRUE((FunctionWithPrototype<void (Dummy<>::*)(...) noexcept, void (...) noexcept>));
+  EXPECT_TRUE((FunctionWithPrototype<char * (*)(float, ...) noexcept, char * (float, ...) noexcept>));
+ }
+
+ TEST(FunctionWithPrototype, struct_with_function_operator_matching_prototype_satisfies_constraint) {
+  struct A {
+   void operator()() {}
+   int operator()(...) & { return 0; }
+   float * operator()(int, char, ...) volatile & noexcept { return nullptr; }
+   long double ** operator()(...) const && noexcept { return nullptr; }
+  };
+
+  EXPECT_TRUE((FunctionWithPrototype<A, void ()>));
+  EXPECT_TRUE((FunctionWithPrototype<A, void (A::*)()>));
+  EXPECT_TRUE((FunctionWithPrototype<A, int (A::*)(...) &>));
+  EXPECT_TRUE((FunctionWithPrototype<A, float * (A::*)(int, char ...) volatile & noexcept>));
+  EXPECT_TRUE((FunctionWithPrototype<A, long double ** (A::*)(...) const && noexcept>));
+ }
+
+ TEST(FunctionWithPrototype, non_matching_function_prototypes_do_not_satisfy_constraint) {
+  EXPECT_FALSE((FunctionWithPrototype<float (), char ()>));
+  EXPECT_FALSE((FunctionWithPrototype<double (Dummy<>::*)() &, double (Dummy<>::*)()>));
+  EXPECT_FALSE((FunctionWithPrototype<void (Dummy<>::*)() noexcept, void ()>));
+ }
+
+ TEST(FunctionWithPrototype, struct_with_function_operator_not_matching_prototype_does_not_satisfy_constraint) {
+  struct A {
+   void operator()(float(&)[1234]) {};
+   char operator()() const volatile && noexcept { return 0; };
+  };
+
+  EXPECT_FALSE((FunctionWithPrototype<A, void (float(&)[12])>));
+  EXPECT_FALSE((FunctionWithPrototype<A, char (A::*)() volatile && noexcept>));
  }
 
  TEST(MemberField, member_fields_satisfy_constraint) {
@@ -933,41 +998,6 @@ namespace CX {
   EXPECT_FALSE((MemberField<decltype(&nonMemberFunction)>));
   EXPECT_FALSE((MemberField<void *>));
   EXPECT_FALSE((MemberField<decltype(&S::m2)>));
- }
-
- TEST(Function, all_functions_satisfy_constraint) {
-  EXPECT_TRUE((Function<void ()>));
-  EXPECT_TRUE((Function<void (*)()>));
-  EXPECT_TRUE((Function<void (&)()>));
-  EXPECT_TRUE((Function<void (&)() noexcept>));
-  EXPECT_TRUE((Function<void (&)(...) noexcept>));
-  EXPECT_TRUE((Function<void (Dummy<>::*)()>));
-  EXPECT_TRUE((Function<void (Dummy<>::*)() const>));
-  EXPECT_TRUE((Function<void (Dummy<>::*)() const noexcept>));
-  EXPECT_TRUE((Function<void (Dummy<>::*)(...) const noexcept>));
-  EXPECT_TRUE((Function<std::function<void ()>>));
-  EXPECT_TRUE((Function<decltype(&S::f1)>));
-  EXPECT_TRUE((Function<decltype(&S::f5)>));
-  EXPECT_TRUE((Function<decltype(nonMemberFunction)>));
- }
-
- TEST(Function, conditional_constraint_satisified_for_expected_functions) {
-  EXPECT_TRUE((Function<decltype(&S::f1), void>));
-  EXPECT_TRUE((Function<decltype(&S::f3), float, int>));
-  EXPECT_TRUE((Function<decltype(&S::f6), signed char>));
-  EXPECT_TRUE((Function<std::function<double (float)>, double>));
-
-  EXPECT_FALSE((Function<void (...), char>));
-  EXPECT_FALSE((Function<decltype(&nonMemberFunction), float, int>));
-  EXPECT_FALSE((Function<decltype(&S::f1), short>));
-  EXPECT_FALSE((Function<decltype(&S::f6), int, void (*)()>));
- }
-
- TEST(Function, non_functions_do_not_satisfy_constraint) {
-  EXPECT_FALSE((Function<S>));
-  EXPECT_FALSE((Function<unsigned char[512]>));
-  EXPECT_FALSE((Function<int * const *&>));
-  EXPECT_FALSE((Function<void>));
  }
 
  //All operator overloads
@@ -1014,51 +1044,51 @@ namespace CX {
   };
 
   TEST(Operators, unqualified_operators_satisfy_constraints) {
-   EXPECT_TRUE((AdditionOperator<UnqualifiedOperators>));
-   EXPECT_TRUE((SubtractionOperator<UnqualifiedOperators>));
-   EXPECT_TRUE((DivisionOperator<UnqualifiedOperators>));
-   EXPECT_TRUE((MultiplicationOperator<UnqualifiedOperators>));
-   EXPECT_TRUE((ModulusOperator<UnqualifiedOperators>));
-   EXPECT_TRUE((BinaryAndOperator<UnqualifiedOperators>));
-   EXPECT_TRUE((BinaryOrOperator<UnqualifiedOperators>));
-   EXPECT_TRUE((LeftShiftOperator<UnqualifiedOperators>));
-   EXPECT_TRUE((RightShiftOperator<UnqualifiedOperators>));
-   EXPECT_TRUE((GreaterThanOperator<UnqualifiedOperators>));
-   EXPECT_TRUE((LessThanOperator<UnqualifiedOperators>));
-   EXPECT_TRUE((EqualityOperator<UnqualifiedOperators>));
-   EXPECT_TRUE((InequalityOperator<UnqualifiedOperators>));
-   EXPECT_TRUE((GreaterOrEqualThanOperator<UnqualifiedOperators>));
-   EXPECT_TRUE((LessOrEqualThanOperator<UnqualifiedOperators>));
+   EXPECT_TRUE((AdditionOperator<UnqualifiedOperators, void (int)>));
+   EXPECT_TRUE((SubtractionOperator<UnqualifiedOperators, void (int)>));
+   EXPECT_TRUE((DivisionOperator<UnqualifiedOperators, void (int)>));
+   EXPECT_TRUE((MultiplicationOperator<UnqualifiedOperators, void (int)>));
+   EXPECT_TRUE((ModulusOperator<UnqualifiedOperators, void (int)>));
+   EXPECT_TRUE((BinaryAndOperator<UnqualifiedOperators, void (int)>));
+   EXPECT_TRUE((BinaryOrOperator<UnqualifiedOperators, void (int)>));
+   EXPECT_TRUE((LeftShiftOperator<UnqualifiedOperators, void (int)>));
+   EXPECT_TRUE((RightShiftOperator<UnqualifiedOperators, void (int)>));
+   EXPECT_TRUE((GreaterThanOperator<UnqualifiedOperators, void (int)>));
+   EXPECT_TRUE((LessThanOperator<UnqualifiedOperators, void (int)>));
+   EXPECT_TRUE((EqualityOperator<UnqualifiedOperators, void (int)>));
+   EXPECT_TRUE((InequalityOperator<UnqualifiedOperators, void (int)>));
+   EXPECT_TRUE((GreaterOrEqualThanOperator<UnqualifiedOperators, void (int)>));
+   EXPECT_TRUE((LessOrEqualThanOperator<UnqualifiedOperators, void (int)>));
    //Must explicitly specify the return type and arguments
    //for the assignment operator concept since there may be l/r-value
    //assignment operators present
-   EXPECT_TRUE((AssignmentOperator<UnqualifiedOperators, void, int>));
-   EXPECT_TRUE((AdditionAssignmentOperator<UnqualifiedOperators>));
-   EXPECT_TRUE((SubtractionAssignmentOperator<UnqualifiedOperators>));
-   EXPECT_TRUE((MultiplicationAssignmentOperator<UnqualifiedOperators>));
-   EXPECT_TRUE((DivisionAssignmentOperator<UnqualifiedOperators>));
-   EXPECT_TRUE((ModulusAssignmentOperator<UnqualifiedOperators>));
-   EXPECT_TRUE((OrAssignmentOperator<UnqualifiedOperators>));
-   EXPECT_TRUE((AndAssignmentOperator<UnqualifiedOperators>));
-   EXPECT_TRUE((XORAssignmentOperator<UnqualifiedOperators>));
-   EXPECT_TRUE((LeftShiftAssignmentOperator<UnqualifiedOperators>));
-   EXPECT_TRUE((RightShiftAssignmentOperator<UnqualifiedOperators>));
-   EXPECT_TRUE((CommaOperator<UnqualifiedOperators>));
+   EXPECT_TRUE((AssignmentOperator<UnqualifiedOperators, void (int)>));
+   EXPECT_TRUE((AdditionAssignmentOperator<UnqualifiedOperators, void (int)>));
+   EXPECT_TRUE((SubtractionAssignmentOperator<UnqualifiedOperators, void (int)>));
+   EXPECT_TRUE((MultiplicationAssignmentOperator<UnqualifiedOperators, void (int)>));
+   EXPECT_TRUE((DivisionAssignmentOperator<UnqualifiedOperators, void (int)>));
+   EXPECT_TRUE((ModulusAssignmentOperator<UnqualifiedOperators, void (int)>));
+   EXPECT_TRUE((OrAssignmentOperator<UnqualifiedOperators, void (int)>));
+   EXPECT_TRUE((AndAssignmentOperator<UnqualifiedOperators, void (int)>));
+   EXPECT_TRUE((XORAssignmentOperator<UnqualifiedOperators, void (int)>));
+   EXPECT_TRUE((LeftShiftAssignmentOperator<UnqualifiedOperators, void (int)>));
+   EXPECT_TRUE((RightShiftAssignmentOperator<UnqualifiedOperators, void (int)>));
+   EXPECT_TRUE((CommaOperator<UnqualifiedOperators, void (int)>));
 
    //Special operators
-   EXPECT_TRUE((ThreeWayComparisonOperator<UnqualifiedOperators>));
-   EXPECT_TRUE((MemberAccessOperator<UnqualifiedOperators>));
-   EXPECT_TRUE((MemberPointerAccessOperator<UnqualifiedOperators>));
-   EXPECT_TRUE((SubscriptOperator<UnqualifiedOperators>));
-   EXPECT_TRUE((FunctionOperator<UnqualifiedOperators>));
+   EXPECT_TRUE((ThreeWayComparisonOperator<UnqualifiedOperators, void (int)>));
+   EXPECT_TRUE((MemberAccessOperator<UnqualifiedOperators, void ()>));
+   EXPECT_TRUE((MemberPointerAccessOperator<UnqualifiedOperators, void (int)>));
+   EXPECT_TRUE((SubscriptOperator<UnqualifiedOperators, void (int)>));
+   EXPECT_TRUE((FunctionOperator<UnqualifiedOperators, void (int)>));
 
    //Unary operators
-   EXPECT_TRUE((DereferenceOperator<UnqualifiedOperators>));
-   EXPECT_TRUE((ComplimentOperator<UnqualifiedOperators>));
-   EXPECT_TRUE((IncrementOperator<UnqualifiedOperators>));
-   EXPECT_TRUE((DecrementOperator<UnqualifiedOperators>));
-   EXPECT_TRUE((NotOperator<UnqualifiedOperators>));
-   EXPECT_TRUE((AddressOperator<UnqualifiedOperators>));
+   EXPECT_TRUE((DereferenceOperator<UnqualifiedOperators, void (int)>));
+   EXPECT_TRUE((ComplimentOperator<UnqualifiedOperators, void ()>));
+   EXPECT_TRUE((IncrementOperator<UnqualifiedOperators, void (int)>));
+   EXPECT_TRUE((DecrementOperator<UnqualifiedOperators, void (int)>));
+   EXPECT_TRUE((NotOperator<UnqualifiedOperators, void ()>));
+   EXPECT_TRUE((AddressOperator<UnqualifiedOperators, void (int)>));
 
    //Must explicitly specify the result of the conversion operator
    //since you can't directly address it
@@ -1107,51 +1137,51 @@ namespace CX {
   };
 
   TEST(Operators, qualified_operators_satisfy_constraints) {
-   EXPECT_TRUE((AdditionOperator<QualifiedOperators>));
-   EXPECT_TRUE((SubtractionOperator<QualifiedOperators>));
-   EXPECT_TRUE((DivisionOperator<QualifiedOperators>));
-   EXPECT_TRUE((MultiplicationOperator<QualifiedOperators>));
-   EXPECT_TRUE((ModulusOperator<QualifiedOperators>));
-   EXPECT_TRUE((BinaryAndOperator<QualifiedOperators>));
-   EXPECT_TRUE((BinaryOrOperator<QualifiedOperators>));
-   EXPECT_TRUE((LeftShiftOperator<QualifiedOperators>));
-   EXPECT_TRUE((RightShiftOperator<QualifiedOperators>));
-   EXPECT_TRUE((GreaterThanOperator<QualifiedOperators>));
-   EXPECT_TRUE((LessThanOperator<QualifiedOperators>));
-   EXPECT_TRUE((EqualityOperator<QualifiedOperators>));
-   EXPECT_TRUE((InequalityOperator<QualifiedOperators>));
-   EXPECT_TRUE((GreaterOrEqualThanOperator<QualifiedOperators>));
-   EXPECT_TRUE((LessOrEqualThanOperator<QualifiedOperators>));
+   EXPECT_TRUE((AdditionOperator<QualifiedOperators, void (QualifiedOperators::*)(int) const noexcept>));
+   EXPECT_TRUE((SubtractionOperator<QualifiedOperators, void (QualifiedOperators::*)(int) const noexcept>));
+   EXPECT_TRUE((DivisionOperator<QualifiedOperators, void (QualifiedOperators::*)(int) const noexcept>));
+   EXPECT_TRUE((MultiplicationOperator<QualifiedOperators, void (QualifiedOperators::*)(int) const noexcept>));
+   EXPECT_TRUE((ModulusOperator<QualifiedOperators, void (QualifiedOperators::*)(int) const noexcept>));
+   EXPECT_TRUE((BinaryAndOperator<QualifiedOperators, void (QualifiedOperators::*)(int) const noexcept>));
+   EXPECT_TRUE((BinaryOrOperator<QualifiedOperators, void (QualifiedOperators::*)(int) const noexcept>));
+   EXPECT_TRUE((LeftShiftOperator<QualifiedOperators, void (QualifiedOperators::*)(int) const noexcept>));
+   EXPECT_TRUE((RightShiftOperator<QualifiedOperators, void (QualifiedOperators::*)(int) const noexcept>));
+   EXPECT_TRUE((GreaterThanOperator<QualifiedOperators, void (QualifiedOperators::*)(int) const noexcept>));
+   EXPECT_TRUE((LessThanOperator<QualifiedOperators, void (QualifiedOperators::*)(int) const noexcept>));
+   EXPECT_TRUE((EqualityOperator<QualifiedOperators, void (QualifiedOperators::*)(int) const noexcept>));
+   EXPECT_TRUE((InequalityOperator<QualifiedOperators, void (QualifiedOperators::*)(int) const noexcept>));
+   EXPECT_TRUE((GreaterOrEqualThanOperator<QualifiedOperators, void (QualifiedOperators::*)(int) const noexcept>));
+   EXPECT_TRUE((LessOrEqualThanOperator<QualifiedOperators, void (QualifiedOperators::*)(int) const noexcept>));
    //Must explicitly specify the return type and arguments
    //for the assignment operator concept since there may be l/r-value
    //assignment operators present
-   EXPECT_TRUE((AssignmentOperator<QualifiedOperators, void, int>));
-   EXPECT_TRUE((AdditionAssignmentOperator<QualifiedOperators>));
-   EXPECT_TRUE((SubtractionAssignmentOperator<QualifiedOperators>));
-   EXPECT_TRUE((MultiplicationAssignmentOperator<QualifiedOperators>));
-   EXPECT_TRUE((DivisionAssignmentOperator<QualifiedOperators>));
-   EXPECT_TRUE((ModulusAssignmentOperator<QualifiedOperators>));
-   EXPECT_TRUE((OrAssignmentOperator<QualifiedOperators>));
-   EXPECT_TRUE((AndAssignmentOperator<QualifiedOperators>));
-   EXPECT_TRUE((XORAssignmentOperator<QualifiedOperators>));
-   EXPECT_TRUE((LeftShiftAssignmentOperator<QualifiedOperators>));
-   EXPECT_TRUE((RightShiftAssignmentOperator<QualifiedOperators>));
-   EXPECT_TRUE((CommaOperator<QualifiedOperators>));
+   EXPECT_TRUE((AssignmentOperator<QualifiedOperators, void (QualifiedOperators::*)(int) const noexcept>));
+   EXPECT_TRUE((AdditionAssignmentOperator<QualifiedOperators, void (QualifiedOperators::*)(int) const noexcept>));
+   EXPECT_TRUE((SubtractionAssignmentOperator<QualifiedOperators, void (QualifiedOperators::*)(int) const noexcept>));
+   EXPECT_TRUE((MultiplicationAssignmentOperator<QualifiedOperators, void (QualifiedOperators::*)(int) const noexcept>));
+   EXPECT_TRUE((DivisionAssignmentOperator<QualifiedOperators, void (QualifiedOperators::*)(int) const noexcept>));
+   EXPECT_TRUE((ModulusAssignmentOperator<QualifiedOperators, void (QualifiedOperators::*)(int) const noexcept>));
+   EXPECT_TRUE((OrAssignmentOperator<QualifiedOperators, void (QualifiedOperators::*)(int) const noexcept>));
+   EXPECT_TRUE((AndAssignmentOperator<QualifiedOperators, void (QualifiedOperators::*)(int) const noexcept>));
+   EXPECT_TRUE((XORAssignmentOperator<QualifiedOperators, void (QualifiedOperators::*)(int) const noexcept>));
+   EXPECT_TRUE((LeftShiftAssignmentOperator<QualifiedOperators, void (QualifiedOperators::*)(int) const noexcept>));
+   EXPECT_TRUE((RightShiftAssignmentOperator<QualifiedOperators, void (QualifiedOperators::*)(int) const noexcept>));
+   EXPECT_TRUE((CommaOperator<QualifiedOperators, void (QualifiedOperators::*)(int) const noexcept>));
 
    //Special operators
-   EXPECT_TRUE((ThreeWayComparisonOperator<QualifiedOperators>));
-   EXPECT_TRUE((MemberAccessOperator<QualifiedOperators>));
-   EXPECT_TRUE((MemberPointerAccessOperator<QualifiedOperators>));
-   EXPECT_TRUE((SubscriptOperator<QualifiedOperators>));
-   EXPECT_TRUE((FunctionOperator<QualifiedOperators>));
+   EXPECT_TRUE((ThreeWayComparisonOperator<QualifiedOperators, void (QualifiedOperators::*)(int) const noexcept>));
+   EXPECT_TRUE((MemberAccessOperator<QualifiedOperators, void (QualifiedOperators::*)() const noexcept>));
+   EXPECT_TRUE((MemberPointerAccessOperator<QualifiedOperators, void (QualifiedOperators::*)(int) const noexcept>));
+   EXPECT_TRUE((SubscriptOperator<QualifiedOperators, void (QualifiedOperators::*)(int) const noexcept>));
+   EXPECT_TRUE((FunctionOperator<QualifiedOperators, void (QualifiedOperators::*)(int) const noexcept>));
 
    //Unary operators
-   EXPECT_TRUE((DereferenceOperator<QualifiedOperators>));
-   EXPECT_TRUE((ComplimentOperator<QualifiedOperators>));
-   EXPECT_TRUE((IncrementOperator<QualifiedOperators>));
-   EXPECT_TRUE((DecrementOperator<QualifiedOperators>));
-   EXPECT_TRUE((NotOperator<QualifiedOperators>));
-   EXPECT_TRUE((AddressOperator<QualifiedOperators>));
+   EXPECT_TRUE((DereferenceOperator<QualifiedOperators, void (QualifiedOperators::*)(int) const noexcept>));
+   EXPECT_TRUE((ComplimentOperator<QualifiedOperators, void (QualifiedOperators::*)() const noexcept>));
+   EXPECT_TRUE((IncrementOperator<QualifiedOperators, void (QualifiedOperators::*)(int) const noexcept>));
+   EXPECT_TRUE((DecrementOperator<QualifiedOperators, void (QualifiedOperators::*)(int) const noexcept>));
+   EXPECT_TRUE((NotOperator<QualifiedOperators, void (QualifiedOperators::*)() const noexcept>));
+   EXPECT_TRUE((AddressOperator<QualifiedOperators, void (QualifiedOperators::*)(int) const noexcept>));
 
    //Must explicitly specify the result of the conversion operator
    //since you can't directly address it
@@ -1187,64 +1217,64 @@ namespace CX {
    template<typename A> void operator>>=(A) {}
    template<typename A> void operator,(A) {}
    template<typename A> void operator<=>(A) {}
-   template<typename A> void operator->() {}
+   template<typename = void> void operator->() {}
    template<typename A> void operator->*(A) {}
    template<typename A> void operator[](A) {}
    template<typename A> void operator()(A) {}
-   template<typename A> void operator~() {}
+   template<typename = void> void operator~() {}
    template<typename A> void operator++(A) {}
    template<typename A> void operator--(A) {}
-   template<typename A> void operator!() {}
+   template<typename = void> void operator!() {}
    template<typename A> void operator&(A) {}
    template<typename A> operator A() { throw; }
   };
 
   TEST(Operators, templated_operators_satisfy_conditional_constraints) {
-   EXPECT_TRUE((AdditionOperator<TemplateOperators, void, int>));
-   EXPECT_TRUE((SubtractionOperator<TemplateOperators, void, int>));
-   EXPECT_TRUE((DivisionOperator<TemplateOperators, void, int>));
-   EXPECT_TRUE((MultiplicationOperator<TemplateOperators, void, int>));
-   EXPECT_TRUE((ModulusOperator<TemplateOperators, void, int>));
-   EXPECT_TRUE((BinaryAndOperator<TemplateOperators, void, int>));
-   EXPECT_TRUE((BinaryOrOperator<TemplateOperators, void, int>));
-   EXPECT_TRUE((LeftShiftOperator<TemplateOperators, void, int>));
-   EXPECT_TRUE((RightShiftOperator<TemplateOperators, void, int>));
-   EXPECT_TRUE((GreaterThanOperator<TemplateOperators, void, int>));
-   EXPECT_TRUE((LessThanOperator<TemplateOperators, void, int>));
-   EXPECT_TRUE((EqualityOperator<TemplateOperators, void, int>));
-   EXPECT_TRUE((InequalityOperator<TemplateOperators, void, int>));
-   EXPECT_TRUE((GreaterOrEqualThanOperator<TemplateOperators, void, int>));
-   EXPECT_TRUE((LessOrEqualThanOperator<TemplateOperators, void, int>));
+   EXPECT_TRUE((AdditionOperator<TemplateOperators, void (int)>));
+   EXPECT_TRUE((SubtractionOperator<TemplateOperators, void (int)>));
+   EXPECT_TRUE((DivisionOperator<TemplateOperators, void (int)>));
+   EXPECT_TRUE((MultiplicationOperator<TemplateOperators, void (int)>));
+   EXPECT_TRUE((ModulusOperator<TemplateOperators, void (int)>));
+   EXPECT_TRUE((BinaryAndOperator<TemplateOperators, void (int)>));
+   EXPECT_TRUE((BinaryOrOperator<TemplateOperators, void (int)>));
+   EXPECT_TRUE((LeftShiftOperator<TemplateOperators, void (int)>));
+   EXPECT_TRUE((RightShiftOperator<TemplateOperators, void (int)>));
+   EXPECT_TRUE((GreaterThanOperator<TemplateOperators, void (int)>));
+   EXPECT_TRUE((LessThanOperator<TemplateOperators, void (int)>));
+   EXPECT_TRUE((EqualityOperator<TemplateOperators, void (int)>));
+   EXPECT_TRUE((InequalityOperator<TemplateOperators, void (int)>));
+   EXPECT_TRUE((GreaterOrEqualThanOperator<TemplateOperators, void (int)>));
+   EXPECT_TRUE((LessOrEqualThanOperator<TemplateOperators, void (int)>));
    //Must explicitly specify the return type and arguments
    //for the assignment operator concept since there may be l/r-value
    //assignment operators present
-   EXPECT_TRUE((AssignmentOperator<TemplateOperators, void, int>));
-   EXPECT_TRUE((AdditionAssignmentOperator<TemplateOperators, void, int>));
-   EXPECT_TRUE((SubtractionAssignmentOperator<TemplateOperators, void, int>));
-   EXPECT_TRUE((MultiplicationAssignmentOperator<TemplateOperators, void, int>));
-   EXPECT_TRUE((DivisionAssignmentOperator<TemplateOperators, void, int>));
-   EXPECT_TRUE((ModulusAssignmentOperator<TemplateOperators, void, int>));
-   EXPECT_TRUE((OrAssignmentOperator<TemplateOperators, void, int>));
-   EXPECT_TRUE((AndAssignmentOperator<TemplateOperators, void, int>));
-   EXPECT_TRUE((XORAssignmentOperator<TemplateOperators, void, int>));
-   EXPECT_TRUE((LeftShiftAssignmentOperator<TemplateOperators, void, int>));
-   EXPECT_TRUE((RightShiftAssignmentOperator<TemplateOperators, void, int>));
-   EXPECT_TRUE((CommaOperator<TemplateOperators, void, int>));
+   EXPECT_TRUE((AssignmentOperator<TemplateOperators, void (int)>));
+   EXPECT_TRUE((AdditionAssignmentOperator<TemplateOperators, void (int)>));
+   EXPECT_TRUE((SubtractionAssignmentOperator<TemplateOperators, void (int)>));
+   EXPECT_TRUE((MultiplicationAssignmentOperator<TemplateOperators, void (int)>));
+   EXPECT_TRUE((DivisionAssignmentOperator<TemplateOperators, void (int)>));
+   EXPECT_TRUE((ModulusAssignmentOperator<TemplateOperators, void (int)>));
+   EXPECT_TRUE((OrAssignmentOperator<TemplateOperators, void (int)>));
+   EXPECT_TRUE((AndAssignmentOperator<TemplateOperators, void (int)>));
+   EXPECT_TRUE((XORAssignmentOperator<TemplateOperators, void (int)>));
+   EXPECT_TRUE((LeftShiftAssignmentOperator<TemplateOperators, void (int)>));
+   EXPECT_TRUE((RightShiftAssignmentOperator<TemplateOperators, void (int)>));
+   EXPECT_TRUE((CommaOperator<TemplateOperators, void (int)>));
 
    //Special operators
-   EXPECT_TRUE((ThreeWayComparisonOperator<TemplateOperators, void, int>));
-   EXPECT_TRUE((MemberAccessOperator<TemplateOperators, void>));
-   EXPECT_TRUE((MemberPointerAccessOperator<TemplateOperators, void, int>));
-   EXPECT_TRUE((SubscriptOperator<TemplateOperators, void, int>));
-   EXPECT_TRUE((FunctionOperator<TemplateOperators, void, int>));
+   EXPECT_TRUE((ThreeWayComparisonOperator<TemplateOperators, void (int)>));
+   EXPECT_TRUE((MemberAccessOperator<TemplateOperators, void ()>));
+   EXPECT_TRUE((MemberPointerAccessOperator<TemplateOperators, void (int)>));
+   EXPECT_TRUE((SubscriptOperator<TemplateOperators, void (int)>));
+   EXPECT_TRUE((FunctionOperator<TemplateOperators, void (int)>));
 
    //Unary operators
-   EXPECT_TRUE((DereferenceOperator<TemplateOperators, void, int>));
-   EXPECT_TRUE((ComplimentOperator<TemplateOperators, void>));
-   EXPECT_TRUE((IncrementOperator<TemplateOperators, void, int>));
-   EXPECT_TRUE((DecrementOperator<TemplateOperators, void, int>));
-   EXPECT_TRUE((NotOperator<TemplateOperators, void>));
-   EXPECT_TRUE((AddressOperator<TemplateOperators, void, int>));
+   EXPECT_TRUE((DereferenceOperator<TemplateOperators, void (int)>));
+   EXPECT_TRUE((ComplimentOperator<TemplateOperators, void ()>));
+   EXPECT_TRUE((IncrementOperator<TemplateOperators, void (int)>));
+   EXPECT_TRUE((DecrementOperator<TemplateOperators, void (int)>));
+   EXPECT_TRUE((NotOperator<TemplateOperators, void ()>));
+   EXPECT_TRUE((AddressOperator<TemplateOperators, void (int)>));
 
    //Must explicitly specify the result of the conversion operator
    //since you can't directly address it
@@ -1252,51 +1282,51 @@ namespace CX {
   }
 
   TEST(Operators, non_operators_do_not_satisfy_constraints) {
-   EXPECT_FALSE((AdditionOperator<S>));
-   EXPECT_FALSE((SubtractionOperator<S>));
-   EXPECT_FALSE((DivisionOperator<S>));
-   EXPECT_FALSE((MultiplicationOperator<S>));
-   EXPECT_FALSE((ModulusOperator<S>));
-   EXPECT_FALSE((BinaryAndOperator<S>));
-   EXPECT_FALSE((BinaryOrOperator<S>));
-   EXPECT_FALSE((LeftShiftOperator<S>));
-   EXPECT_FALSE((RightShiftOperator<S>));
-   EXPECT_FALSE((GreaterThanOperator<S>));
-   EXPECT_FALSE((LessThanOperator<S>));
-   EXPECT_FALSE((EqualityOperator<S>));
-   EXPECT_FALSE((InequalityOperator<S>));
-   EXPECT_FALSE((GreaterOrEqualThanOperator<S>));
-   EXPECT_FALSE((LessOrEqualThanOperator<S>));
+   EXPECT_FALSE((AdditionOperator<S, void ()>));
+   EXPECT_FALSE((SubtractionOperator<S, void ()>));
+   EXPECT_FALSE((DivisionOperator<S, void ()>));
+   EXPECT_FALSE((MultiplicationOperator<S, void ()>));
+   EXPECT_FALSE((ModulusOperator<S, void ()>));
+   EXPECT_FALSE((BinaryAndOperator<S, void ()>));
+   EXPECT_FALSE((BinaryOrOperator<S, void ()>));
+   EXPECT_FALSE((LeftShiftOperator<S, void ()>));
+   EXPECT_FALSE((RightShiftOperator<S, void ()>));
+   EXPECT_FALSE((GreaterThanOperator<S, void ()>));
+   EXPECT_FALSE((LessThanOperator<S, void ()>));
+   EXPECT_FALSE((EqualityOperator<S, void ()>));
+   EXPECT_FALSE((InequalityOperator<S, void ()>));
+   EXPECT_FALSE((GreaterOrEqualThanOperator<S, void ()>));
+   EXPECT_FALSE((LessOrEqualThanOperator<S, void ()>));
    //Must explicitly specify the return type and arguments
    //for the assignment operator concept since there may be l/r-value
    //assignment operators present
-   EXPECT_FALSE((AssignmentOperator<S, void, int>));
-   EXPECT_FALSE((AdditionAssignmentOperator<S>));
-   EXPECT_FALSE((SubtractionAssignmentOperator<S>));
-   EXPECT_FALSE((MultiplicationAssignmentOperator<S>));
-   EXPECT_FALSE((DivisionAssignmentOperator<S>));
-   EXPECT_FALSE((ModulusAssignmentOperator<S>));
-   EXPECT_FALSE((OrAssignmentOperator<S>));
-   EXPECT_FALSE((AndAssignmentOperator<S>));
-   EXPECT_FALSE((XORAssignmentOperator<S>));
-   EXPECT_FALSE((LeftShiftAssignmentOperator<S>));
-   EXPECT_FALSE((RightShiftAssignmentOperator<S>));
-   EXPECT_FALSE((CommaOperator<S>));
+   EXPECT_FALSE((AssignmentOperator<S, void ()>));
+   EXPECT_FALSE((AdditionAssignmentOperator<S, void ()>));
+   EXPECT_FALSE((SubtractionAssignmentOperator<S, void ()>));
+   EXPECT_FALSE((MultiplicationAssignmentOperator<S, void ()>));
+   EXPECT_FALSE((DivisionAssignmentOperator<S, void ()>));
+   EXPECT_FALSE((ModulusAssignmentOperator<S, void ()>));
+   EXPECT_FALSE((OrAssignmentOperator<S, void ()>));
+   EXPECT_FALSE((AndAssignmentOperator<S, void ()>));
+   EXPECT_FALSE((XORAssignmentOperator<S, void ()>));
+   EXPECT_FALSE((LeftShiftAssignmentOperator<S, void ()>));
+   EXPECT_FALSE((RightShiftAssignmentOperator<S, void ()>));
+   EXPECT_FALSE((CommaOperator<S, void ()>));
 
    //Special operators
-   EXPECT_FALSE((ThreeWayComparisonOperator<S>));
-   EXPECT_FALSE((MemberAccessOperator<S>));
-   EXPECT_FALSE((MemberPointerAccessOperator<S>));
-   EXPECT_FALSE((SubscriptOperator<S>));
-   EXPECT_FALSE((FunctionOperator<S>));
+   EXPECT_FALSE((ThreeWayComparisonOperator<S, void ()>));
+   EXPECT_FALSE((MemberAccessOperator<S, void ()>));
+   EXPECT_FALSE((MemberPointerAccessOperator<S, void ()>));
+   EXPECT_FALSE((SubscriptOperator<S, void ()>));
+   EXPECT_FALSE((FunctionOperator<S, void ()>));
 
    //Unary operators
-   EXPECT_FALSE((DereferenceOperator<S>));
-   EXPECT_FALSE((ComplimentOperator<S>));
-   EXPECT_FALSE((IncrementOperator<S>));
-   EXPECT_FALSE((DecrementOperator<S>));
-   EXPECT_FALSE((NotOperator<S>));
-   EXPECT_FALSE((AddressOperator<S>));
+   EXPECT_FALSE((DereferenceOperator<S, void ()>));
+   EXPECT_FALSE((ComplimentOperator<S, void ()>));
+   EXPECT_FALSE((IncrementOperator<S, void ()>));
+   EXPECT_FALSE((DecrementOperator<S, void ()>));
+   EXPECT_FALSE((NotOperator<S, void ()>));
+   EXPECT_FALSE((AddressOperator<S, void ()>));
 
    //Must explicitly specify the result of the conversion operator
    //since you can't directly address it

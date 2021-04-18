@@ -480,112 +480,157 @@ namespace CX {
   struct MemberFunction : FalseType {
    using Type = ImpossibleType<>;
    using ReturnType = ImpossibleType<>;
-   using ArgumentTypes = Dummy<>;
+   template<template<typename...> typename Receiver = ImpossibleType>
+   using ArgumentTypes = Receiver<>;
    using FunctionPrototype = ImpossibleType<>;
    using MemberFunctionPrototype = ImpossibleType<>;
    static constexpr auto const Const = false;
+   static constexpr auto const Volatile = false;
    static constexpr auto const Noexcept = false;
    static constexpr auto const Variadic = false;
+   static constexpr auto const LValueRef = false;
+   static constexpr auto const RValueRef = false;
   };
 
+  //Base unqualified member function case
   template<typename T, typename R, typename... Args>
-  struct MemberFunction<R (T::*)(Args...)> : TrueType {
+  struct MemberFunction<R (T::*)(Args...)> : MemberFunction<void> {
    using Type = T;
    using ReturnType = R;
-   using ArgumentTypes = Dummy<Args...>;
+   template<template<typename...> typename Receiver = Dummy>
+   using ArgumentTypes = Receiver<Args...>;
    using FunctionPrototype = R (Args...);
    using MemberFunctionPrototype = R (T::*)(Args...);
-   static constexpr auto const Const = false;
-   static constexpr auto const Noexcept = false;
-   static constexpr auto const Variadic = false;
+   static constexpr auto const Value = true;
   };
 
-  template<typename T, typename R, typename... Args>
-  struct MemberFunction<R (T::*)(Args...) const> : MemberFunction<R (T::*)(Args...)> {
-   using MemberFunctionPrototype = R (T::*)(Args...) const;
-   static constexpr auto const Const = true;
-  };
+  #define DEFINE_MEMBER_FUNCTION_IDIOM_CASE(field, prototype, staticPrototype, base) \
+  template<typename T, typename R, typename... Args>\
+  struct MemberFunction<prototype> : base {\
+   using FunctionPrototype = staticPrototype;\
+   using MemberFunctionPrototype = prototype;\
+   static constexpr auto const field = true;\
+  }
 
-  template<typename T, typename R, typename... Args>
-  struct MemberFunction<R (T::*)(Args..., ...)> : MemberFunction<R (T::*)(Args...)> {
-   using FunctionPrototype = R (Args..., ...);
-   using MemberFunctionPrototype = R (T::*)(Args..., ...);
-   static constexpr auto const Variadic = true;
-  };
+  //All base qualifiers
+  DEFINE_MEMBER_FUNCTION_IDIOM_CASE(Const,     R (T::*)(Args...) const,    R (Args...),          MemberFunction<R (T::*)(Args...)>);
+  DEFINE_MEMBER_FUNCTION_IDIOM_CASE(Volatile,  R (T::*)(Args...) volatile, R (Args...),          MemberFunction<R (T::*)(Args...)>);
+  DEFINE_MEMBER_FUNCTION_IDIOM_CASE(Noexcept,  R (T::*)(Args...) noexcept, R (Args...) noexcept, MemberFunction<R (T::*)(Args...)>);
+  DEFINE_MEMBER_FUNCTION_IDIOM_CASE(Variadic,  R (T::*)(Args..., ...),     R (Args..., ...),     MemberFunction<R (T::*)(Args...)>);
+  DEFINE_MEMBER_FUNCTION_IDIOM_CASE(LValueRef, R (T::*)(Args...) &,        R (Args...),          MemberFunction<R (T::*)(Args...)>);
+  DEFINE_MEMBER_FUNCTION_IDIOM_CASE(RValueRef, R (T::*)(Args...) &&,       R (Args...),          MemberFunction<R (T::*)(Args...)>);
 
-  template<typename T, typename R, typename... Args>
-  struct MemberFunction<R (T::*)(Args..., ...) const> : MemberFunction<R (T::*)(Args...) const> {
-   using FunctionPrototype = R (Args..., ...);
-   using MemberFunctionPrototype = R (T::*)(Args..., ...) const;
-   static constexpr auto const Variadic = true;
-  };
+  //Const product expansion
+  DEFINE_MEMBER_FUNCTION_IDIOM_CASE(Const, R (T::*)(Args...) const volatile, R (Args...),          MemberFunction<R (T::*)(Args...) volatile>);
+  DEFINE_MEMBER_FUNCTION_IDIOM_CASE(Const, R (T::*)(Args...) const noexcept, R (Args...) noexcept, MemberFunction<R (T::*)(Args...) noexcept>);
+  DEFINE_MEMBER_FUNCTION_IDIOM_CASE(Const, R (T::*)(Args..., ...) const,     R (Args..., ...),     MemberFunction<R (T::*)(Args..., ...)>);
+  DEFINE_MEMBER_FUNCTION_IDIOM_CASE(Const, R (T::*)(Args...) const &,        R (Args...),          MemberFunction<R (T::*)(Args...) &>);
+  DEFINE_MEMBER_FUNCTION_IDIOM_CASE(Const, R (T::*)(Args...) const &&,       R (Args...),          MemberFunction<R (T::*)(Args...) &&>);
 
-  template<typename T, typename R, typename... Args>
-  struct MemberFunction<R (T::*)(Args...) noexcept> : MemberFunction<R (T::*)(Args...)> {
-   using FunctionPrototype = R (Args...) noexcept;
-   using MemberFunctionPrototype = R (T::*)(Args...) noexcept;
-   static constexpr auto const Noexcept = true;
-  };
+  //Volatile product expansion
+  DEFINE_MEMBER_FUNCTION_IDIOM_CASE(Volatile, R (T::*)(Args...) volatile noexcept, R (Args...) noexcept, MemberFunction<R (T::*)(Args...) noexcept>);
+  DEFINE_MEMBER_FUNCTION_IDIOM_CASE(Volatile, R (T::*)(Args..., ...) volatile,     R (Args..., ...),     MemberFunction<R (T::*)(Args..., ...)>);
+  DEFINE_MEMBER_FUNCTION_IDIOM_CASE(Volatile, R (T::*)(Args...) volatile &,        R (Args...),          MemberFunction<R (T::*)(Args...) &>);
+  DEFINE_MEMBER_FUNCTION_IDIOM_CASE(Volatile, R (T::*)(Args...) volatile &&,       R (Args...),          MemberFunction<R (T::*)(Args...) &&>);
 
-  template<typename T, typename R, typename... Args>
-  struct MemberFunction<R (T::*)(Args..., ...) noexcept> : MemberFunction<R (T::*)(Args...) noexcept> {
-   using FunctionPrototype = R (Args..., ...) noexcept;
-   using MemberFunctionPrototype = R (T::*)(Args..., ...) noexcept;
-   static constexpr auto const Variadic = true;
-  };
+  //Noexcept product expansion
+  DEFINE_MEMBER_FUNCTION_IDIOM_CASE(Noexcept, R (T::*)(Args..., ...) noexcept, R (Args..., ...) noexcept, MemberFunction<R (T::*)(Args..., ...)>);
+  DEFINE_MEMBER_FUNCTION_IDIOM_CASE(Noexcept, R (T::*)(Args...) & noexcept,    R (Args...) noexcept,      MemberFunction<R (T::*)(Args...) &>);
+  DEFINE_MEMBER_FUNCTION_IDIOM_CASE(Noexcept, R (T::*)(Args...) && noexcept,   R (Args...) noexcept,      MemberFunction<R (T::*)(Args...) &&>);
 
-  template<typename T, typename R, typename... Args>
-  struct MemberFunction<R (T::*)(Args...) const noexcept> : MemberFunction<R (T::*)(Args...) noexcept> {
-   using MemberFunctionPrototype = R (T::*)(Args...) const noexcept;
-   static constexpr auto const Const = true;
-  };
+  //Variadic product expansion
+  DEFINE_MEMBER_FUNCTION_IDIOM_CASE(Variadic, R (T::*)(Args..., ...) &,  R (Args..., ...), MemberFunction<R (T::*)(Args...) &>);
+  DEFINE_MEMBER_FUNCTION_IDIOM_CASE(Variadic, R (T::*)(Args..., ...) &&, R (Args..., ...), MemberFunction<R (T::*)(Args...) &&>);
 
-  template<typename T, typename R, typename... Args>
-  struct MemberFunction<R (T::*)(Args..., ...) const noexcept> : MemberFunction<R (T::*)(Args...) const noexcept> {
-   using MemberFunctionPrototype = R (T::*)(Args..., ...) const noexcept;
-   static constexpr auto const Variadic = true;
-  };
+  //Note: l/r-value reference qualifiers cannot both be applied
+  //to the same member function, so there is no need to expand
+  //them.
+
+  //Const-volatile expansion
+  DEFINE_MEMBER_FUNCTION_IDIOM_CASE(Const, R (T::*)(Args...) const volatile noexcept, R (Args...) noexcept, MemberFunction<R (T::*)(Args...) volatile noexcept>);
+  DEFINE_MEMBER_FUNCTION_IDIOM_CASE(Const, R (T::*)(Args..., ...) const volatile,     R (Args..., ...),     MemberFunction<R (T::*)(Args..., ...) volatile>);
+  DEFINE_MEMBER_FUNCTION_IDIOM_CASE(Const, R (T::*)(Args...) const volatile &,        R (Args...),          MemberFunction<R (T::*)(Args...) volatile &>);
+  DEFINE_MEMBER_FUNCTION_IDIOM_CASE(Const, R (T::*)(Args...) const volatile &&,       R (Args...),          MemberFunction<R (T::*)(Args...) volatile &&>);
+
+  //Const-noexcept expansion
+  DEFINE_MEMBER_FUNCTION_IDIOM_CASE(Const, R (T::*)(Args..., ...) const noexcept, R (Args..., ...) noexcept, MemberFunction<R (T::*)(Args..., ...) noexcept>);
+  DEFINE_MEMBER_FUNCTION_IDIOM_CASE(Const, R (T::*)(Args...) const & noexcept,    R (Args...) noexcept,      MemberFunction<R (T::*)(Args...) & noexcept>);
+  DEFINE_MEMBER_FUNCTION_IDIOM_CASE(Const, R (T::*)(Args...) const && noexcept,   R (Args...) noexcept,      MemberFunction<R (T::*)(Args...) && noexcept>);
+
+  //Const-variadic expansion
+  DEFINE_MEMBER_FUNCTION_IDIOM_CASE(Const, R (T::*)(Args..., ...) const &,  R (Args..., ...), MemberFunction<R (T::*)(Args..., ...) &>);
+  DEFINE_MEMBER_FUNCTION_IDIOM_CASE(Const, R (T::*)(Args..., ...) const &&, R (Args..., ...), MemberFunction<R (T::*)(Args..., ...) &&>);
+
+  //Volatile-noexcept expansion
+  DEFINE_MEMBER_FUNCTION_IDIOM_CASE(Volatile, R (T::*)(Args..., ...) volatile noexcept, R (Args..., ...) noexcept, MemberFunction<R (T::*)(Args..., ...) noexcept>);
+  DEFINE_MEMBER_FUNCTION_IDIOM_CASE(Volatile, R (T::*)(Args...) volatile & noexcept,    R (Args...) noexcept,      MemberFunction<R (T::*)(Args...) & noexcept>);
+  DEFINE_MEMBER_FUNCTION_IDIOM_CASE(Volatile, R (T::*)(Args...) volatile && noexcept,   R (Args...) noexcept,      MemberFunction<R (T::*)(Args...) && noexcept>);
+
+  //Volatile-variadic expansion
+  DEFINE_MEMBER_FUNCTION_IDIOM_CASE(Volatile, R (T::*)(Args..., ...) volatile &,  R (Args..., ...), MemberFunction<R (T::*)(Args..., ...) &>);
+  DEFINE_MEMBER_FUNCTION_IDIOM_CASE(Volatile, R (T::*)(Args..., ...) volatile &&, R (Args..., ...), MemberFunction<R (T::*)(Args..., ...) &&>);
+
+  //Noexcept-variadic expansion
+  DEFINE_MEMBER_FUNCTION_IDIOM_CASE(Noexcept, R (T::*)(Args..., ...) & noexcept,  R (Args..., ...) noexcept, MemberFunction<R (T::*)(Args..., ...) &>);
+  DEFINE_MEMBER_FUNCTION_IDIOM_CASE(Noexcept, R (T::*)(Args..., ...) && noexcept, R (Args..., ...) noexcept, MemberFunction<R (T::*)(Args..., ...) &&>);
+
+  //Const-volatile-noexcept expansion
+  DEFINE_MEMBER_FUNCTION_IDIOM_CASE(Const, R (T::*)(Args..., ...) const volatile noexcept, R (Args..., ...) noexcept, MemberFunction<R (T::*)(Args..., ...) volatile noexcept>);
+  DEFINE_MEMBER_FUNCTION_IDIOM_CASE(Const, R (T::*)(Args...) const volatile & noexcept,    R (Args...) noexcept, MemberFunction<R (T::*)(Args...) volatile & noexcept>);
+  DEFINE_MEMBER_FUNCTION_IDIOM_CASE(Const, R (T::*)(Args...) const volatile && noexcept,   R (Args...) noexcept, MemberFunction<R (T::*)(Args...) volatile && noexcept>);
+
+  //Const-volatile-variadic expansion
+  DEFINE_MEMBER_FUNCTION_IDIOM_CASE(Const, R (T::*)(Args..., ...) const volatile &,  R (Args..., ...), MemberFunction<R (T::*)(Args..., ...) volatile &>);
+  DEFINE_MEMBER_FUNCTION_IDIOM_CASE(Const, R (T::*)(Args..., ...) const volatile &&, R (Args..., ...), MemberFunction<R (T::*)(Args..., ...) volatile &&>);
+
+  //Const-noexcept-variadic expansion
+  DEFINE_MEMBER_FUNCTION_IDIOM_CASE(Const, R (T::*)(Args..., ...) const & noexcept,  R (Args..., ...) noexcept, MemberFunction<R (T::*)(Args..., ...) & noexcept>);
+  DEFINE_MEMBER_FUNCTION_IDIOM_CASE(Const, R (T::*)(Args..., ...) const && noexcept, R (Args..., ...) noexcept, MemberFunction<R (T::*)(Args..., ...) && noexcept>);
+
+  //Volatile-noexcept-variadic expansion
+  DEFINE_MEMBER_FUNCTION_IDIOM_CASE(Volatile, R (T::*)(Args..., ...) volatile & noexcept,  R (Args..., ...) noexcept, MemberFunction<R (T::*)(Args..., ...) & noexcept>);
+  DEFINE_MEMBER_FUNCTION_IDIOM_CASE(Volatile, R (T::*)(Args..., ...) volatile && noexcept, R (Args..., ...) noexcept, MemberFunction<R (T::*)(Args..., ...) && noexcept>);
+
+  #undef DEFINE_MEMBER_FUNCTION_IDIOM_CASE
 
   //Static function idiom
   template<typename>
   struct StaticFunction : FalseType {
    using ReturnType = ImpossibleType<>;
-   using ArgumentTypes = Dummy<>;
+   template<template<typename...> typename Receiver = ImpossibleType>
+   using ArgumentTypes = Receiver<>;
    using FunctionPrototype = ImpossibleType<>;
    static constexpr auto const Noexcept = false;
    static constexpr auto const Variadic = false;
   };
 
+  //Base unqualified static function case
   template<typename R, typename... Args>
-  struct StaticFunction<R (Args...)> : TrueType {
+  struct StaticFunction<R (Args...)> : StaticFunction<void> {
    using ReturnType = R;
-   using ArgumentTypes = Dummy<Args...>;
+   template<template<typename...> typename Receiver = Dummy>
+   using ArgumentTypes = Receiver<Args...>;
    using FunctionPrototype = R (Args...);
-   static constexpr auto const Noexcept = false;
-   static constexpr auto const Variadic = false;
+   template<typename T = Dummy<>>
+   using MemberFunctionPrototype = R (T::*)(Args...);
+   static constexpr auto const Value = true;
   };
 
-  template<typename R, typename... Args>
-  struct StaticFunction<R (Args..., ...)> : StaticFunction<R (Args...)> {
-   using FunctionPrototype = R (Args..., ...);
-   static constexpr auto const Variadic = true;
-  };
+  #define DEFINE_STATIC_FUNCTION_IDIOM_CASE(field, prototype, memberPrototype, base) \
+  template<typename R, typename... Args>\
+  struct StaticFunction<prototype> : base {\
+   using FunctionPrototype = prototype;\
+   template<typename T = Dummy<>>\
+   using MemberFunctionPrototype = memberPrototype;\
+   static constexpr auto const field = true;\
+  }
 
-  template<typename R, typename... Args>
-  struct StaticFunction<R (Args...) noexcept> : StaticFunction<R (Args...)> {
-   using FunctionPrototype = R (Args...) noexcept;
-   static constexpr auto const Noexcept = true;
-  };
+  //All qualifiers and qualifier combinations
+  DEFINE_STATIC_FUNCTION_IDIOM_CASE(Noexcept, R (Args...) noexcept,      R (T::*)(Args...) noexcept,      StaticFunction<R (Args...)>);
+  DEFINE_STATIC_FUNCTION_IDIOM_CASE(Variadic, R (Args..., ...),          R (T::*)(Args..., ...),          StaticFunction<R (Args...)>);
+  DEFINE_STATIC_FUNCTION_IDIOM_CASE(Noexcept, R (Args..., ...) noexcept, R (T::*)(Args..., ...) noexcept, StaticFunction<R (Args..., ...)>);
 
-  template<typename R, typename... Args>
-  struct StaticFunction<R (Args..., ...) noexcept> : StaticFunction<R (Args...) noexcept > {
-   using FunctionPrototype = R (Args..., ...) noexcept;
-   static constexpr auto const Variadic = true;
-  };
-
-  //Variadic function idiom
-  template<typename F, typename R, typename... Args>
-  struct VariadicFunction : FalseType {};
+  #undef DEFINE_STATIC_FUNCTION_IDIOM_CASE
 
   //Function prototype meta-function
   template<typename F>
@@ -965,7 +1010,7 @@ namespace CX {
   // has been specified and there is at least one argument specified
   && CX_CONDITIONAL_CONSTRAINT(
    (!SameType<R, ImpossibleType<>> && sizeof...(Args) > 0),
-   (SameType<Dummy<Args...>, typename MetaFunctions::MemberFunction<Unqualified<F>>::ArgumentTypes>),
+   (SameType<Dummy<Args...>, typename MetaFunctions::MemberFunction<Unqualified<F>>::template ArgumentTypes<>>),
    true
   );
 
@@ -984,34 +1029,9 @@ namespace CX {
   // the `MemberFunction` concept
   && CX_CONDITIONAL_CONSTRAINT(
    (!SameType<R, ImpossibleType<>> && sizeof...(Args) > 0),
-   (SameType<Dummy<Args...>, typename MetaFunctions::StaticFunction<Unqualified<F>>::ArgumentTypes>),
+   (SameType<Dummy<Args...>, typename MetaFunctions::StaticFunction<Unqualified<F>>::template ArgumentTypes<>>),
    true
   );
-
- //Supporting specializations for `VariadicFunction` idiom
- namespace MetaFunctions {
-  template<typename F, typename R, typename... Args>
-  requires (CX::StaticFunction<F, R, Args...>)
-  struct VariadicFunction<F, R, Args...> {
-   static constexpr auto const Value = StaticFunction<Unqualified<F>>::Variadic;
-  };
-
-  template<typename F, typename R, typename... Args>
-  requires (CX::MemberFunction<F, R, Args...>)
-  struct VariadicFunction<F, R, Args...> {
-   static constexpr auto const Value = MemberFunction<Unqualified<F>>::Variadic;
-  };
- }
-
- //Variadic function identity
- //Note: Has optional return type and argument type matching
- template<typename F, typename R = ImpossibleType<>, typename... Args>
- concept VariadicFunction = MetaFunctions
-  ::VariadicFunction<F, R, Args...>
-  ::Value;
-
- //TODO should these type meta-functions propagate pointer, l/r-value ref
- //and CV qualifiers? (FunctionPrototype, MemberFunctionPrototype)
 
  //Yields the prototype of a given function type;
  //For member functions, the member pointer is stripped from the type
@@ -1027,22 +1047,117 @@ namespace CX {
   ::MemberFunction<Unqualified<F>>
   ::MemberFunctionPrototype;
 
- //Noexcept function identity
- //Note: Has optional return type and argument type matching
- template<typename F, typename R = ImpossibleType<>, typename... Args>
- concept NoexceptFunction = (StaticFunction<F, R, Args...> && MetaFunctions
-  ::StaticFunction<F>
-  ::Noexcept
- )
-  || (MemberFunction<F, R, Args...> && MetaFunctions
-   ::MemberFunction<F>
-   ::Noexcept
-  );
+ namespace MetaFunctions {
+  //Matching function prototype idiom
+  template<typename F, typename Prototype>
+  requires (CX::StaticFunction<Prototype> || CX::MemberFunction<Prototype>)
+  struct FunctionWithPrototype : FalseType {};
+
+  //`<static, static>` specialization
+  template<typename F, typename Prototype>
+  requires (CX::StaticFunction<Prototype> && CX::StaticFunction<F>)
+  struct FunctionWithPrototype<F, Prototype> : SameType<
+   typename StaticFunction<typename Unqualified<F>::Type>::FunctionPrototype,
+   Prototype
+  > {};
+
+  //`<member, static>` specialization
+  template<typename F, typename Prototype>
+  requires (CX::StaticFunction<Prototype> && CX::MemberFunction<F>)
+  struct FunctionWithPrototype<F, Prototype> : SameType<
+   typename MemberFunction<typename Unqualified<F>::Type>::FunctionPrototype,
+   Prototype
+  > {};
+
+  //`<member, member>` specialization
+  template<typename F, typename Prototype>
+  requires (CX::MemberFunction<Prototype> && CX::MemberFunction<F>)
+  struct FunctionWithPrototype<F, Prototype> : SameType<
+   typename Unqualified<F>::Type,
+   Prototype
+  > {};
+
+  //Function operator specialization; `<struct, static>`
+  //Note: Not all member function qualifiers are applicable
+  //to static functions so the deduction capabilities of this
+  //partial specialization are limited.
+  template<typename F, typename Prototype>
+  requires (CX::StaticFunction<Prototype>
+   && CX::Struct<F>
+   && requires (typename StaticFunction<Prototype>::template MemberFunctionPrototype<F> func) {
+    func = &CX::ConstDecayed<F>::operator();
+   }
+  )
+  struct FunctionWithPrototype<F, Prototype> : TrueType {};
+
+  //Function operator specialization; `<struct, member>`
+  template<typename F, typename Prototype>
+  requires (CX::MemberFunction<Prototype>
+   && CX::Struct<F>
+   && requires (Prototype func) {
+    func = &CX::ConstDecayed<F>::operator();
+   }
+  )
+  struct FunctionWithPrototype<F, Prototype> : TrueType {};
+ }
+
+ //Identity concept for matching function types, as well as
+ //function operators
+ template<typename F, typename Prototype>
+ concept FunctionWithPrototype = MetaFunctions
+  ::FunctionWithPrototype<F, Prototype>
+  ::Value;
 
  //Virtual function identity
  template<auto F>
  concept VirtualFunction = MetaFunctions
   ::VirtualFunction<F>
+  ::Value;
+
+ namespace MetaFunctions {
+  //Variadic function idiom (member and static)
+  template<typename Prototype>
+  struct VariadicFunction : FalseType {};
+
+  template<typename Prototype>
+  requires (CX::StaticFunction<Prototype>)
+  struct VariadicFunction<Prototype> {
+   static constexpr auto const Value = StaticFunction<Prototype>::Variadic;
+  };
+
+  template<typename Prototype>
+  requires (CX::MemberFunction<Prototype>)
+  struct VariadicFunction<Prototype> {
+   static constexpr auto const Value = MemberFunction<Prototype>::Variadic;
+  };
+
+  //Noexcept function idiom (member and static)
+  template<typename Prototype>
+  struct NoexceptFunction : FalseType {};
+
+  template<typename Prototype>
+  requires (CX::StaticFunction<Prototype>)
+  struct NoexceptFunction<Prototype> {
+   static constexpr auto const Value = StaticFunction<Prototype>::Noexcept;
+  };
+
+  template<typename Prototype>
+  requires (CX::MemberFunction<Prototype>)
+  struct NoexceptFunction<Prototype> {
+   static constexpr auto const Value = MemberFunction<Prototype>::Noexcept;
+  };
+ }
+
+ //Variadic function prototype identity concept
+ template<typename Prototype>
+ concept VariadicFunction = MetaFunctions
+  ::VariadicFunction<Unqualified<Prototype>>
+  ::Value;
+
+ //Noexcept function prototype identity concept
+ template<typename Prototype>
+ concept NoexceptFunction = MetaFunctions
+  ::NoexceptFunction<Unqualified<Prototype>>
   ::Value;
 
  //Member field identity
@@ -1062,95 +1177,98 @@ namespace CX {
    true
   );
 
- //Operator detection concepts
- #define DEFINE_OPERATOR_CONCEPT(name, op) \
- template<typename T, typename R = ImpossibleType<>, typename... Args>\
- concept name##Operator = \
-  /*Member or static member non-overloaded operator*/\
-  requires { expect(&T::operator op); }\
-  /*Member or static member overloaded operator, match against return type and arguments*/\
-  || (!SameType<R, ImpossibleType<>> && requires (T t, Args... args) {\
-   { t.operator op(args...) } -> SameType<R>;\
-  })\
-  /*Member overloaded operator (R as template parameter + return type, Args as template parameters and function arguments)*/\
-  || (!SameType<R, ImpossibleType<>> && requires (T t, Args... args) {\
-   { t.template operator op<R, Args...>(args...) } -> SameType<R>;\
-  })\
-  /*Member overloaded operator (R + Args as template parameters and function arguments)*/\
-  || (!SameType<R, ImpossibleType<>> && requires (T t, R r, Args... args) {\
-   t.template operator op<R, Args...>(r, args...);\
-  })\
-  /*Member overloaded operator (R + Args as template parameters, R as the return type)*/\
-  || (!SameType<R, ImpossibleType<>> && requires (T t, R (T::* fptr)()) {\
-   fptr = &T::template operator op<R, Args...>;\
-  })\
-  || (!SameType<R, ImpossibleType<>> && requires (T t, R (T::* fptr)() const) {\
-   fptr = &T::template operator op<R, Args...>;\
-  })\
-  /*Member overloaded operator (R + Args as template parameters)*/\
-  || (!SameType<R, ImpossibleType<>> && requires (T t) {\
-   t.template operator op<R, Args...>();\
-  })
+ #define CX_DEFINE_FUNCTION_IDENTITY_CONCEPT(name, funcName) \
+ namespace MetaFunctions {\
+  /*Matching member function with prototype idiom*/\
+  template<typename S, typename Prototype>\
+  requires (\
+   CX::Struct<S>\
+   && (CX::StaticFunction<Prototype> || CX::MemberFunction<Prototype>))\
+  struct name : FalseType {};\
+  \
+  /*`<struct, static>` specialization*/\
+  template<typename S, typename Prototype>\
+  requires (CX::StaticFunction<Prototype>\
+   && CX::Struct<S>\
+   && requires (typename StaticFunction<Prototype>::template MemberFunctionPrototype<S> func) {\
+    func = &CX::ConstDecayed<S>::funcName;\
+   }\
+  )\
+  struct name<S, Prototype> : TrueType {};\
+  \
+  /*`<struct, member>` specialization*/\
+  template<typename S, typename Prototype>\
+  requires (CX::MemberFunction<Prototype>\
+   && CX::Struct<S>\
+   && requires (Prototype func) {\
+    func = &CX::ConstDecayed<S>::funcName;\
+   }\
+  )\
+  struct name<S, Prototype> : TrueType {};\
+ }\
+ \
+ /*Concept definition*/\
+ template<typename S, typename Prototype>\
+ concept name = MetaFunctions\
+  ::name<S, Prototype>\
+  ::Value;
+
+ #define CX_DEFINE_OPERATOR_CONCEPT(name, op) \
+ CX_DEFINE_FUNCTION_IDENTITY_CONCEPT(name##Operator, operator op)
 
  //Binary operators
- DEFINE_OPERATOR_CONCEPT(Addition, +);
- DEFINE_OPERATOR_CONCEPT(Subtraction, -);
- DEFINE_OPERATOR_CONCEPT(Division, /);
- DEFINE_OPERATOR_CONCEPT(Multiplication, *);
- DEFINE_OPERATOR_CONCEPT(Modulus, %);
- DEFINE_OPERATOR_CONCEPT(BinaryAnd, &&);
- DEFINE_OPERATOR_CONCEPT(BinaryOr, ||);
- DEFINE_OPERATOR_CONCEPT(LeftShift, <<);
- DEFINE_OPERATOR_CONCEPT(RightShift, >>);
+ CX_DEFINE_OPERATOR_CONCEPT(Addition, +);
+ CX_DEFINE_OPERATOR_CONCEPT(Subtraction, -);
+ CX_DEFINE_OPERATOR_CONCEPT(Division, /);
+ CX_DEFINE_OPERATOR_CONCEPT(Multiplication, *);
+ CX_DEFINE_OPERATOR_CONCEPT(Modulus, %);
+ CX_DEFINE_OPERATOR_CONCEPT(BinaryAnd, &&);
+ CX_DEFINE_OPERATOR_CONCEPT(BinaryOr, ||);
+ CX_DEFINE_OPERATOR_CONCEPT(LeftShift, <<);
+ CX_DEFINE_OPERATOR_CONCEPT(RightShift, >>);
  #define MORE_THAN >
- DEFINE_OPERATOR_CONCEPT(GreaterThan, MORE_THAN);
+ CX_DEFINE_OPERATOR_CONCEPT(GreaterThan, MORE_THAN);
  #undef MORE_THAN
  #define LESS_THAN <
- DEFINE_OPERATOR_CONCEPT(LessThan, LESS_THAN);
+ CX_DEFINE_OPERATOR_CONCEPT(LessThan, LESS_THAN);
  #undef LESS_THAN
- DEFINE_OPERATOR_CONCEPT(Equality, ==);
- DEFINE_OPERATOR_CONCEPT(Inequality, !=);
- DEFINE_OPERATOR_CONCEPT(GreaterOrEqualThan, >=);
- DEFINE_OPERATOR_CONCEPT(LessOrEqualThan, <=);
- //Add default cases for the l/r-value assignment operators since they are
- //overloads of any user defined assignment operator
- DEFINE_OPERATOR_CONCEPT(Assignment, =)
-  || (SameType<R, ImpossibleType<>> && (
-   requires { expect<T& (T::*)(T const&)>(&T::operator=); }
-   || requires { expect<T& (T::*)(T&&)>(&T::operator=); }
-  ));
- DEFINE_OPERATOR_CONCEPT(AdditionAssignment, +=);
- DEFINE_OPERATOR_CONCEPT(SubtractionAssignment, -=);
- DEFINE_OPERATOR_CONCEPT(MultiplicationAssignment, *=);
- DEFINE_OPERATOR_CONCEPT(DivisionAssignment, /=);
- DEFINE_OPERATOR_CONCEPT(ModulusAssignment, %=);
- DEFINE_OPERATOR_CONCEPT(OrAssignment, |=);
- DEFINE_OPERATOR_CONCEPT(AndAssignment, &=);
- DEFINE_OPERATOR_CONCEPT(XORAssignment, ^=);
- DEFINE_OPERATOR_CONCEPT(LeftShiftAssignment, <<=);
- DEFINE_OPERATOR_CONCEPT(RightShiftAssignment, >>=);
+ CX_DEFINE_OPERATOR_CONCEPT(Equality, ==);
+ CX_DEFINE_OPERATOR_CONCEPT(Inequality, !=);
+ CX_DEFINE_OPERATOR_CONCEPT(GreaterOrEqualThan, >=);
+ CX_DEFINE_OPERATOR_CONCEPT(LessOrEqualThan, <=);
+ CX_DEFINE_OPERATOR_CONCEPT(Assignment, =);
+ CX_DEFINE_OPERATOR_CONCEPT(AdditionAssignment, +=);
+ CX_DEFINE_OPERATOR_CONCEPT(SubtractionAssignment, -=);
+ CX_DEFINE_OPERATOR_CONCEPT(MultiplicationAssignment, *=);
+ CX_DEFINE_OPERATOR_CONCEPT(DivisionAssignment, /=);
+ CX_DEFINE_OPERATOR_CONCEPT(ModulusAssignment, %=);
+ CX_DEFINE_OPERATOR_CONCEPT(OrAssignment, |=);
+ CX_DEFINE_OPERATOR_CONCEPT(AndAssignment, &=);
+ CX_DEFINE_OPERATOR_CONCEPT(XORAssignment, ^=);
+ CX_DEFINE_OPERATOR_CONCEPT(LeftShiftAssignment, <<=);
+ CX_DEFINE_OPERATOR_CONCEPT(RightShiftAssignment, >>=);
  #define COMMA ,
- DEFINE_OPERATOR_CONCEPT(Comma, COMMA);
+ CX_DEFINE_FUNCTION_IDENTITY_CONCEPT(CommaOperator, operator COMMA);
  #undef COMMA
 
  //Special operators
- DEFINE_OPERATOR_CONCEPT(ThreeWayComparison, <=>);
- DEFINE_OPERATOR_CONCEPT(MemberAccess, ->);
- DEFINE_OPERATOR_CONCEPT(MemberPointerAccess, ->*);
- DEFINE_OPERATOR_CONCEPT(Subscript, []);
- DEFINE_OPERATOR_CONCEPT(Function, ());
+ CX_DEFINE_OPERATOR_CONCEPT(ThreeWayComparison, <=>);
+ CX_DEFINE_OPERATOR_CONCEPT(MemberAccess, ->);
+ CX_DEFINE_OPERATOR_CONCEPT(MemberPointerAccess, ->*);
+ CX_DEFINE_OPERATOR_CONCEPT(Subscript, []);
+ CX_DEFINE_OPERATOR_CONCEPT(Function, ());
 
  //Unary operators
- template<typename T, typename R = ImpossibleType<>, typename... Args>
- concept DereferenceOperator = MultiplicationOperator<T, R, Args...>;
- DEFINE_OPERATOR_CONCEPT(Compliment, ~);
- DEFINE_OPERATOR_CONCEPT(Increment, ++);
- DEFINE_OPERATOR_CONCEPT(Decrement, --);
- DEFINE_OPERATOR_CONCEPT(Not, !);
- DEFINE_OPERATOR_CONCEPT(Address, &);
+ template<typename F, typename Prototype>
+ concept DereferenceOperator = MultiplicationOperator<F, Prototype>;
+ CX_DEFINE_OPERATOR_CONCEPT(Compliment, ~);
+ CX_DEFINE_OPERATOR_CONCEPT(Increment, ++);
+ CX_DEFINE_OPERATOR_CONCEPT(Decrement, --);
+ CX_DEFINE_OPERATOR_CONCEPT(Not, !);
+ CX_DEFINE_OPERATOR_CONCEPT(Address, &);
 
  //Clean up internal macro
- #undef DEFINE_OPERATOR_CONCEPT
+ #undef CX_DEFINE_OPERATOR_CONCEPT
 
  //Conversion operator
  //Notes:
@@ -1164,9 +1282,4 @@ namespace CX {
   || requires (T t) {
    { t.operator C() } -> SameType<C>;
   };
-
- template<typename F, typename R = ImpossibleType<>, typename... Args>
- concept Function = MemberFunction<F, R, Args...>
-  || StaticFunction<F, R, Args...>
-  || FunctionOperator<F, R, Args...>;
 }

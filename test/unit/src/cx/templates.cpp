@@ -36,7 +36,10 @@ namespace CX {
  }
 
  TEST(TypeSize, types_yield_expected_value) {
-  throw std::runtime_error{"Unimplemented"};
+  EXPECT_EQ((TypeSize<void *>), sizeof(void *));
+  EXPECT_EQ((TypeSize<char(&)[]>), sizeof(char *));
+  EXPECT_EQ((TypeSize<int&>), sizeof(int *));
+  EXPECT_EQ((TypeSize<double (*)()>), sizeof(double (*)()));
  }
 
  TEST(MaxTypeSize, type_pack_yields_expected_value) {
@@ -67,7 +70,11 @@ namespace CX {
  }
 
  TEST(TypeAlignment, types_yield_expected_value) {
-  throw std::runtime_error{"Unimplemented"};
+  EXPECT_EQ((TypeAlignment<void *>), alignof(void *));
+  EXPECT_EQ((TypeAlignment<int(&)[]>), alignof(int *));
+  EXPECT_EQ((TypeAlignment<char[123]>), alignof(char[123]));
+  EXPECT_EQ((TypeAlignment<float&>), alignof(float *));
+  EXPECT_EQ((TypeAlignment<void (*)()>), alignof(void (*)()));
  }
 
  TEST(MaxTypeAlignment, type_pack_yields_expected_value) {

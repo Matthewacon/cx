@@ -300,6 +300,25 @@ namespace CX {
    static constexpr auto const Value = 0;
   };
 
+  //Yields a reference to the `N`'th argument
+  template<auto N, typename... Args>
+  requires (0 <= N && N < sizeof...(Args))
+  struct ArgumentAtIndex;
+
+  template<auto N, typename T, typename... Args>
+  struct ArgumentAtIndex<N, T, Args...> {
+   static auto& value(T &, Args&... args) {
+    return ArgumentAtIndex<N - 1, Args...>::value(args...);
+   }
+  };
+
+  template<typename T, typename... Args>
+  struct ArgumentAtIndex<0, T, Args...> {
+   static auto& value(T &t, Args&...) {
+    return t;
+   }
+  };
+
   //Conditional type, template-type and value selector meta-functions
   //Yields the result of the type expression: `Cond ? Success : Failure`
   template<bool Cond, typename Success, typename Failure>
@@ -492,6 +511,14 @@ namespace CX {
  constexpr auto const ValueAtIndex = MetaFunctions
   ::ValueAtIndex<Index, Values...>
   ::Value;
+
+ template<auto N, typename... Args>
+ requires (0 <= N && N < sizeof...(Args))
+ auto& argumentAtIndex(Args&... args) {
+  return MetaFunctions
+   ::ArgumentAtIndex<N, Args...>
+   ::value(args...);
+ }
 
  template<bool Cond, typename Success, typename Failure>
  using SelectType = typename MetaFunctions

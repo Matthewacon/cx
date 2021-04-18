@@ -172,6 +172,18 @@ namespace CX {
   EXPECT_EQ((IndexOfValue<0>), -1);
  }
 
+ TEST(ValueAtIndex, valid_indices_yield_expected_value) {
+  throw std::runtime_error{"Unimplemented"};
+ }
+
+ TEST(ValueAtIndex, invalid_indices_yield_default_value) {
+  throw std::runtime_error{"Unimplemented"};
+ }
+
+ TEST(argumentAtIndex, valid_indices_yield_expected_argument) {
+  throw std::runtime_error{"Unimplemented"};
+ }
+
  TEST(SelectType, condition_yields_expected_type) {
   using TypeA = int;
   using ExpectedTypeA = TypeA;

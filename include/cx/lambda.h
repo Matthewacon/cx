@@ -288,7 +288,7 @@ namespace CX {
     #pragma GCC diagnostic pop
 
     FptrWrapper(R (* const &ptr)(Args..., ...)) :
-     fptrOrInst(ptr)
+     fptrOrInst((void *)ptr)
     {}
 
     template<FunctionWithPrototype<R (Args..., ...)> T>
@@ -297,8 +297,8 @@ namespace CX {
      memberPtr{&T::operator()}
     {}
 
-    template<typename... Varargs, bool Noexcept>
-    R invoke(Args... args, Varargs... varargs) {
+    template<bool Noexcept, typename... Varargs>
+    R invoke(Args... args, Varargs... varargs) noexcept(Noexcept) {
      if (memberPtr.lo || memberPtr.hi) {
       //Invoke member function
       auto const ptr = (R (FptrWrapper::*)(Args..., ...) noexcept(Noexcept))memberPtr.memberPtr;
@@ -316,14 +316,9 @@ namespace CX {
     throw UninitializedLambdaError{};
    }
 
-   template<typename... Varargs>
-   R op(Args... args, Varargs... varargs) {
-    return get().template invoke<Varargs..., false>(args..., varargs...);
-   }
-
-   template<typename... Varargs>
-   R noexceptOp(Args... args, Varargs... varargs) noexcept {
-    return get().template invoke<Varargs..., true>(args..., varargs...);
+   template<bool Noexcept, typename... Varargs>
+   R op(Args... args, Varargs... varargs) noexcept(Noexcept) {
+    return get().template invoke<Noexcept, Varargs...>(args..., varargs...);
    }
 
    virtual decltype(sizeof(0)) size() const noexcept {
@@ -447,7 +442,6 @@ namespace CX {
    );
   }
 
-
   //Implementation of LambdaBase<...>
   template<typename, typename>
   struct LambdaSpecialized;
@@ -546,19 +540,27 @@ namespace CX {
 
   #pragma GCC diagnostic pop
 
-  //Base of all lambda internal operations
-  template<typename>
-  struct LambdaOperationBase;
+  //Check `F` against a restriction
+  template<typename F, template<typename> typename Restriction>
+  concept SupportedPrototype = requires (Restriction<F> r) {
+   r;
+  };
 
-  //LambdaOperationBase implementation for non-c-variadic functions
-  template<typename R, typename... Args>
-  struct LambdaOperationBase<R (Args...)> {
+  //LambdaOperationBase implementation; provides implementations for all
+  //underlying lambda mechanisms, for all specializations.
+  template<
+   //The static function prototype of the invoking lambda specialization
+   typename SpecializationPrototype,
+   //Prototype restrictions for the invoking lambda specialization
+   template<typename> typename Restriction
+  >
+  struct LambdaOperationBase {
    //TODO rename to: `initEmptyLambda`
    //Initializes buffer with empty `LambdaBase` obj
    template<auto Size>
    [[gnu::always_inline]]
    static void init(unsigned char (&buffer)[Size], decltype(alignof(int)) alignment) {
-    new (&buffer) LambdaBase<R (Args...), ImpossibleType<>>{
+    new (&buffer) LambdaBase<SpecializationPrototype, ImpossibleType<>>{
      Size,
      alignment
     };
@@ -568,14 +570,14 @@ namespace CX {
    template<auto Size>
    [[gnu::always_inline]]
    static void destroy(unsigned char (&buffer)[Size]) {
-    using LambdaBase = LambdaBase<R (Args...)>;
+    using LambdaBase = LambdaBase<SpecializationPrototype>;
     (*(LambdaBase *)&buffer).~LambdaBase();
    }
 
-   //FunctionOperator/StaticFunction copy assignment
-   template<auto Size, typename F>
-   requires (FunctionWithPrototype<F, R (Args...)>
-    && (CopyConstructible<F> || (Constructible<F> && CopyAssignable<F>))
+   //FunctionOperator / function pointer copy assignment
+   template<auto Size, SupportedPrototype<Restriction> F>
+   requires (CopyConstructible<F>
+    || (Constructible<F> && CopyAssignable<F>)
    )
    [[gnu::always_inline]]
    static void copyAssignFunction(unsigned char (&buffer)[Size], F const &f) {
@@ -583,21 +585,24 @@ namespace CX {
     destroy(buffer);
 
     //Initialize buffer
-    copyLambdaBuffer<LambdaSpecialized<F, R (Args...)>>(buffer, (F const&)f);
+    copyLambdaBuffer<LambdaSpecialized<F, SpecializationPrototype>>(buffer, (F const&)f);
    }
 
    //FunctionOperator move assignment
-   template<auto Size, FunctionOperator<R (Args...)> F>
-   requires (!Const<F>
+   template<auto Size, SupportedPrototype<Restriction> F>
+   requires (Struct<F>
     && (MoveConstructible<F> || (Constructible<F> && MoveAssignable<F>))
    )
    [[gnu::always_inline]]
-   static void moveAssignFunction(unsigned char (&buffer)[Size], F &&f) {
+   static void moveAssignFunction(unsigned char (&buffer)[Size], ConstDecayed<F> &&f) {
     //Clean up current state
     destroy(buffer);
 
     //Initialize buffer
-    moveLambdaBuffer<LambdaSpecialized<F, R (Args...)>>(buffer, (F&&)f);
+    moveLambdaBuffer<LambdaSpecialized<
+     ConstDecayed<F>,
+     SpecializationPrototype>
+    >(buffer, (ConstDecayed<F>&&)f);
    }
 
    //Lambda copy and move assignment
@@ -607,7 +612,7 @@ namespace CX {
     destroy(l1);
 
     //Copy `l2` to `l1`
-    (*(LambdaBase<R (Args...)> *)&l2).copy(l1);
+    (*(LambdaBase<SpecializationPrototype> *)&l2).copy(l1);
    }
 
    //Lambda move assignment
@@ -617,17 +622,13 @@ namespace CX {
     destroy(l1);
 
     //Copy `l2` to `l1`
-    (*(LambdaBase<R (Args...)> *)&l2).copy(l1);
+    (*(LambdaBase<SpecializationPrototype> *)&l2).copy(l1);
 
     //Clean up `l2` and reinitialize it as an empty lambda
     destroy(l2);
     init(l2);
    }
   };
-
-  //TODO LambdaOperationBase implementation for c-variadic functions
-  // - Lambda <-> Lambda
-  // -
  }
 
  //Unqualified lambda specialization
@@ -639,7 +640,7 @@ namespace CX {
   template<typename>
   friend struct AllocLambda;
 
-  template<typename>
+  template<typename, template<typename> typename>
   friend struct Internal::LambdaOperationBase;
 
   using ReturnType = R;
@@ -651,7 +652,26 @@ namespace CX {
   static constexpr auto const Size = CX_LAMBDA_BUF_SIZE;
 
  private:
-  using OperationBase = Internal::LambdaOperationBase<R (Args...)>;
+  template<typename F>
+  requires (FunctionWithPrototype<F, R (Args...)>
+   || FunctionWithPrototype<F, R (Args...) noexcept>
+   || FunctionWithPrototype<F, R (F::*)(Args...)>
+   || FunctionWithPrototype<F, R (F::*)(Args...) const>
+   || FunctionWithPrototype<F, R (F::*)(Args...) noexcept>
+   || FunctionWithPrototype<F, R (F::*)(Args...) const noexcept>
+  )
+  struct PrototypeRestriction {};
+
+  template<typename F>
+  static constexpr bool const SupportedPrototype = Internal::SupportedPrototype<
+   F,
+   PrototypeRestriction
+  >;
+
+  using OperationBase = Internal::LambdaOperationBase<
+   R (Args...),
+   PrototypeRestriction
+  >;
   using LambdaBase = Internal::LambdaBase<R (Args...)>;
 
   alignas(Alignment) unsigned char buffer[Size];
@@ -669,15 +689,18 @@ namespace CX {
   }
 
   //FunctionOperator / function pointer copy constructor
-  template<FunctionWithPrototype<R (Args...)> F>
-  requires (!IsLambda<F>)
+  template<typename F>
+  requires (!IsLambda<F> && SupportedPrototype<F>)
   Lambda(F const &f) : Lambda() {
    operator=<F>((F const&)f);
   }
 
   //FunctionOperator move constructor
-  template<FunctionOperator<R (Args...)> F>
-  requires (!IsLambda<F>)
+  template<typename F>
+  requires (!IsLambda<F>
+   && Struct<F>
+   && SupportedPrototype<F>
+  )
   Lambda(ConstDecayed<F> &&f) : Lambda() {
    operator=<F>((ConstDecayed<F>&&)f);
   }
@@ -718,7 +741,7 @@ namespace CX {
 
   //FunctionOperator / function pointer copy assignment
   template<typename F>
-  requires (!IsLambda<F> && FunctionWithPrototype<F, R (Args...)>)
+  requires (!IsLambda<F> && SupportedPrototype<F>)
   Lambda& operator=(F const &f) {
    //Ensure `F` will fit within `buffer`
    Internal::lambdaAssignBufferCheck<F, Size, Alignment>();
@@ -730,8 +753,11 @@ namespace CX {
   }
 
   //FunctionOperator move assignment
-  template<FunctionOperator<R (Args...)> F>
-  requires (!IsLambda<F>)
+  template<typename F>
+  requires (!IsLambda<F>
+   && Struct<F>
+   && SupportedPrototype<F>
+  )
   Lambda& operator=(ConstDecayed<F> &&f) {
    //Ensure `F` will fit within `buffer`
    Internal::lambdaAssignBufferCheck<F, Size, Alignment>();
@@ -767,7 +793,7 @@ namespace CX {
   template<typename>
   friend struct AllocLambda;
 
-  template<typename>
+  template<typename, template<typename> typename>
   friend struct Internal::LambdaOperationBase;
 
   using ReturnType = R;
@@ -779,7 +805,23 @@ namespace CX {
   static constexpr auto const Size = CX_LAMBDA_BUF_SIZE;
 
  private:
-  using OperationBase = Internal::LambdaOperationBase<R (Args...)>;
+  template<typename F>
+  requires (FunctionWithPrototype<F, R (Args...) noexcept>
+   || FunctionWithPrototype<F, R (F::*)(Args...) noexcept>
+   || FunctionWithPrototype<F, R (F::*)(Args...) const noexcept>
+  )
+  struct PrototypeRestriction {};
+
+  template<typename F>
+  static constexpr bool const SupportedPrototype = Internal::SupportedPrototype<
+   F,
+   PrototypeRestriction
+  >;
+
+  using OperationBase = Internal::LambdaOperationBase<
+   R (Args...),
+   PrototypeRestriction
+  >;
   using LambdaBase = Internal::LambdaBase<R (Args...)>;
 
   alignas(Alignment) unsigned char buffer[Size];
@@ -797,15 +839,18 @@ namespace CX {
   }
 
   //FunctionOperator / function pointer copy constructor
-  template<FunctionWithPrototype<R (Args...) noexcept> F>
-  requires (!IsLambda<F>)
+  template<typename F>
+  requires (!IsLambda<F> && SupportedPrototype<F>)
   Lambda(F const &f) : Lambda() {
    operator=<F>((F const&)f);
   }
 
   //FunctionOperator move constructor
-  template<FunctionOperator<R (Args...) noexcept> F>
-  requires (!IsLambda<F> && NoexceptFunction<F>)
+  template<typename F>
+  requires (!IsLambda<F>
+   && Struct<F>
+   && SupportedPrototype<F>
+  )
   Lambda(ConstDecayed<F> &&f) : Lambda() {
    operator=<F>((ConstDecayed<F>&&)f);
   }
@@ -844,8 +889,8 @@ namespace CX {
   }
 
   //FunctionOperator / function pointer copy assignment
-  template<FunctionWithPrototype<R (Args...) noexcept> F>
-  requires (!IsLambda<F>)
+  template<typename F>
+  requires (!IsLambda<F> && SupportedPrototype<F>)
   Lambda& operator=(F const &f) {
    //Ensure `F` will fit within `buffer`
    Internal::lambdaAssignBufferCheck<F, Size, Alignment>();
@@ -857,8 +902,11 @@ namespace CX {
   }
 
   //FunctionOperator move assignment
-  template<FunctionOperator<R (Args...) noexcept> F>
-  requires (!IsLambda<F> && NoexceptFunction<F>)
+  template<typename F>
+  requires (!IsLambda<F>
+   && Struct<F>
+   && SupportedPrototype<F>
+  )
   Lambda& operator=(ConstDecayed<F> &&f) {
    //Ensure `F` will fit within `buffer`
    Internal::lambdaAssignBufferCheck<F, Size, Alignment>();
@@ -893,7 +941,7 @@ namespace CX {
   template<typename>
   friend struct AllocLambda;
 
-  template<typename>
+  template<typename, template<typename> typename>
   friend struct Internal::LambdaOperationBase;
 
   using ReturnType = R;
@@ -905,7 +953,26 @@ namespace CX {
   static constexpr auto const Size = CX_LAMBDA_BUF_SIZE;
 
  private:
-  using OperationBase = Internal::LambdaOperationBase<R (Args..., ...)>;
+  template<typename F>
+  requires (FunctionWithPrototype<F, R (Args..., ...)>
+   || FunctionWithPrototype<F, R (Args..., ...) noexcept>
+   || FunctionWithPrototype<F, R (F::*)(Args..., ...)>
+   || FunctionWithPrototype<F, R (F::*)(Args..., ...) const>
+   || FunctionWithPrototype<F, R (F::*)(Args..., ...) noexcept>
+   || FunctionWithPrototype<F, R (F::*)(Args..., ...) const noexcept>
+  )
+  struct PrototypeRestriction {};
+
+  template<typename F>
+  static constexpr bool const SupportedPrototype = Internal::SupportedPrototype<
+   F,
+   PrototypeRestriction
+  >;
+
+  using OperationBase = Internal::LambdaOperationBase<
+   R (Args..., ...),
+   PrototypeRestriction
+  >;
   using LambdaBase = Internal::LambdaBase<R (Args..., ...)>;
 
   alignas(Alignment) unsigned char buffer[Size];
@@ -923,15 +990,18 @@ namespace CX {
   }
 
   //FunctionOperator / function pointer copy constructor
-  template<FunctionWithPrototype<R (Args..., ...)> F>
-  requires (!IsLambda<F>)
+  template<typename F>
+  requires (!IsLambda<F> && SupportedPrototype<F>)
   Lambda(F const &f) : Lambda() {
    operator=<F>((F const&)f);
   }
 
   //FunctionOperator move constructor
-  template<FunctionOperator<R (Args..., ...)> F>
-  requires (!IsLambda<F>)
+  template<typename F>
+  requires (!IsLambda<F>
+   && Struct<F>
+   && SupportedPrototype<F>
+  )
   Lambda(ConstDecayed<F> &&f) : Lambda() {
    operator=<F>((ConstDecayed<F> &&)f);
   }
@@ -956,7 +1026,7 @@ namespace CX {
   //Lambda function operator
   template<typename... Varargs>
   R operator()(Args... args, Varargs... varargs) {
-   return (*(LambdaBase *)&buffer).op(args..., varargs...);
+   return (*(LambdaBase *)&buffer).template op<false>(args..., varargs...);
   }
 
   //Presence conversion operator
@@ -972,7 +1042,7 @@ namespace CX {
 
   //FunctionOperator / function pointer copy assignment
   template<typename F>
-  requires (!IsLambda<F> && FunctionWithPrototype<F, R (Args..., ...)>)
+  requires (!IsLambda<F> && SupportedPrototype<F>)
   Lambda& operator=(F const &f) {
    //Ensure `F` will fit within `buffer`
    Internal::lambdaAssignBufferCheck<F, Size, Alignment>();
@@ -984,8 +1054,11 @@ namespace CX {
   }
 
   //FunctionOperator move assignment
-  template<FunctionOperator<R (Args...)> F>
-  requires (!IsLambda<F>)
+  template<typename F>
+  requires (!IsLambda<F>
+   && Struct<F>
+   && SupportedPrototype<F>
+  )
   Lambda& operator=(ConstDecayed<F> &&f) {
    //Ensure `F` will fit within `buffer`
    Internal::lambdaAssignBufferCheck<F, Size, Alignment>();
@@ -1020,7 +1093,7 @@ namespace CX {
   template<typename>
   friend struct AllocLambda;
 
-  template<typename>
+  template<typename, template<typename> typename>
   friend struct Internal::LambdaOperationBase;
 
   using ReturnType = R;
@@ -1032,7 +1105,23 @@ namespace CX {
   static constexpr auto const Size = CX_LAMBDA_BUF_SIZE;
 
  private:
-  using OperationBase = Internal::LambdaOperationBase<R (Args..., ...)>;
+  template<typename F>
+  requires (FunctionWithPrototype<F, R (Args..., ...) noexcept>
+   || FunctionWithPrototype<F, R (F::*)(Args..., ...) noexcept>
+   || FunctionWithPrototype<F, R (F::*)(Args..., ...) const noexcept>
+  )
+  struct PrototypeRestriction {};
+
+  template<typename F>
+  static constexpr bool const SupportedPrototype = Internal::SupportedPrototype<
+   F,
+   PrototypeRestriction
+  >;
+
+  using OperationBase = Internal::LambdaOperationBase<
+   R (Args..., ...),
+   PrototypeRestriction
+  >;
   using LambdaBase = Internal::LambdaBase<R (Args..., ...)>;
 
   alignas(Alignment) unsigned char buffer[Size];
@@ -1050,17 +1139,17 @@ namespace CX {
   }
 
   //FunctionOperator / function pointer copy constructor
-  template<FunctionWithPrototype<R (Args..., ...) noexcept> F>
-  requires (!IsLambda<F>)
+  template<typename F>
+  requires (!IsLambda<F> && SupportedPrototype<F>)
   Lambda(F const &f) : Lambda() {
    operator=<F>((F const&)f);
   }
 
   //FunctionOperator move constructor
-  template<FunctionOperator<R (Args..., ...) noexcept> F>
+  template<typename F>
   requires (!IsLambda<F>
-   && VariadicFunction<F>
-   && NoexceptFunction<F>
+   && Struct<F>
+   && SupportedPrototype<F>
   )
   Lambda(ConstDecayed<F> &&f) : Lambda() {
    operator=<F>((ConstDecayed<F>&&)f);
@@ -1086,7 +1175,7 @@ namespace CX {
   //Lambda function operator
   template<typename... Varargs>
   R operator()(Args... args, Varargs... varargs) {
-   return (*(LambdaBase *)&buffer).noexceptOp(args..., varargs...);
+   return (*(LambdaBase *)&buffer).template op<true>(args..., varargs...);
   }
 
   //Presence conversion operator
@@ -1102,7 +1191,7 @@ namespace CX {
 
   //FunctionOperator / function pointer copy assignment
   template<typename F>
-  requires (!IsLambda<F> && FunctionWithPrototype<F, R (Args..., ...) noexcept>)
+  requires (!IsLambda<F> && SupportedPrototype<F>)
   Lambda& operator=(F const &f) {
    //Ensure `F` will fit within `buffer`
    Internal::lambdaAssignBufferCheck<F, Size, Alignment>();
@@ -1114,8 +1203,11 @@ namespace CX {
   }
 
   //FunctionOperator move assignment
-  template<FunctionOperator<R (Args..., ...) noexcept> F>
-  requires (!IsLambda<F>)
+  template<typename F>
+  requires (!IsLambda<F>
+   && Struct<F>
+   && SupportedPrototype<F>
+  )
   Lambda& operator=(ConstDecayed<F> &&f) {
    //Ensure `F` will fit within `buffer`
    Internal::lambdaAssignBufferCheck<F, Size, Alignment>();

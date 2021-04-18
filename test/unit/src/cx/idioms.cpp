@@ -966,6 +966,9 @@ namespace CX {
   EXPECT_TRUE((FunctionWithPrototype<A, int (A::*)(...) &>));
   EXPECT_TRUE((FunctionWithPrototype<A, float * (A::*)(int, char ...) volatile & noexcept>));
   EXPECT_TRUE((FunctionWithPrototype<A, long double ** (A::*)(...) const && noexcept>));
+
+  auto lambda = [] {};
+  EXPECT_TRUE((FunctionWithPrototype<decltype(lambda), void (decltype(lambda)::*)() const>));
  }
 
  TEST(FunctionWithPrototype, non_matching_function_prototypes_do_not_satisfy_constraint) {

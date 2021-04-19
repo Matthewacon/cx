@@ -603,7 +603,81 @@ namespace CX {
  }
 
  TEST(LambdaConstructor, c_variadic_lambda_copy_constructor_properly_initializes_lambda) {
-  throw std::runtime_error{"Unimplemented"};
+  //Test with uninitialized lambda
+  //Construct empty lambda and ensure it was correctly initialized
+  Lambda<void (...)> l1;
+  EXPECT_FALSE(l1);
+  EXPECT_THROW(
+   ([&] {
+    l1(0);
+   }()),
+   UninitializedLambdaError
+  );
+
+  //Copy construct lambda and ensure it was correctly initialized
+  Lambda l2{(decltype(l1) const&)l1};
+  EXPECT_FALSE(l2);
+  EXPECT_THROW(
+   ([&] {
+    l2(0);
+   }()),
+   UninitializedLambdaError
+  );
+
+  //Test with initialized lambda
+  static int invoked;
+
+  //Reset counter in case test is re-run
+  invoked = 0;
+
+  //Construct lambda and ensure it was correctly initialized
+  static constexpr char const varargs[] = "lambda";
+  static constexpr int const iExpected = ArraySize<decltype(varargs)>;
+  static constexpr char const returnExpected = 'F';
+
+  Lambda l3{[](int i, ...) -> char {
+   CX::VaList list;
+   va_start(list, i);
+   invoked++;
+   EXPECT_FLOAT_EQ(i, iExpected);
+   for (unsigned long l = 0; l < ArraySize<decltype(varargs)>; l++) {
+    EXPECT_TRUE((list.arg<char>() == varargs[l]));
+   }
+   return returnExpected;
+  }};
+  EXPECT_TRUE(l3);
+  EXPECT_NO_THROW(([&] {
+   auto returned = l3(
+    iExpected,
+    varargs[0],
+    varargs[1],
+    varargs[2],
+    varargs[3],
+    varargs[4],
+    varargs[5],
+    varargs[6]
+   );
+   EXPECT_EQ(returned, returnExpected);
+   EXPECT_EQ(invoked, 1);
+  }()));
+
+  //Copy construct lambda and ensure it was correctly initialized
+  Lambda l4{(decltype(l3) const&)l3};
+  EXPECT_TRUE(l4);
+  EXPECT_NO_THROW(([&] {
+   auto returned = l4(
+    iExpected,
+    varargs[0],
+    varargs[1],
+    varargs[2],
+    varargs[3],
+    varargs[4],
+    varargs[5],
+    varargs[6]
+   );
+   EXPECT_EQ(returned, returnExpected);
+   EXPECT_EQ(invoked, 2);
+  }()));
  }
 
  TEST(LambdaConstructor, noexcept_c_variadic_lambda_copy_constructor_properly_initializes_lambda) {

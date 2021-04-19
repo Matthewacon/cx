@@ -312,7 +312,7 @@ namespace CX {
 
    virtual ~LambdaBase() = default;
 
-   virtual FptrWrapper get() noexcept {
+   virtual FptrWrapper get() {
     throw UninitializedLambdaError{};
    }
 
@@ -512,7 +512,7 @@ namespace CX {
     f((F&&)f)
    {}
 
-   typename LambdaBase<R (Args..., ...)>::FptrWrapper get() noexcept override {
+   typename LambdaBase<R (Args..., ...)>::FptrWrapper get() override {
     return {(F const&)f};
    }
 

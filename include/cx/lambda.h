@@ -279,19 +279,19 @@ namespace CX {
       hi(nullptr)
      {}
 
-     template<typename T>
-     MemberPtr(R (T::* ptr)(Args..., ...)) :
-      memberPtr((decltype(memberPtr))ptr)
+     template<CX::MemberFunction F>
+     MemberPtr(F memFptr) :
+      memberPtr((decltype(memberPtr))memFptr)
      {}
     } memberPtr;
 
     #pragma GCC diagnostic pop
 
-    FptrWrapper(R (* const &ptr)(Args..., ...)) :
+    FptrWrapper(CX::StaticFunction auto ptr) :
      fptrOrInst((void *)ptr)
     {}
 
-    template<FunctionWithPrototype<R (Args..., ...)> T>
+    template<CX::Struct T>
     FptrWrapper(T const &inst) :
      fptrOrInst((void *)&inst),
      memberPtr{&T::operator()}

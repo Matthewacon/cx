@@ -119,7 +119,7 @@ namespace CX {
   invoked = false;
 
   //Construct lambda and ensure it was correctly initialized
-  auto const fptr = +[](double d, char32_t c) -> float {
+  auto const fptr = +[](double d, char32_t c) noexcept -> float {
    invoked = true;
    EXPECT_EQ(d, dExpected);
    EXPECT_TRUE(c == cExpected);
@@ -130,7 +130,7 @@ namespace CX {
 
   //Invoke lambda, ensure all values match expected and ensure
   //lambda was actually invoked
-  EXPECT_NO_THROW(([&] {
+  EXPECT_NO_FATAL_FAILURE(([&] {
    auto returned = l(dExpected, cExpected);
    EXPECT_TRUE(invoked);
    EXPECT_FLOAT_EQ(returned, returnExpected);
@@ -219,7 +219,7 @@ namespace CX {
   invoked = false;
 
   //Construct lambda and ensure it was correctly initialized
-  auto const lambda = [](uintptr_t v, long double d, unsigned int i, CX::VaList &list) -> char {
+  auto const lambda = [](uintptr_t v, long double d, unsigned int i, CX::VaList &list) noexcept -> char {
    invoked = true;
    EXPECT_EQ(v, vExpected);
    EXPECT_TRUE(d == dExpected);
@@ -232,13 +232,13 @@ namespace CX {
 
    return returnExpected;
   };
-  auto const fptr = &VariadicLambdaWrapper<char (decltype(lambda)::*)(uintptr_t, long double, unsigned int, ...)>::invoke;
+  auto const fptr = &VariadicLambdaWrapper<char (decltype(lambda)::*)(uintptr_t, long double, unsigned int, ...) noexcept>::invoke;
   Lambda l{(decltype(fptr) const&)fptr};
   EXPECT_TRUE(l);
 
   //Invoke lambda, ensure all values match expected and ensure
   //lambda was actually invoked
-  EXPECT_NO_THROW(([&] {
+  EXPECT_NO_FATAL_FAILURE(([&] {
    auto returned = l(vExpected, dExpected, iExpected, varargs[0], varargs[1], varargs[2], varargs[3]);
    EXPECT_TRUE(invoked);
    EXPECT_TRUE(returned == returnExpected);
@@ -290,7 +290,7 @@ namespace CX {
 
   //Invoke lambda, ensure all values match expected and ensure
   //lambda was actually invoked
-  EXPECT_NO_THROW(([&] {
+  EXPECT_NO_FATAL_FAILURE(([&] {
    auto returned = l(sExpected);
    EXPECT_TRUE(invoked);
    EXPECT_EQ(returned, returnExpected);
@@ -343,7 +343,7 @@ namespace CX {
   invoked = false;
 
   //Construct lambda and ensure it was correctly initialized
-  constexpr auto const lambda = [](int i, ...) {
+  constexpr auto const lambda = [](int i, ...) noexcept {
    CX::VaList list;
    va_start(list, i);
    invoked = true;
@@ -359,7 +359,7 @@ namespace CX {
 
   //Invoke lambda, ensure all values match expected and ensure
   //lambda was actually invoked
-  EXPECT_NO_THROW(([&] {
+  EXPECT_NO_FATAL_FAILURE(([&] {
    auto returned = l(
     iExpected,
     varargs[0],
@@ -417,7 +417,7 @@ namespace CX {
 
   //Invoke lambda, ensure all values match expected and ensure
   //lambda was actually invoked
-  EXPECT_NO_THROW(([&] {
+  EXPECT_NO_FATAL_FAILURE(([&] {
    auto returned = l(iExpected, fExpected);
    EXPECT_TRUE(invoked);
    EXPECT_EQ(returned, returnExpected);
@@ -489,7 +489,7 @@ namespace CX {
 
   //Invoke lambda, ensure all values match expected and ensure
   //lambda was actually invoked
-  EXPECT_NO_THROW(([&] {
+  EXPECT_NO_FATAL_FAILURE(([&] {
    l(
     iExpected,
     varargs[0],
@@ -588,7 +588,7 @@ namespace CX {
    invoked++;
   }};
   EXPECT_TRUE(l3);
-  EXPECT_NO_THROW(([&] {
+  EXPECT_NO_FATAL_FAILURE(([&] {
    l3();
    EXPECT_EQ(invoked, 1);
   }()));
@@ -596,7 +596,7 @@ namespace CX {
   //Copy construct lambda and ensure it was correctly initialized
   Lambda l4{(decltype(l3) const&)l3};
   EXPECT_TRUE(l4);
-  EXPECT_NO_THROW(([&] {
+  EXPECT_NO_FATAL_FAILURE(([&] {
    l4();
    EXPECT_EQ(invoked, 2);
   }()));
@@ -724,7 +724,7 @@ namespace CX {
    return returnExpected;
   }};
   EXPECT_TRUE(l3);
-  EXPECT_NO_THROW(([&] {
+  EXPECT_NO_FATAL_FAILURE(([&] {
    auto returned = l3(
     iExpected,
     varargs[0],
@@ -742,7 +742,7 @@ namespace CX {
   //Copy construct lambda and ensure it was correctly initialized
   Lambda l4{(decltype(l3) const&)l3};
   EXPECT_TRUE(l4);
-  EXPECT_NO_THROW(([&] {
+  EXPECT_NO_FATAL_FAILURE(([&] {
    auto returned = l4(
     iExpected,
     varargs[0],
@@ -1106,22 +1106,18 @@ namespace CX {
   //Reset flag in case test is re-run
   invoked = false;
 
-  //Construct lambda empty lambda
-  Lambda<float (int, char)> l;
-
   //Copy assign to lambda and ensure it was correctly initializes
-  auto const fptr = +[](int i, char c) -> float {
+  Lambda<float (int, char)> l = +[](int i, char c) -> float {
    invoked = true;
    EXPECT_EQ(i, iExpected);
    EXPECT_EQ(c, cExpected);
    return returnExpected;
   };
-  l = (decltype(fptr) const&)fptr;
   EXPECT_TRUE(l);
 
   //Invoke lambda, ensure all values match expected and ensure
   //lambda was actually invoked
-  EXPECT_NO_THROW(([&] {
+  EXPECT_NO_FATAL_FAILURE(([&] {
    auto returned = l(iExpected, cExpected);
    EXPECT_TRUE(invoked);
    EXPECT_FLOAT_EQ(returned, returnExpected);
@@ -1129,47 +1125,379 @@ namespace CX {
  }
 
  TEST(LambdaAssignment, noexcept_lambda_funcftion_pointer_assignment_operator_correctly_initializes_lambda) {
-  throw std::runtime_error{"Unimplemented"};
+  static constexpr double const dExpected = 3249;
+  static constexpr char const cExpected = 'A';
+  static constexpr float const returnExpected = 32467.3;
+
+  static bool invoked;
+
+  //Reset flag in case test is re-run
+  invoked = false;
+
+  //Copy assign to lambda and ensure it was correctly initialized
+  Lambda l = +[](double d, char c) noexcept -> float {
+   invoked = true;
+   EXPECT_EQ(d, dExpected);
+   EXPECT_EQ(c, cExpected);
+   return returnExpected;
+  };
+  EXPECT_TRUE(l);
+
+  //Invoke lambda, ensure all values match expected and ensure
+  //lambda was actually invoked
+  EXPECT_NO_FATAL_FAILURE(([&] {
+   auto returned = l(dExpected, cExpected);
+   EXPECT_TRUE(invoked);
+   EXPECT_FLOAT_EQ(returned, returnExpected);
+  }()));
  }
 
  TEST(LambdaAssignment, c_variadic_lambda_function_pointer_assignment_operator_correctly_initializes_lambda) {
-  throw std::runtime_error{"Unimplemented"};
+  static constexpr auto const iExpected = 7;
+  static constexpr short const varargs[] = {1, 2, 3, 4, 5, 6, 7};
+
+  static bool invoked;
+
+  //Reset flag in case test is re-run
+  invoked = false;
+
+  //Default construct empty lambda
+  Lambda<void (int, ...)> l;
+
+
+  auto const lambda = [](int i, CX::VaList &list) {
+   invoked = true;
+   EXPECT_EQ(i, iExpected);
+   for (unsigned long l = 0; l < ArraySize<decltype(varargs)>; l++) {
+    EXPECT_TRUE((list.arg<short>() == varargs[l]));
+   }
+  };
+
+  //Copy assign to lambda and ensure it was correctly initialized
+  l = &VariadicLambdaWrapper<void (decltype(lambda)::*)(int, ...)>::invoke;
+  EXPECT_TRUE(l);
+
+  //Invoke lambda, ensure all values match expected and ensure
+  //lambda was actually invoked
+  EXPECT_NO_THROW(([&] {
+   l(
+    iExpected,
+    varargs[0],
+    varargs[1],
+    varargs[2],
+    varargs[3],
+    varargs[4],
+    varargs[5],
+    varargs[6]
+   );
+   EXPECT_TRUE(invoked);
+  }()));
  }
 
  TEST(LambdaAssignment, noexcept_c_variadic_lambda_function_pointer_assignment_operator_correctly_initializes_lambda) {
-  throw std::runtime_error{"Unimplemented"};
+  static constexpr int const i1Expected = 324780;
+  static constexpr int const i2Expected = 6;
+  static constexpr char const varargs[] = "hello";
+  static constexpr char const returnExpected = 'Z';
+
+  static bool invoked;
+
+  //Reset flag in case test is re-run
+  invoked = false;
+
+  //Default construct empty lambda
+  Lambda<char (int, int, ...) noexcept> l;
+
+  auto const lambda = [](int i1, int i2, CX::VaList &list) noexcept -> char {
+   invoked = true;
+   EXPECT_EQ(i1, i1Expected);
+   EXPECT_EQ(i2, i2Expected);
+   for (unsigned long l = 0; l < ArraySize<decltype(varargs)>; l++) {
+    EXPECT_TRUE((list.arg<char>() == varargs[l]));
+   }
+   return returnExpected;
+  };
+
+  //Copy assign to lambda and ensure it was correctly initialized
+  l = &VariadicLambdaWrapper<char (decltype(lambda)::*)(int, int, ...) noexcept>::invoke;
+  EXPECT_TRUE(l);
+
+  //Invoke lambda, ensure all values match expected and ensure
+  //lambda was actually invoked
+  EXPECT_NO_FATAL_FAILURE(([&] {
+   auto returned = l(
+    i1Expected,
+    i2Expected,
+    varargs[0],
+    varargs[1],
+    varargs[2],
+    varargs[3],
+    varargs[4],
+    varargs[5]
+   );
+   EXPECT_TRUE(invoked);
+   EXPECT_TRUE(returned == returnExpected);
+  }()));
  }
 
  TEST(LambdaAssignment, lambda_function_copy_assignment_operator_properly_initializes_lambda) {
-  throw std::runtime_error{"Unimplemented"};
+  static constexpr bool const bExpected = false;
+  static constexpr char16_t cExpected = 'A';
+
+  static bool invoked;
+
+  //Reset flag in case test is re-run
+  invoked = false;
+
+  //Construct lambda and ensure it was correctly initialized
+  auto const lambda = [](bool b, char16_t c) {
+   invoked = true;
+   EXPECT_EQ(b, bExpected);
+   EXPECT_TRUE(c == cExpected);
+  };
+  Lambda<void (bool, char16_t)> l;
+  l = (decltype(lambda) const&)lambda;
+  EXPECT_TRUE(l);
+
+  //Invoke lambda, ensure all values match expected and ensure
+  //lambda was actually invoked
+  EXPECT_NO_THROW(([&] {
+   l(bExpected, cExpected);
+   EXPECT_TRUE(invoked);
+  }()));
  }
 
  TEST(LambdaAssignment, noexcept_lambda_function_copy_assignment_operator_properly_initializes_lambda) {
-  throw std::runtime_error{"Unimplemented"};
+  static constexpr char32_t const cExpected = 'd';
+  static constexpr short const sExpected = 354;
+  static constexpr float const returnExpected = 3.24152;
+
+  static bool invoked;
+
+  //Reset flag in case test is re-run
+  invoked = false;
+
+  //Construct lambda and ensure it was correctly initialized
+  auto const lambda = [](char32_t c, short s) noexcept -> float {
+   invoked = true;
+   EXPECT_TRUE(c == cExpected);
+   EXPECT_EQ(s, sExpected);
+   return returnExpected;
+  };
+  Lambda l = (decltype(lambda) const&)lambda;
+  EXPECT_TRUE(l);
+
+  //Invoke lambda, ensure all values match expected and ensure
+  //lambda was actually invoked
+  EXPECT_NO_FATAL_FAILURE(([&] {
+   auto returned = l(cExpected, sExpected);
+   EXPECT_TRUE(invoked);
+   EXPECT_EQ(returned, returnExpected);
+  }()));
  }
 
  TEST(LambdaAssignment, c_variadic_lambda_function_copy_assignment_operator_properly_initializes_lambda) {
-  throw std::runtime_error{"Unimplemented"};
+  static constexpr long double d1Expected = 1.130211;
+  static constexpr double d2Expected = 0.523299;
+  static constexpr char16_t returnExpected = 2345;
+  static constexpr long long varargs[] {283765, 2093480934875};
+
+  static bool invoked;
+
+  //Reset flag in case test is re-run
+  invoked = false;
+
+  //Construct lambda and ensure it was correctly initialized
+  constexpr auto const lambda = [](long double d1, double d2, ...) {
+   CX::VaList list;
+   va_start(list, d2);
+   invoked = true;
+   EXPECT_TRUE(d1 == d1Expected);
+   EXPECT_TRUE(d2 == d2Expected);
+   for (int i = 0; i < 2; i++) {
+    EXPECT_EQ((list.arg<long long>()), (varargs[i]));
+   }
+   return returnExpected;
+  };
+  Lambda l = (decltype(lambda) const&)lambda;
+  EXPECT_TRUE(l);
+
+  //Invoke lambda, ensure all values match expected and ensure
+  //lambda was actually invoked
+  EXPECT_NO_THROW(([&] {
+   auto returned = l(d1Expected, d2Expected, varargs[0], varargs[1]);
+   EXPECT_TRUE(invoked);
+   EXPECT_TRUE(returned == returnExpected);
+  }()));
  }
 
  TEST(LambdaAssignment, noexcept_c_variadic_lambda_function_copy_assignment_operator_properly_initializes_lambda) {
-  throw std::runtime_error{"Unimplemented"};
+  static constexpr int const iExpected = 'L';
+  static constexpr float returnExpected = 1.129848;
+  static constexpr char const varargs[] = "Hello";
+
+  static bool invoked;
+
+  //Reset flag in case test is re-run
+  invoked = false;
+
+  //Construct lambda and ensure it was correctly initialized
+  constexpr auto const lambda = [](int i, ...) noexcept {
+   CX::VaList list;
+   va_start(list, i);
+   invoked = true;
+   EXPECT_EQ(i, iExpected);
+   //Verify varargs
+   for (unsigned long l = 0; l < ArraySize<decltype(varargs)>; l++) {
+    EXPECT_EQ((list.arg<char>()), (varargs[l]));
+   }
+   return returnExpected;
+  };
+  Lambda l = (decltype(lambda) const&)lambda;
+  EXPECT_TRUE(l);
+
+  //Invoke lambda, ensure all values match expected and ensure
+  //lambda was actually invoked
+  EXPECT_NO_FATAL_FAILURE(([&] {
+   auto returned = l(
+    iExpected,
+    varargs[0],
+    varargs[1],
+    varargs[2],
+    varargs[3],
+    varargs[4],
+    varargs[5]
+   );
+   EXPECT_TRUE(invoked);
+   EXPECT_EQ(returned, returnExpected);
+  }()));
  }
 
  TEST(LambdaAssignment, lambda_function_move_assignment_operator_properly_initializes_lambda) {
-  throw std::runtime_error{"Unimplemented"};
+  static bool invoked;
+
+  //Reset flag in case test is re-run
+  invoked = false;
+
+  //Construct lambda and ensure it was correctly initialized
+  auto lambda = [] {
+   invoked = true;
+  };
+  Lambda l = (decltype(lambda)&&)lambda;
+  EXPECT_TRUE(l);
+
+  //Invoke lambda, ensure all values match expected and ensure
+  //lambda was actually invoked
+  EXPECT_NO_THROW(([&] {
+   l();
+   EXPECT_TRUE(invoked);
+  }()));
  }
 
  TEST(LambdaAssignment, noexcept_lambda_function_move_assignment_operator_properly_initializes_lambda) {
-  throw std::runtime_error{"Unimplemented"};
+  static constexpr int const iExpected = 2435;
+  static constexpr float const fExpected = 3463457.254;
+  static constexpr double const returnExpected = 3;
+
+  static bool invoked;
+
+  //Reset flag in case test is re-run
+  invoked = false;
+
+  //Construct lambda and ensure it was correctly initialized
+  auto lambda = [](int i, float f) noexcept -> double {
+   invoked = true;
+   EXPECT_EQ(i, iExpected);
+   EXPECT_EQ(f, fExpected);
+   return returnExpected;
+  };
+  Lambda l = (decltype(lambda)&&)lambda;
+  EXPECT_TRUE(l);
+
+  //Invoke lambda, ensure all values match expected and ensure
+  //lambda was actually invoked
+  EXPECT_NO_FATAL_FAILURE(([&] {
+   auto returned = l(iExpected, fExpected);
+   EXPECT_TRUE(invoked);
+   EXPECT_EQ(returned, returnExpected);
+  }()));
  }
 
  TEST(LambdaAssignment, c_variadic_lambda_function_move_assignment_operator_properly_initializes_lambda) {
-  throw std::runtime_error{"Unimplemented"};
+  static constexpr int const iExpected = 2435;
+  static constexpr double const dExpected = 3463457.254;
+  static constexpr float const varargs[] = {3.14, 6.28, 2.71};
+  static constexpr float const returnExpected = 3;
+
+  static bool invoked;
+
+  //Reset flag in case test is re-run
+  invoked = false;
+
+  //Construct lambda and ensure it was correctly initialized
+  auto lambda = [](int i, double d, ...) -> float {
+   CX::VaList list;
+   va_start(list, d);
+   invoked = true;
+   EXPECT_EQ(i, iExpected);
+   EXPECT_EQ(d, dExpected);
+   for (unsigned long l = 0; l < ArraySize<decltype(varargs)>; l++) {
+    EXPECT_FLOAT_EQ((list.arg<float>()), (varargs[l]));
+   }
+   return returnExpected;
+  };
+  Lambda l = (decltype(lambda)&&)lambda;
+  EXPECT_TRUE(l);
+
+  //Invoke lambda, ensure all values match expected and ensure
+  //lambda was actually invoked
+  EXPECT_NO_THROW(([&] {
+   auto returned = l(
+    iExpected,
+    dExpected,
+    varargs[0],
+    varargs[1],
+    varargs[2]
+   );
+   EXPECT_TRUE(invoked);
+   EXPECT_EQ(returned, returnExpected);
+  }()));
  }
 
  TEST(LambdaAssignment, noexcept_c_variadic_lambda_function_move_assignment_operator_properly_initializes_lambda) {
-  throw std::runtime_error{"Unimplemented"};
+  static constexpr int const iExpected = 4;
+  static constexpr long double const varargs[] = {1, 2, 3, 4};
+
+  static bool invoked;
+
+  //Reset flag in case test is re-run
+  invoked = false;
+
+  //Construct lambda and ensure it was correctly initialized
+  auto lambda = [](int i, ...) noexcept {
+   CX::VaList list;
+   va_start(list, i);
+   invoked = true;
+   EXPECT_EQ(i, iExpected);
+   for (unsigned long l = 0; l < ArraySize<decltype(varargs)>; l++) {
+    EXPECT_FLOAT_EQ((list.arg<long double>()), (varargs[l]));
+   }
+  };
+  Lambda l = (decltype(lambda)&&)lambda;
+  EXPECT_TRUE(l);
+
+  //Invoke lambda, ensure all values match expected and ensure
+  //lambda was actually invoked
+  EXPECT_NO_FATAL_FAILURE(([&] {
+   l(
+    iExpected,
+    varargs[0],
+    varargs[1],
+    varargs[2],
+    varargs[3]
+   );
+   EXPECT_TRUE(invoked);
+  }()));
  }
 
  TEST(LambdaAssignment, lambda_copy_assignment_operator_properly_initializes_lambda) {

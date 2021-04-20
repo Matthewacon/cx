@@ -770,7 +770,7 @@ namespace CX {
    UninitializedLambdaError
   );
 
-  //Copy construct lambda and ensure it was correctly initialized
+  //Move construct lambda and ensure it was correctly initialized
   Lambda l2{(decltype(l1)&&)l1};
   EXPECT_FALSE(l2);
   EXPECT_THROW(
@@ -811,7 +811,7 @@ namespace CX {
    EXPECT_EQ(invoked, 1);
   }()));
 
-  //Copy construct lambda and ensure it was correctly initialized
+  //Move construct lambda and ensure it was correctly initialized
   Lambda l4{(decltype(l3)&&)l3};
   EXPECT_TRUE(l4);
   EXPECT_NO_THROW(([&] {
@@ -843,7 +843,7 @@ namespace CX {
    "UninitializedLambdaError"
   );
 
-  //Copy construct lambda and ensure it was correctly initialized
+  //Move construct lambda and ensure it was correctly initialized
   Lambda l2{(decltype(l1)&&)l1};
   EXPECT_FALSE(l2);
   EXPECT_DEATH(
@@ -886,7 +886,7 @@ namespace CX {
    EXPECT_EQ(invoked, 1);
   }()));
 
-  //Copy construct lambda and ensure it was correctly initialized
+  //Move construct lambda and ensure it was correctly initialized
   Lambda l4{(decltype(l3)&&)l3};
   EXPECT_TRUE(l4);
   EXPECT_NO_FATAL_FAILURE(([&] {
@@ -918,7 +918,7 @@ namespace CX {
    UninitializedLambdaError
   );
 
-  //Copy construct lambda and ensure it was correctly initialized
+  //Move construct lambda and ensure it was correctly initialized
   Lambda l2{(decltype(l1)&&)l1};
   EXPECT_FALSE(l2);
   EXPECT_THROW(
@@ -974,7 +974,7 @@ namespace CX {
    EXPECT_EQ(invoked, 1);
   }()));
 
-  //Copy construct lambda and ensure it was correctly initialized
+  //Move construct lambda and ensure it was correctly initialized
   Lambda l4{(decltype(l3)&&)l3};
   EXPECT_TRUE(l4);
   EXPECT_NO_THROW(([&] {
@@ -1013,7 +1013,7 @@ namespace CX {
    "UninitializedLambdaError"
   );
 
-  //Copy construct lambda and ensure it was correctly initialized
+  //Move construct lambda and ensure it was correctly initialized
   Lambda l2{(decltype(l1)&&)l1};
   EXPECT_FALSE(l2);
   EXPECT_DEATH(
@@ -1038,7 +1038,7 @@ namespace CX {
   //Reset counter in case test is re-run
   invoked = 0;
 
-  //Construct lambda and ensure it was correctly initialized
+  //Move lambda and ensure it was correctly initialized
   static constexpr char const varargs[] = "lambda";
   static constexpr int const iExpected = ArraySize<decltype(varargs)>;
   static constexpr char const returnExpected = 'F';
@@ -1069,7 +1069,7 @@ namespace CX {
    EXPECT_EQ(invoked, 1);
   }()));
 
-  //Copy construct lambda and ensure it was correctly initialized
+  //Move construct lambda and ensure it was correctly initialized
   Lambda l4{(decltype(l3)&&)l3};
   EXPECT_TRUE(l4);
   EXPECT_NO_FATAL_FAILURE(([&] {
@@ -1501,35 +1501,598 @@ namespace CX {
  }
 
  TEST(LambdaAssignment, lambda_copy_assignment_operator_properly_initializes_lambda) {
-  throw std::runtime_error{"Unimplemented"};
+  //Test with uninitialized lambda
+  //Construct empty lambda and ensure it was correctly initialized
+  Lambda<int (float)> l1;
+  EXPECT_FALSE(l1);
+  EXPECT_THROW(
+   ([&] {
+    l1(0);
+   }()),
+   UninitializedLambdaError
+  );
+
+  //Copy assign to lambda and ensure it was correctly initialized
+  Lambda l2 = (decltype(l1) const&)l1;
+  EXPECT_FALSE(l2);
+  EXPECT_THROW(
+   ([&] {
+    l2(0);
+   }()),
+   UninitializedLambdaError
+  );
+
+  //Test with initialized lambda
+  static int invoked;
+
+  //Reset counter in case test is re-run
+  invoked = 0;
+
+  //Construct lambda and ensure it was correctly initialized
+  static constexpr float const fExpected = 2463987;
+  static constexpr int const returnExpected = 2456;
+
+  Lambda l3{[](float f) {
+   invoked++;
+   EXPECT_FLOAT_EQ(f, fExpected);
+   return returnExpected;
+  }};
+  EXPECT_TRUE(l3);
+  EXPECT_NO_THROW(([&] {
+   auto returned = l3(fExpected);
+   EXPECT_EQ(returned, returnExpected);
+   EXPECT_EQ(invoked, 1);
+  }()));
+
+  //Copy assign to lambda and ensure it was correctly initialized
+  Lambda l4 = (decltype(l3) const&)l3;
+  EXPECT_TRUE(l4);
+  EXPECT_NO_THROW(([&] {
+   auto returned = l4(fExpected);
+   EXPECT_EQ(returned, returnExpected);
+   EXPECT_EQ(invoked, 2);
+  }()));
  }
 
  TEST(LambdaAssignment, noexcept_lambda_copy_assignment_operator_properly_initializes_lambda) {
-  throw std::runtime_error{"Unimplemented"};
+  //Test with uninitialized lambda
+  //Construct empty lambda and ensure it was correctly initialized
+  Lambda<void () noexcept> l1;
+  EXPECT_FALSE(l1);
+  EXPECT_DEATH(
+   ([&] {
+    l1();
+   }()),
+   "UninitializedLambdaError"
+  );
+
+  //Copy assign to lambda and ensure it was correctly initialized
+  Lambda l2 = (decltype(l1) const&)l1;
+  EXPECT_FALSE(l2);
+  EXPECT_DEATH(
+   ([&] {
+    l2();
+   }()),
+   "UninitializedLambdaError"
+  );
+
+  //Test with initialized lambda
+  static int invoked;
+
+  //Reset counter in case test is re-run
+  invoked = 0;
+
+  //Construct lambda and ensure it was correctly initialized
+  Lambda l3{[]() noexcept {
+   invoked++;
+  }};
+  EXPECT_TRUE(l3);
+  EXPECT_NO_FATAL_FAILURE(([&] {
+   l3();
+   EXPECT_EQ(invoked, 1);
+  }()));
+
+  //Copy assign to lambda and ensure it was correctly initialized
+  Lambda l4 = (decltype(l3) const&)l3;
+  EXPECT_TRUE(l4);
+  EXPECT_NO_FATAL_FAILURE(([&] {
+   l4();
+   EXPECT_EQ(invoked, 2);
+  }()));
  }
 
  TEST(LambdaAssignment, c_variadic_lambda_copy_assignment_operator_properly_initializes_lambda) {
-  throw std::runtime_error{"Unimplemented"};
+  //Test with uninitialized lambda
+  //Construct empty lambda and ensure it was correctly initialized
+  Lambda<void (...)> l1;
+  EXPECT_FALSE(l1);
+  EXPECT_THROW(
+   ([&] {
+    l1(0);
+   }()),
+   UninitializedLambdaError
+  );
+
+  //Copy assign to lambda and ensure it was correctly initialized
+  Lambda l2 = (decltype(l1) const&)l1;
+  EXPECT_FALSE(l2);
+  EXPECT_THROW(
+   ([&] {
+    l2(0);
+   }()),
+   UninitializedLambdaError
+  );
+
+  //Test with initialized lambda
+  static int invoked;
+
+  //Reset counter in case test is re-run
+  invoked = 0;
+
+  //Construct lambda and ensure it was correctly initialized
+  static constexpr char const varargs[] = "lambda";
+  static constexpr int const iExpected = ArraySize<decltype(varargs)>;
+  static constexpr char const returnExpected = 'F';
+
+  Lambda l3{[](int i, ...) -> char {
+   CX::VaList list;
+   va_start(list, i);
+   invoked++;
+   EXPECT_FLOAT_EQ(i, iExpected);
+   for (unsigned long l = 0; l < ArraySize<decltype(varargs)>; l++) {
+    EXPECT_TRUE((list.arg<char>() == varargs[l]));
+   }
+   return returnExpected;
+  }};
+  EXPECT_TRUE(l3);
+  EXPECT_NO_THROW(([&] {
+   auto returned = l3(
+    iExpected,
+    varargs[0],
+    varargs[1],
+    varargs[2],
+    varargs[3],
+    varargs[4],
+    varargs[5],
+    varargs[6]
+   );
+   EXPECT_EQ(returned, returnExpected);
+   EXPECT_EQ(invoked, 1);
+  }()));
+
+  //Copy assign to lambda and ensure it was correctly initialized
+  Lambda l4 = (decltype(l3) const&)l3;
+  EXPECT_TRUE(l4);
+  EXPECT_NO_THROW(([&] {
+   auto returned = l4(
+    iExpected,
+    varargs[0],
+    varargs[1],
+    varargs[2],
+    varargs[3],
+    varargs[4],
+    varargs[5],
+    varargs[6]
+   );
+   EXPECT_EQ(returned, returnExpected);
+   EXPECT_EQ(invoked, 2);
+  }()));
  }
 
  TEST(LambdaAssignment, noexcept_c_variadic_lambda_copy_assignment_operator_properly_initializes_lambda) {
-  throw std::runtime_error{"Unimplemented"};
+  //Test with uninitialized lambda
+  //Construct empty lambda and ensure it was correctly initialized
+  Lambda<void (...) noexcept> l1;
+  EXPECT_FALSE(l1);
+  EXPECT_DEATH(
+   ([&] {
+    l1(0);
+   }()),
+   "UninitializedLambdaError"
+  );
+
+  //Copy assign to lambda and ensure it was correctly initialized
+  Lambda l2 = (decltype(l1) const&)l1;
+  EXPECT_FALSE(l2);
+  EXPECT_DEATH(
+   ([&] {
+    l2(0);
+   }()),
+   "UninitializedLambdaError"
+  );
+
+  //Test with initialized lambda
+  static int invoked;
+
+  //Reset counter in case test is re-run
+  invoked = 0;
+
+  //Construct lambda and ensure it was correctly initialized
+  static constexpr char const varargs[] = "lambda";
+  static constexpr int const iExpected = ArraySize<decltype(varargs)>;
+  static constexpr char const returnExpected = 'F';
+
+  Lambda l3{[](int i, ...) noexcept -> char {
+   CX::VaList list;
+   va_start(list, i);
+   invoked++;
+   EXPECT_FLOAT_EQ(i, iExpected);
+   for (unsigned long l = 0; l < ArraySize<decltype(varargs)>; l++) {
+    EXPECT_TRUE((list.arg<char>() == varargs[l]));
+   }
+   return returnExpected;
+  }};
+  EXPECT_TRUE(l3);
+  EXPECT_NO_FATAL_FAILURE(([&] {
+   auto returned = l3(
+    iExpected,
+    varargs[0],
+    varargs[1],
+    varargs[2],
+    varargs[3],
+    varargs[4],
+    varargs[5],
+    varargs[6]
+   );
+   EXPECT_EQ(returned, returnExpected);
+   EXPECT_EQ(invoked, 1);
+  }()));
+
+  //Copy assign to lambda and ensure it was correctly initialized
+  Lambda l4 = (decltype(l3) const&)l3;
+  EXPECT_TRUE(l4);
+  EXPECT_NO_FATAL_FAILURE(([&] {
+   auto returned = l4(
+    iExpected,
+    varargs[0],
+    varargs[1],
+    varargs[2],
+    varargs[3],
+    varargs[4],
+    varargs[5],
+    varargs[6]
+   );
+   EXPECT_EQ(returned, returnExpected);
+   EXPECT_EQ(invoked, 2);
+  }()));
  }
 
  TEST(LambdaAssignment, lambda_move_assignment_operator_properly_initializes_lambda) {
-  throw std::runtime_error{"Unimplemented"};
+  //Test with uninitialized lambda
+  //Construct empty lambda and ensure it was correctly initialized
+  Lambda<void ()> l1;
+  EXPECT_FALSE(l1);
+  EXPECT_THROW(
+   ([&] {
+    l1();
+   }()),
+   UninitializedLambdaError
+  );
+
+  //Move assign to lambda and ensure it was correctly initialized
+  Lambda l2 = (decltype(l1)&&)l1;
+  EXPECT_FALSE(l2);
+  EXPECT_THROW(
+   ([&] {
+    l2();
+   }()),
+   UninitializedLambdaError
+  );
+
+  //Ensure moved lambda is uninitialized
+  EXPECT_FALSE(l1);
+  EXPECT_THROW(
+   ([&] {
+    l1();
+   }()),
+   UninitializedLambdaError
+  );
+
+  //Test with initialized lambda
+  static int invoked;
+
+  //Reset counter in case test is re-run
+  invoked = 0;
+
+  //Construct lambda and ensure it was correctly initialized
+  static constexpr float const fExpected = 2463987;
+  static constexpr int const returnExpected = 2456;
+
+  Lambda l3{[](float f) {
+   invoked++;
+   EXPECT_FLOAT_EQ(f, fExpected);
+   return returnExpected;
+  }};
+  EXPECT_TRUE(l3);
+  EXPECT_NO_THROW(([&] {
+   auto returned = l3(fExpected);
+   EXPECT_EQ(returned, returnExpected);
+   EXPECT_EQ(invoked, 1);
+  }()));
+
+  //Move assign to lambda and ensure it was correctly initialized
+  Lambda l4 = (decltype(l3)&&)l3;
+  EXPECT_TRUE(l4);
+  EXPECT_NO_THROW(([&] {
+   auto returned = l4(fExpected);
+   EXPECT_EQ(returned, returnExpected);
+   EXPECT_EQ(invoked, 2);
+  }()));
+
+  //Ensure moved lambda is uninitialized
+  EXPECT_FALSE(l3);
+  EXPECT_THROW(
+   ([&] {
+    l3(1254);
+   }()),
+   UninitializedLambdaError
+  );
+  EXPECT_EQ(invoked, 2);
  }
 
  TEST(LambdaAssignment, noexcept_lambda_move_assignment_operator_properly_initializes_lambda) {
-  throw std::runtime_error{"Unimplemented"};
+  //Test with uninitialized lambda
+  //Construct empty lambda and ensure it was correctly initialized
+  Lambda<void () noexcept> l1;
+  EXPECT_FALSE(l1);
+  EXPECT_DEATH(
+   ([&] {
+    l1();
+   }()),
+   "UninitializedLambdaError"
+  );
+
+  //Move assign to lambda and ensure it was correctly initialized
+  Lambda l2 = (decltype(l1)&&)l1;
+  EXPECT_FALSE(l2);
+  EXPECT_DEATH(
+   ([&] {
+    l2();
+   }()),
+   "UninitializedLambdaError"
+  );
+
+  //Ensure moved lambda is uninitialized
+  EXPECT_FALSE(l1);
+  EXPECT_DEATH(
+   ([&] {
+    l1();
+   }()),
+   "UninitializedLambdaError"
+  );
+
+  //Test with initialized lambda
+  static int invoked;
+
+  //Reset counter in case test is re-run
+  invoked = 0;
+
+  //Construct lambda and ensure it was correctly initialized
+  static constexpr float const fExpected = 2463987;
+  static constexpr long double const dExpected = 932487.827365;
+  static constexpr int const returnExpected = -1;
+
+  Lambda l3{[](float f, long double d) noexcept {
+   invoked++;
+   EXPECT_FLOAT_EQ(f, fExpected);
+   EXPECT_DOUBLE_EQ(d, dExpected);
+   return returnExpected;
+  }};
+  EXPECT_TRUE(l3);
+  EXPECT_NO_FATAL_FAILURE(([&] {
+   auto returned = l3(fExpected, dExpected);
+   EXPECT_EQ(returned, returnExpected);
+   EXPECT_EQ(invoked, 1);
+  }()));
+
+  //Move assign to lambda and ensure it was correctly initialized
+  Lambda l4 = (decltype(l3)&&)l3;
+  EXPECT_TRUE(l4);
+  EXPECT_NO_FATAL_FAILURE(([&] {
+   auto returned = l4(fExpected, dExpected);
+   EXPECT_EQ(returned, returnExpected);
+   EXPECT_EQ(invoked, 2);
+  }()));
+
+  //Ensure moved lambda is uninitialized
+  EXPECT_FALSE(l3);
+  EXPECT_DEATH(
+   ([&] {
+    l3(-1, 1);
+   }()),
+   "UninitializedLambdaError"
+  );
+  EXPECT_EQ(invoked, 2);
  }
 
  TEST(LambdaAssignment, c_variadic_lambda_move_assignment_operator_properly_initializes_lambda) {
-  throw std::runtime_error{"Unimplemented"};
+  //Test with uninitialized lambda
+  //Construct empty lambda and ensure it was correctly initialized
+  Lambda<void (...)> l1;
+  EXPECT_FALSE(l1);
+  EXPECT_THROW(
+   ([&] {
+    l1(0);
+   }()),
+   UninitializedLambdaError
+  );
+
+  //Move assign to lambda and ensure it was correctly initialized
+  Lambda l2 = (decltype(l1)&&)l1;
+  EXPECT_FALSE(l2);
+  EXPECT_THROW(
+   ([&] {
+    l2(0);
+   }()),
+   UninitializedLambdaError
+  );
+
+  //Ensure moved lambda is uninitialized
+  EXPECT_FALSE(l1);
+  EXPECT_THROW(
+   ([&] {
+    l1(0);
+   }()),
+   UninitializedLambdaError
+  );
+
+  //Test with initialized lambda
+  static int invoked;
+
+  //Reset counter in case test is re-run
+  invoked = 0;
+
+  //Construct lambda and ensure it was correctly initialized
+  static constexpr char const varargs[] = "lambda";
+  static constexpr int const iExpected = ArraySize<decltype(varargs)>;
+  static constexpr char const returnExpected = 'F';
+
+  Lambda l3{[](int i, ...) -> char {
+   CX::VaList list;
+   va_start(list, i);
+   invoked++;
+   EXPECT_FLOAT_EQ(i, iExpected);
+   for (unsigned long l = 0; l < ArraySize<decltype(varargs)>; l++) {
+    EXPECT_TRUE((list.arg<char>() == varargs[l]));
+   }
+   return returnExpected;
+  }};
+  EXPECT_TRUE(l3);
+  EXPECT_NO_THROW(([&] {
+   auto returned = l3(
+    iExpected,
+    varargs[0],
+    varargs[1],
+    varargs[2],
+    varargs[3],
+    varargs[4],
+    varargs[5],
+    varargs[6]
+   );
+   EXPECT_EQ(returned, returnExpected);
+   EXPECT_EQ(invoked, 1);
+  }()));
+
+  //Move assign to lambda and ensure it was correctly initialized
+  Lambda l4 = (decltype(l3)&&)l3;
+  EXPECT_TRUE(l4);
+  EXPECT_NO_THROW(([&] {
+   auto returned = l4(
+    iExpected,
+    varargs[0],
+    varargs[1],
+    varargs[2],
+    varargs[3],
+    varargs[4],
+    varargs[5],
+    varargs[6]
+   );
+   EXPECT_EQ(returned, returnExpected);
+   EXPECT_EQ(invoked, 2);
+  }()));
+
+  //Ensure moved lambda is uninitialized
+  EXPECT_THROW(
+   ([&] {
+    l3(0);
+   }()),
+   UninitializedLambdaError
+  );
  }
 
  TEST(LambdaAssignment, noexcept_c_variadic_lambda_move_assignment_operator_properly_initializes_lambda) {
-  throw std::runtime_error{"Unimplemented"};
+  //Test with uninitialized lambda
+  //Construct empty lambda and ensure it was correctly initialized
+  Lambda<void (...) noexcept> l1;
+  EXPECT_FALSE(l1);
+  EXPECT_DEATH(
+   ([&] {
+    l1(0);
+   }()),
+   "UninitializedLambdaError"
+  );
+
+  //Move assign to lambda and ensure it was correctly initialized
+  Lambda l2 = (decltype(l1)&&)l1;
+  EXPECT_FALSE(l2);
+  EXPECT_DEATH(
+   ([&] {
+    l2(0);
+   }()),
+   "UninitializedLambdaError"
+  );
+
+  //Ensure moved lambda is unitialized
+  EXPECT_FALSE(l1);
+  EXPECT_DEATH(
+   ([&] {
+    l1(0);
+   }()),
+   "UninitializedLambdaError"
+  );
+
+  //Test with initialized lambda
+  static int invoked;
+
+  //Reset counter in case test is re-run
+  invoked = 0;
+
+  //Move lambda and ensure it was correctly initialized
+  static constexpr char const varargs[] = "lambda";
+  static constexpr int const iExpected = ArraySize<decltype(varargs)>;
+  static constexpr char const returnExpected = 'F';
+
+  Lambda l3{[](int i, ...) noexcept -> char {
+   CX::VaList list;
+   va_start(list, i);
+   invoked++;
+   EXPECT_FLOAT_EQ(i, iExpected);
+   for (unsigned long l = 0; l < ArraySize<decltype(varargs)>; l++) {
+    EXPECT_TRUE((list.arg<char>() == varargs[l]));
+   }
+   return returnExpected;
+  }};
+  EXPECT_TRUE(l3);
+  EXPECT_NO_FATAL_FAILURE(([&] {
+   auto returned = l3(
+    iExpected,
+    varargs[0],
+    varargs[1],
+    varargs[2],
+    varargs[3],
+    varargs[4],
+    varargs[5],
+    varargs[6]
+   );
+   EXPECT_EQ(returned, returnExpected);
+   EXPECT_EQ(invoked, 1);
+  }()));
+
+  //Move assign to lambda and ensure it was correctly initialized
+  Lambda l4 = (decltype(l3)&&)l3;
+  EXPECT_TRUE(l4);
+  EXPECT_NO_FATAL_FAILURE(([&] {
+   auto returned = l4(
+    iExpected,
+    varargs[0],
+    varargs[1],
+    varargs[2],
+    varargs[3],
+    varargs[4],
+    varargs[5],
+    varargs[6]
+   );
+   EXPECT_EQ(returned, returnExpected);
+   EXPECT_EQ(invoked, 2);
+  }()));
+
+  //Ensure moved lambda is uninitialized
+  EXPECT_DEATH(
+   ([&] {
+    l3(0);
+   }()),
+   "UninitializedLambdaError"
+  );
  }
 
  //TODO

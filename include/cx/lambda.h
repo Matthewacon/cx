@@ -198,17 +198,9 @@ namespace CX {
     throw UninitializedLambdaError{};
    }
 
-   virtual decltype(sizeof(0)) size() const noexcept {
-    throw UninitializedLambdaError{};
-   }
-
-   virtual decltype(alignof(int)) alignment() const noexcept {
-    throw UninitializedLambdaError{};
-   }
-
-   virtual void copy(void *) {
-    throw UninitializedLambdaError{};
-   }
+   virtual decltype(sizeof(0)) size() const noexcept = 0;
+   virtual decltype(alignof(int)) alignment() const noexcept = 0;
+   virtual void copy(void *) = 0;
 
    virtual bool present() const noexcept {
     return false;
@@ -233,12 +225,16 @@ namespace CX {
     bufAlign(bufAlign)
    {}
 
-   virtual decltype(bufSize) size() const noexcept override {
+   decltype(bufSize) size() const noexcept override {
     return bufSize;
    }
 
-   virtual decltype(bufAlign) alignment() const noexcept override {
+   decltype(bufAlign) alignment() const noexcept override {
     return bufAlign;
+   }
+
+   void copy(void * buf) override {
+    new (buf) LambdaBase{bufSize, bufAlign};
    }
   };
 
@@ -321,17 +317,9 @@ namespace CX {
     return get().template invoke<Noexcept, Varargs...>(args..., varargs...);
    }
 
-   virtual decltype(sizeof(0)) size() const noexcept {
-    throw UninitializedLambdaError{};
-   }
-
-   virtual decltype(alignof(int)) alignment() const noexcept {
-    throw UninitializedLambdaError{};
-   }
-
-   virtual void copy(void *) {
-    throw UninitializedLambdaError{};
-   }
+   virtual decltype(sizeof(0)) size() const noexcept = 0;
+   virtual decltype(alignof(int)) alignment() const noexcept = 0;
+   virtual void copy(void *) = 0;
 
    virtual bool present() const noexcept {
     return false;
@@ -362,6 +350,10 @@ namespace CX {
 
    decltype(bufAlign) alignment() const noexcept override {
     return bufAlign;
+   }
+
+   void copy(void * buf) override {
+    new (buf) LambdaBase {bufSize, bufAlign};
    }
   };
 
@@ -607,6 +599,7 @@ namespace CX {
 
    //Lambda copy and move assignment
    template<auto Size1, auto Size2>
+   [[gnu::always_inline]]
    static void copyAssignLambda(unsigned char (&l1)[Size1], unsigned char (&l2)[Size2]) {
     //Clean up current state
     destroy(l1);
@@ -617,6 +610,7 @@ namespace CX {
 
    //Lambda move assignment
    template<auto Size1, auto Size2>
+   [[gnu::always_inline]]
    static void moveAssignLambda(unsigned char (&l1)[Size1], unsigned char (&l2)[Size2]) {
     //Clean up current state
     destroy(l1);
@@ -625,8 +619,9 @@ namespace CX {
     (*(LambdaBase<SpecializationPrototype> *)&l2).copy(l1);
 
     //Clean up `l2` and reinitialize it as an empty lambda
+    auto const l2Alignment = (*(LambdaBase<SpecializationPrototype> *)&l2).alignment();
     destroy(l2);
-    init(l2);
+    init(l2, l2Alignment);
    }
   };
  }
@@ -706,12 +701,22 @@ namespace CX {
   }
 
   //Lambda copy constructor
+  Lambda(Lambda const &l) : Lambda() {
+   operator=<Lambda>((Lambda const&)l);
+  }
+
+  //Lambda move constructor
+  Lambda(Lambda &&l) : Lambda() {
+   operator=<Lambda>((Lambda&&)l);
+  }
+
+  //CompatibleLambda copy constructor
   template<CompatibleLambda<Lambda> L>
   Lambda(L const &l) : Lambda() {
    operator=<L>((L const&)l);
   }
 
-  //Lambda move constructor
+  //CompatibleLambda move constructor
   template<CompatibleLambda<Lambda> L>
   requires (!Const<L>)
   Lambda(ConstDecayed<L> &&l) : Lambda() {
@@ -769,13 +774,23 @@ namespace CX {
   }
 
   //Lambda copy assignment
+  Lambda& operator=(Lambda const &l) {
+   return operator=<Lambda>((Lambda const&)l);
+  }
+
+  //Lambda move assignment
+  Lambda& operator=(Lambda &&l) {
+   return operator=<Lambda>((Lambda&&)l);
+  }
+
+  //CompatibleLambda copy assignment
   template<CompatibleLambda<Lambda> L>
   Lambda& operator=(L const &l) {
    OperationBase::copyAssignLambda(buf(), l.buf());
    return *this;
   }
 
-  //Lambda move assignment
+  //CompatibleLambda move assignment
   template<CompatibleLambda<Lambda> L>
   requires (!Const<L>)
   Lambda& operator=(ConstDecayed<L> &&l) {
@@ -856,12 +871,22 @@ namespace CX {
   }
 
   //Lambda copy constructor
+  Lambda(Lambda const &l) : Lambda() {
+   operator=<Lambda>((Lambda const&)l);
+  }
+
+  //Lambda move constructor
+  Lambda(Lambda &&l) : Lambda() {
+   operator=<Lambda>((Lambda&&)l);
+  }
+
+  //CompatibleLambda copy constructor
   template<CompatibleLambda<Lambda> L>
   Lambda(L const &l) : Lambda() {
    operator=<L>((L const&)l);
   }
 
-  //Lambda move constructor
+  //CompatibleLambda move constructor
   template<CompatibleLambda<Lambda> L>
   Lambda(ConstDecayed<L> &&l) : Lambda() {
    operator=<L>((ConstDecayed<L>&&)l);
@@ -918,13 +943,23 @@ namespace CX {
   }
 
   //Lambda copy assignment
+  Lambda& operator=(Lambda const &l) {
+   return operator=<Lambda>((Lambda const&)l);
+  }
+
+  //Lambda move assignment
+  Lambda& operator=(Lambda &&l) {
+   return operator=<Lambda>((Lambda&&)l);
+  }
+
+  //CompatibleLambda copy assignment
   template<CompatibleLambda<Lambda> L>
   Lambda& operator=(L const &l) {
    OperationBase::copyAssignLambda(buf(), l.buf());
    return *this;
   }
 
-  //Lambda move assignment
+  //CompatibleLambda move assignment
   template<CompatibleLambda<Lambda> L>
   Lambda& operator=(ConstDecayed<L> &&l) {
    OperationBase::moveAssignLambda(buf(), l.buf());
@@ -1007,12 +1042,22 @@ namespace CX {
   }
 
   //Lambda copy constructor
+  Lambda(Lambda const &l) : Lambda() {
+   operator=<Lambda>((Lambda const&)l);
+  }
+
+  //Lambda move constructor
+  Lambda(Lambda &&l) : Lambda() {
+   operator=<Lambda>((Lambda&&)l);
+  }
+
+  //CompatibleLambda copy constructor
   template<CompatibleLambda<Lambda> L>
   Lambda(L const &l) : Lambda() {
    operator=<L>((L const&)l);
   }
 
-  //Lambda move constructor
+  //CompatibleLambda move constructor
   template<CompatibleLambda<Lambda> L>
   Lambda(ConstDecayed<L> &&l) : Lambda() {
    operator=<L>((ConstDecayed<L>&&)l);
@@ -1070,13 +1115,23 @@ namespace CX {
   }
 
   //Lambda copy assignment
+  Lambda& operator=(Lambda const &l) {
+   return operator=<Lambda>((Lambda const&)l);
+  }
+
+  //Lambda move assignment
+  Lambda& operator=(Lambda &&l) {
+   return operator=<Lambda>((Lambda&&)l);
+  }
+
+  //CompatibleLambda copy assignment
   template<CompatibleLambda<Lambda> L>
   Lambda& operator=(L const &l) {
    OperationBase::copyAssignLambda(buf(), l.buf());
    return *this;
   }
 
-  //Lambda move assignment
+  //CompatibleLambda move assignment
   template<CompatibleLambda<Lambda> L>
   Lambda& operator=(ConstDecayed<L> &&l) {
    OperationBase::moveAssignLambda(buf(), l.buf());
@@ -1156,12 +1211,22 @@ namespace CX {
   }
 
   //Lambda copy constructor
+  Lambda(Lambda const &l) : Lambda() {
+   operator=<Lambda>((Lambda const&)l);
+  }
+
+  //Lambda move constructor
+  Lambda(Lambda &&l) : Lambda() {
+   operator=<Lambda>((Lambda&&)l);
+  }
+
+  //CompatibleLambda copy constructor
   template<CompatibleLambda<Lambda> L>
   Lambda(L const &l) : Lambda() {
    operator=<L>((L const &)l);
   }
 
-  //Lambda move constructor
+  //CompatibleLambda move constructor
   template<CompatibleLambda<Lambda> L>
   Lambda(ConstDecayed<L> &&l) {
    operator=<L>((ConstDecayed<L>&&)l);
@@ -1219,16 +1284,26 @@ namespace CX {
   }
 
   //Lambda copy assignment
-  template<CompatibleLambda<Lambda> L>
-  Lambda& operator=(L const &l) {
-   OperationBase::copyAssignLambda((L const&)l);
-   return *this;
+  Lambda& operator=(Lambda const &l) {
+   return operator=<Lambda>((Lambda const&)l);
   }
 
   //Lambda move assignment
+  Lambda& operator=(Lambda &&l) {
+   return operator=<Lambda>((Lambda&&)l);
+  }
+
+  //CompatibleLambda copy assignment
+  template<CompatibleLambda<Lambda> L>
+  Lambda& operator=(L const &l) {
+   OperationBase::copyAssignLambda(buf(), l.buf());
+   return *this;
+  }
+
+  //CompatibleLambda move assignment
   template<CompatibleLambda<Lambda> L>
   Lambda& operator=(ConstDecayed<L> &&l) {
-   OperationBase::moveAssignLambda((ConstDecayed<L>&&)l);
+   OperationBase::moveAssignLambda(buf(), l.buf());
    return *this;
   }
  };

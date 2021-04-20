@@ -10,7 +10,7 @@
 #define CX_VARARG_INTRENSICS
 #include <cx/vararg.h>
 
-namespace CX {
+namespace CX::Testing {
  TEST(VarargPromoted, types_smaller_than_or_equal_to_int_are_promoted_to_int) {
   EXPECT_TRUE((SameType<Internal::VarargPromoted<char>, int>));
   EXPECT_TRUE((SameType<Internal::VarargPromoted<char8_t>, int>));

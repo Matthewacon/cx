@@ -2,7 +2,7 @@
 
 #include <cx/templates.h>
 
-namespace CX {
+namespace CX::Testing {
  TEST(MaxValue, identically_typed_value_pack_yields_expected_value) {
   EXPECT_EQ((MaxValue<1, -2, 3, 100, -23 -100, 1000>), 1000);
  }

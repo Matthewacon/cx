@@ -4,7 +4,7 @@
 
 #include <cx/idioms.h>
 
-namespace CX {
+namespace CX::Testing {
  TEST(SameType, identical_types_satisfy_constraint) {
   EXPECT_TRUE((SameType<int, int>));
  }

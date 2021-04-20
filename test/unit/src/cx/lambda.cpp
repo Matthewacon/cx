@@ -3,7 +3,7 @@
 #include <cx/vararg.h>
 #include <cx/lambda.h>
 
-namespace CX {
+namespace CX::Testing {
  TEST(IsLambda, lambda_types_satisfy_constraint) {
   EXPECT_TRUE((IsLambda<Lambda<void ()>>));
   EXPECT_TRUE((IsLambda<Lambda<void () noexcept>>));

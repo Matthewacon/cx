@@ -2,7 +2,7 @@
 
 #include <cx/variant.h>
 
-namespace CX {
+namespace CX::Testing {
  //Variant meta-function and concept tests
  TEST(IsVariant, variant_satisfies_constraint) {
   EXPECT_TRUE((IsVariant<Variant<>>));

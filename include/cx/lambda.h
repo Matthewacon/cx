@@ -3,19 +3,16 @@
 #include <cx/idioms.h>
 #include <cx/templates.h>
 
-#ifdef CX_STL_SUPPORT
- #include <memory>
-#else
- #pragma message \
-  "Building without STL support; 'CX::AllocLambda<...>' will be unavailable."
-#endif
-
 //Conditional stl dependencies if CX was built with stl support enabled
 #ifdef CX_STL_SUPPORT
+ #include <memory>
  #include <exception>
 
  #define CX_STL_SUPPORT_EXPR(expr) expr
 #else
+ #pragma message \
+  "Building without STL support; 'CX::AllocLambda<...>' will be unavailable."
+
  #define CX_STL_SUPPORT_EXPR(expr)
 #endif
 

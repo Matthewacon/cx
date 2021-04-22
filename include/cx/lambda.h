@@ -85,7 +85,7 @@ namespace CX {
  template<typename>
  struct Lambda;
 
- //TODO Allocating lambda
+ //Allocating lambda
  template<typename>
  struct AllocLambda;
 
@@ -442,8 +442,23 @@ namespace CX {
   //lambda prototypes; default instance for uninitialized
   //allocating lambdas
   template<typename Prototype>
-  struct AllocLambdaWrapperStub : LambdaBase<Prototype> {
-   //TODO
+  struct AllocLambdaWrapperStub : NonAllocLambdaWrapperStub<Prototype> {
+   using NonAllocLambdaWrapperStub<Prototype>::NonAllocLambdaWrapperStub;
+
+   bool allocates() const noexcept override {
+    return true;
+   }
+
+   void copyTo(
+    void * buf,
+    decltype(sizeof(0)) bufSize,
+    decltype(alignof(int)) bufAlignment
+   ) override {
+    (void)buf;
+    (void)bufSize;
+    (void)bufAlignment;
+    throw IncompatibleLambdaError{"copyTo() unimplemented"};
+   }
   };
 
   //TODO rename to: copyInitWrapper
@@ -470,11 +485,11 @@ namespace CX {
    if constexpr (CopyConstructible<Function>) {
     //If `Function` is copy constructible, invoke wrapper
     //function copy constructor
-    new (buf) Wrapper{(Function const&)func};
+    new (buf) Wrapper{(Function const&)func, bufSize, bufAlignment};
    } else if constexpr(Constructible<Function> && CopyAssignable<Function>) {
     //If `Function` is default constructible and copy assignable,
     //default construct wrapper and copy assign to function
-    (*new (buf) Wrapper{}).f = (Function const&)func;
+    (*new (buf) Wrapper{bufSize, bufAlignment}).f = (Function const&)func;
    }
   }
 
@@ -502,15 +517,15 @@ namespace CX {
    if constexpr(MoveConstructible<Function>) {
     //If `Function` is move constructible, invoke wrapper
     //function move constructor
-    new (buf) Wrapper{(Function&&)func};
+    new (buf) Wrapper{(Function&&)func, bufSize, bufAlignment};
    } else if constexpr (Constructible<Function> && MoveAssignable<Function>) {
     //If `Function` is default constructible and move assignable,
     //default construct wrapper and move assign to function
-    (*new (buf) Wrapper{}).f = (Function&&)func;
+    (*new (buf) Wrapper{bufSize, bufAlignment}).f = (Function&&)func;
    }
   }
 
-  //Implementation of LambdaBase<...>
+  //Implementation of `LambdaBase<...>` for non-allocating lambdas
   template<typename, typename>
   struct NonAllocLambdaWrapper;
 
@@ -520,15 +535,28 @@ namespace CX {
    F f;
 
    //Default constructor
-   NonAllocLambdaWrapper() = default;
+   NonAllocLambdaWrapper(
+    decltype(sizeof(0)),
+    decltype(alignof(int))
+   ) {};
 
    //Function copy constructor
-   NonAllocLambdaWrapper(F const &f) :
+   //Note: size and alignment arguments are unused for the
+   //non-allocating lambda specialization
+   NonAllocLambdaWrapper(
+    F const &f,
+    decltype(sizeof(0)),
+    decltype(alignof(int))
+   ) :
     f((F const&)f)
    {}
 
    //Function move constructor
-   NonAllocLambdaWrapper(F &&f) :
+   NonAllocLambdaWrapper(
+    F &&f,
+    decltype(sizeof(0)),
+    decltype(alignof(int))
+   ) :
     f((F&&)f)
    {}
 
@@ -588,15 +616,26 @@ namespace CX {
    F f;
 
    //Default constructor
-   NonAllocLambdaWrapper() = default;
+   NonAllocLambdaWrapper(
+    decltype(sizeof(0)),
+    decltype(alignof(int))
+   ) {};
 
    //Function copy constructor
-   NonAllocLambdaWrapper(F const &f) :
+   NonAllocLambdaWrapper(
+    F const &f,
+    decltype(sizeof(0)),
+    decltype(alignof(int))
+   ) :
     f((F const&)f)
    {}
 
    //Function move constructor
-   NonAllocLambdaWrapper(F &&f) :
+   NonAllocLambdaWrapper(
+    F &&f,
+    decltype(sizeof(0)),
+    decltype(alignof(int))
+   ) :
     f((F&&)f)
    {}
 
@@ -645,6 +684,103 @@ namespace CX {
    }
   };
 
+  //Implementation of `LambdaBase<...>` for allocating lambdas
+  template<typename, typename>
+  struct AllocLambdaWrapper;
+
+  #ifdef CX_STL_SUPPORT
+   //AllocLambda wrapper for `F` (non-c-variadic)
+   template<typename F, typename R, typename... Args>
+   struct AllocLambdaWrapper<F, R (Args...)> : LambdaBase<R (Args...)> {
+   private:
+    F f;
+    decltype(sizeof(0)) bufSize;
+    decltype(alignof(int)) bufAlignment;
+
+   public:
+    //Default constructor
+    AllocLambdaWrapper(
+     decltype(bufSize) size,
+     decltype(bufAlignment) alignment
+    ) :
+     bufSize(size),
+     bufAlignment(alignment)
+    {};
+
+    //Function copy constructor
+    AllocLambdaWrapper(
+     F const &f,
+     decltype(bufSize) size,
+     decltype(bufAlignment) alignment
+    ) :
+     bufSize(size),
+     bufAlignment(alignment),
+     f((F const&)f)
+    {}
+
+    //Function move constructor
+    AllocLambdaWrapper(
+     F &&f,
+     decltype(bufSize) size,
+     decltype(bufAlignment) alignment
+    ) :
+     bufSize(size),
+     bufAlignment(alignment),
+     f((F&&)f)
+    {}
+
+    [[gnu::always_inline]]
+    R op(Args... args) override {
+     return f(args...);
+    }
+
+    [[gnu::always_inline]]
+    R noexceptOp(Args... args) noexcept override {
+     return f(args...);
+    }
+
+    bool allocates() const noexcept override {
+     return true;
+    }
+
+    decltype(sizeof(0)) typeSize() const noexcept override {
+     return sizeof(AllocLambdaWrapper);
+    }
+
+    decltype(alignof(int)) typeAlignment() const noexcept override {
+     return alignof(AllocLambdaWrapper);
+    }
+
+    decltype(sizeof(0)) bufferSize() const noexcept override {
+     return bufSize;
+    }
+
+    decltype(alignof(int)) bufferAlignment() const noexcept override {
+     return bufAlignment;
+    }
+
+    void copyTo(void * buf,
+     decltype(sizeof(0)) bufSize,
+     decltype(alignof(int)) bufAlignment
+    ) override {
+     //TODO
+     (void)buf;
+     (void)bufSize;
+     (void)bufAlignment;
+    }
+   };
+
+   //AllocLambda wrapper for `F` (c-variadic)
+   template<typename F, typename R, typename... Args>
+   struct AllocLambdaWrapper<F, R (Args..., ...)> : LambdaBase<R (Args..., ...)> {
+    //TODO
+
+    bool allocates() const noexcept override {
+     return true;
+    }
+   };
+  #endif //CX_STL_SUPPORT
+
   #pragma GCC diagnostic pop
 
   //Check `F` against a restriction
@@ -659,28 +795,92 @@ namespace CX {
    //The static function prototype of the invoking lambda specialization
    typename SpecializationPrototype,
    //Prototype restrictions for the invoking lambda specialization
-   template<typename> typename Restriction
+   template<typename> typename Restriction,
+   bool Allocating
   >
   struct LambdaOperationBase {
+   template<typename>
+   friend struct Lambda;
+
+   template<typename>
+   friend struct AllocLambda;
+
+  private:
+   using EmptyWrapperType = CX::SelectType<
+    Allocating,
+    AllocLambdaWrapperStub<SpecializationPrototype>,
+    NonAllocLambdaWrapperStub<SpecializationPrototype>
+   >;
+
+   template<typename F, typename Prototype>
+   using WrapperType = CX::SelectType<
+    Allocating,
+    AllocLambdaWrapper<F, Prototype>,
+    NonAllocLambdaWrapper<F, Prototype>
+   >;
+
+   #ifdef CX_STL_SUPPORT
+    template<typename Wrapper>
+    [[gnu::always_inline]]
+    static auto checkOrReallocate(
+     void ** buffer,
+     decltype(sizeof(0)) &size,
+     decltype(alignof(int)) &alignment
+    ) {
+     constexpr auto const
+      wrapperSize = sizeof(Wrapper),
+      wrapperAlignment = alignof(Wrapper);
+
+     //If the buffer does not meet the `Wrapper` size and
+     //alignment requirements, allocate new buffer with
+     //requiements met
+     if (size < wrapperSize || alignment < wrapperAlignment) {
+      *buffer = operator new(
+       wrapperSize,
+       (std::align_val_t)wrapperAlignment
+      );
+
+      //Set new buffer properties
+      size = wrapperSize;
+      alignment = wrapperAlignment;
+     }
+    }
+   #endif //CX_STL_SUPPORT
+
+  public:
    //TODO rename to: `initEmptyLambda`
    //Initializes buffer with empty `LambdaBase` obj
    [[gnu::always_inline]]
    static void init(
     void * buffer,
     decltype(sizeof(0)) size,
-    decltype(alignof(int)) alignment
+    decltype(alignof(int)) alignment,
+    //TODO remove in favour of non-type template flag
+    bool allocate = false
    ) {
-    using UninitializedLambdaType = NonAllocLambdaWrapperStub<SpecializationPrototype>;
+    auto &bufRecvr = allocate ? *(void **)buffer : buffer;
+    if (allocate) {
+     //Allocate aligned buffer for `AllocLambda`
+     #ifdef CX_STL_SUPPORT
+      //Allocate aligned buffer
+      bufRecvr = operator new(
+       sizeof(EmptyWrapperType),
+       (std::align_val_t)alignment
+      );
+     #endif //CX_STL_SUPPORT
+    } else {
+     //Check buffer constraints for non-alloc `Lambda`
+     //Ensure receiving buffer is compatible
+     wrapperBufferCheck(
+      sizeof(EmptyWrapperType),
+      alignof(EmptyWrapperType),
+      size,
+      alignment
+     );
+    }
 
-    //Ensure receiving buffer is compatible
-    wrapperBufferCheck(
-     sizeof(UninitializedLambdaType),
-     alignof(UninitializedLambdaType),
-     size,
-     alignment
-    );
-
-    new (buffer) UninitializedLambdaType {
+    //Initialize buffer
+    new (bufRecvr) EmptyWrapperType {
      size,
      alignment
     };
@@ -699,19 +899,42 @@ namespace CX {
     || (Constructible<F> && CopyAssignable<F>)
    )
    [[gnu::always_inline]]
-   static void copyAssignFunction(void * buffer, F const &f) {
-    auto &base = *(LambdaBase<SpecializationPrototype> *)buffer;
-    auto const
-     size = base.bufferSize(),
+   static void copyAssignFunction(
+     void * buffer,
+     F const &f,
+     //TODO remove in favour of non-type template flag
+     bool allocate = false
+   ) {
+    void ** bufPtr = (allocate ? (void **)buffer : &buffer);
+    decltype(sizeof(0)) size;
+    decltype(alignof(int)) alignment;
+
+    //Fetch existing buffer size and alignment
+    {
+     auto &base = **(LambdaBase<SpecializationPrototype> **)bufPtr;
+     size = base.bufferSize();
      alignment = base.bufferAlignment();
+    }
 
     //Clean up current state
-    //Note: `base` reference points to an invalid object beyond this point
-    destroy(buffer);
+    destroy(*bufPtr);
+
+    using WrapperSpecialization = WrapperType<F, SpecializationPrototype>;
+
+    #ifdef CX_STL_SUPPORT
+     //Check allocated buffer, re-allocate if necessary
+     if (allocate) {
+      checkOrReallocate<WrapperSpecialization>(
+       bufPtr,
+       size,
+       alignment
+      );
+     }
+    #endif //CX_STL_SUPPORT
 
     //Initialize buffer
-    copyLambdaBuffer<NonAllocLambdaWrapper<F, SpecializationPrototype>>(
-     buffer,
+    copyLambdaBuffer<WrapperSpecialization>(
+     *bufPtr,
      size,
      alignment,
      (F const&)f
@@ -724,21 +947,29 @@ namespace CX {
     && (MoveConstructible<F> || (Constructible<F> && MoveAssignable<F>))
    )
    [[gnu::always_inline]]
-   static void moveAssignFunction(void * buffer, ConstDecayed<F> &&f) {
-    auto &base = *(LambdaBase<SpecializationPrototype> *)buffer;
+   static void moveAssignFunction(
+    void * buffer,
+    ConstDecayed<F> &&f,
+    //TODO remove in favour of non-type template flag
+    bool allocate = false
+   ) {
+    auto &base = *(LambdaBase<SpecializationPrototype> *)(allocate
+     ? *(void **)buffer
+     : buffer
+    );
     auto const
      size = base.size(),
      alignment = base.alignment();
 
     //Clean up current state
     //Note: `base` reference points to an invalid object beyond this point
-    destroy(buffer);
+    destroy(&base);
 
     //Initialize buffer
-    moveLambdaBuffer<NonAllocLambdaWrapper<
+    moveLambdaBuffer<WrapperType<
      ConstDecayed<F>,
      SpecializationPrototype>
-    >(buffer, (ConstDecayed<F>&&)f);
+    >(&base, (ConstDecayed<F>&&)f);
    }
 
    //Lambda copy and move assignment
@@ -796,7 +1027,11 @@ namespace CX {
   template<typename>
   friend struct AllocLambda;
 
-  template<typename, template<typename> typename>
+  template<
+   typename,
+   template<typename> typename,
+   bool
+  >
   friend struct Internal::LambdaOperationBase;
 
   using ReturnType = R;
@@ -826,7 +1061,8 @@ namespace CX {
 
   using OperationBase = Internal::LambdaOperationBase<
    R (Args...),
-   PrototypeRestriction
+   PrototypeRestriction,
+   false
   >;
   using LambdaBase = Internal::LambdaBase<R (Args...)>;
 
@@ -969,7 +1205,11 @@ namespace CX {
   template<typename>
   friend struct AllocLambda;
 
-  template<typename, template<typename> typename>
+  template<
+   typename,
+   template<typename> typename,
+   bool
+  >
   friend struct Internal::LambdaOperationBase;
 
   using ReturnType = R;
@@ -996,7 +1236,8 @@ namespace CX {
 
   using OperationBase = Internal::LambdaOperationBase<
    R (Args...),
-   PrototypeRestriction
+   PrototypeRestriction,
+   false
   >;
   using LambdaBase = Internal::LambdaBase<R (Args...)>;
 
@@ -1137,7 +1378,11 @@ namespace CX {
   template<typename>
   friend struct AllocLambda;
 
-  template<typename, template<typename> typename>
+  template<
+   typename,
+   template<typename> typename,
+   bool
+  >
   friend struct Internal::LambdaOperationBase;
 
   using ReturnType = R;
@@ -1167,7 +1412,8 @@ namespace CX {
 
   using OperationBase = Internal::LambdaOperationBase<
    R (Args..., ...),
-   PrototypeRestriction
+   PrototypeRestriction,
+   false
   >;
   using LambdaBase = Internal::LambdaBase<R (Args..., ...)>;
 
@@ -1309,7 +1555,11 @@ namespace CX {
   template<typename>
   friend struct AllocLambda;
 
-  template<typename, template<typename> typename>
+  template<
+   typename,
+   template<typename> typename,
+   bool
+  >
   friend struct Internal::LambdaOperationBase;
 
   using ReturnType = R;
@@ -1336,7 +1586,8 @@ namespace CX {
 
   using OperationBase = Internal::LambdaOperationBase<
    R (Args..., ...),
-   PrototypeRestriction
+   PrototypeRestriction,
+   false
   >;
   using LambdaBase = Internal::LambdaBase<R (Args..., ...)>;
 
@@ -1497,9 +1748,206 @@ namespace CX {
 
  //AllocLambda implementation
  #ifdef CX_STL_SUPPORT
-  //TODO Unqualified lambda specialization
+  //Utilities for `AllocLambda<...>`
+  namespace Internal {
+   //Aligned deleter for `AllocLambda<...>`'s underlying `shared_ptr`
+   //buffer
+   template<typename LambdaBase, typename OperationBase>
+   constexpr auto const SharedBufferDeleter = [](unsigned char * ptr) {
+     auto &base = *(LambdaBase *)ptr;
+     auto const alignment = base.bufferAlignment();
+
+     //Destruct buffer
+     OperationBase::destroy(ptr);
+
+     //Delete aligned buffer
+     operator delete(ptr, (std::align_val_t)alignment);
+   };
+  }
+
+  //Unqualified lambda specialization
   template<typename R, typename... Args>
-  struct AllocLambda<R (Args...)> {};
+  struct AllocLambda<R (Args...)> {
+   template<typename>
+   friend struct Lambda;
+
+   template<typename>
+   friend struct AllocLambda;
+
+   template<
+    typename,
+    template<typename> typename,
+    bool
+   >
+   friend struct Internal::LambdaOperationBase;
+
+   using ReturnType = R;
+   template<template<typename...> typename Receiver = Dummy>
+   using ArgumentTypes = Receiver<Args...>;
+   using FunctionType = R (Args...);
+
+  private:
+   //Note: Reuse prototype restrictions from `Lambda<R (Args...)>`
+   template<typename F>
+   using PrototypeRestriction = typename Lambda<R (Args...)>::template PrototypeRestriction<F>;
+
+   template<typename F>
+   static constexpr bool const SupportedPrototype = Internal::SupportedPrototype<
+    R (Args...),
+    PrototypeRestriction
+   >;
+
+   static constexpr auto const Alignment = CX_LAMBDA_BUF_ALIGN;
+   static constexpr auto const Size = 0;
+
+   using OperationBase = Internal::LambdaOperationBase<
+    R (Args...),
+    PrototypeRestriction,
+    true
+   >;
+   using LambdaBase = Internal::LambdaBase<R (Args...)>;
+   static constexpr auto const &Deleter = Internal::SharedBufferDeleter<
+    LambdaBase,
+    OperationBase
+   >;
+
+   std::shared_ptr<unsigned char> mutable buffer;
+
+  public:
+   //Default constructor
+   AllocLambda() {
+    unsigned char * buf;
+    OperationBase::init(&buf, Size, Alignment, true);
+    buffer.reset(buf, Deleter);
+   }
+
+   //FunctionOperator / function pointer copy constructor
+   template<typename F>
+   requires (!IsLambda<F> && SupportedPrototype<F>)
+   AllocLambda(F const &f) : AllocLambda() {
+    operator=<F>((F const&)f);
+   }
+
+   //FunctionOperator move constructor
+   template<typename F>
+   requires (!IsLambda<F>
+    && Struct<F>
+    && SupportedPrototype<F>
+   )
+   AllocLambda(ConstDecayed<F> &&f) : AllocLambda() {
+    operator=<F>((ConstDecayed<F>&&)f);
+   }
+
+   //Lambda copy constructor
+   AllocLambda(AllocLambda const &l) : AllocLambda() {
+    operator=<AllocLambda>((AllocLambda const&)l);
+   }
+
+   //Lambda move constructor
+   AllocLambda(AllocLambda &&l) : AllocLambda() {
+    operator=<AllocLambda>((AllocLambda&&)l);
+   }
+
+   //CompatibleLambda copy constructor
+   template<CompatibleLambda<AllocLambda> L>
+   AllocLambda(L const &l) : AllocLambda() {
+    operator=<L>((L const&)l);
+   }
+
+   //CompatibleLambda move constructor
+   template<CompatibleLambda<AllocLambda> L>
+   requires (!Const<L>)
+   AllocLambda(ConstDecayed<L> &&l) : AllocLambda() {
+    operator=<L>((ConstDecayed<L>&&)l);
+   }
+
+   ~AllocLambda() = default;
+
+   //Lambda function operator
+   R operator()(Args... args) const {
+    return (*(LambdaBase *)buffer.get()).op(args...);
+   }
+
+   //Presence conversion operator
+   operator bool() const noexcept {
+    return (*(LambdaBase *)buffer.get()).present();
+   }
+
+   //Implicit lambda conversion operator
+   template<CompatibleLambda<AllocLambda> L>
+   explicit operator L() const {
+    return L{*this};
+   }
+
+   //FunctionOperator / function pointer copy assignment
+   template<typename F>
+   requires (!IsLambda<F> && SupportedPrototype<F>)
+   AllocLambda& operator=(F const &f) {
+    //Initialize buffer
+    unsigned char * buf = buffer.get();
+    OperationBase::copyAssignFunction(
+     &buf,
+     (F const&)f,
+     true
+    );
+
+    //If `buf` was re-allocated, reset `shared_ptr`
+    if (buf != buffer.get()) {
+     buffer.reset(buf, Deleter);
+    }
+
+    return *this;
+   }
+
+   //FunctionOperator move assignment
+   template<typename F>
+   requires (!IsLambda<F>
+    && Struct<F>
+    && SupportedPrototype<F>
+   )
+   AllocLambda& operator=(ConstDecayed<F> &&f) {
+    //Initialize buffer
+    unsigned char * buf = buffer.get();
+    OperationBase::moveAssignFunction(
+     &buf,
+     (ConstDecayed<F>&&)f,
+     true
+    );
+
+    //If `buf` was re-allocated, reset `shared_ptr`
+    if (buf != buffer.get()) {
+     buffer.reset(buf, Deleter);
+    }
+
+    return *this;
+   }
+
+   //Lambda copy assignment
+   AllocLambda& operator=(AllocLambda const &l) {
+    return operator=<AllocLambda>((AllocLambda const&)l);
+   }
+
+   //Lambda move assignment
+   AllocLambda& operator=(AllocLambda &&l) {
+    return operator=<AllocLambda>((AllocLambda&&)l);
+   }
+
+   //CompatibleLambda copy assignment
+   template<CompatibleLambda<AllocLambda> L>
+   AllocLambda& operator=(L const &l) {
+    buffer = l.buffer;
+    return *this;
+   }
+
+   //CompatibleLambda move assignment
+   template<CompatibleLambda<AllocLambda> L>
+   requires (!Const<L>)
+   AllocLambda& operator=(ConstDecayed<L> &&l) {
+    buffer = l.buffer;
+    l.buffer.reset();
+    return *this;
+   }
+  };
 
   //TODO Noexcept qualified lambda specialization
   template<typename R, typename... Args>
@@ -1545,6 +1993,5 @@ namespace CX {
  //Note: Use `CX::VaList` as the prototype requirement instead
 }
 
-//Clean up lambda macros
-#undef CX_LAMBDA_BUF_ALIGN
-#undef CX_LAMBDA_BUF_SIZE
+//Clean up internal macros
+#undef CX_STL_SUPPORT_EXPR

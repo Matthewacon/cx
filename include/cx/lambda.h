@@ -664,10 +664,7 @@ namespace CX {
     || (Constructible<F> && CopyAssignable<F>)
    )
    [[gnu::always_inline]]
-   static void copyAssignFunction(
-     void * buffer,
-     F const &f
-   ) {
+   static void copyAssignFunction(void * buffer, F const &f) {
     void ** bufPtr = (Allocating ? (void **)buffer : &buffer);
     decltype(sizeof(0)) size;
     decltype(alignof(int)) alignment;
@@ -707,13 +704,11 @@ namespace CX {
    //FunctionOperator move assignment
    template<SupportedPrototype<Restriction> F>
    requires (Struct<F>
+    && !Const<F>
     && (MoveConstructible<F> || (Constructible<F> && MoveAssignable<F>))
    )
    [[gnu::always_inline]]
-   static void moveAssignFunction(
-    void * buffer,
-    ConstDecayed<F> &&f
-   ) {
+   static void moveAssignFunction(void * buffer, F &&f) {
     void ** bufPtr = (Allocating ? (void **)buffer : &buffer);
     decltype(sizeof(0)) size;
     decltype(alignof(int)) alignment;
@@ -1415,6 +1410,11 @@ namespace CX {
       );
      }
     }
+
+    [[gnu::always_inline]]
+    bool present() const noexcept override {
+     return true;
+    }
    };
 
    //AllocLambda wrapper for `F` (c-variadic)
@@ -1548,6 +1548,11 @@ namespace CX {
       );
      }
     }
+
+    [[gnu::always_inline]]
+    bool present() const noexcept override {
+     return true;
+    }
    };
   #endif //CX_STL_SUPPORT
  }
@@ -1624,11 +1629,12 @@ namespace CX {
   //FunctionOperator move constructor
   template<typename F>
   requires (!IsLambda<F>
+   && !Const<F>
    && Struct<F>
    && SupportedPrototype<F>
   )
-  Lambda(ConstDecayed<F> &&f) : Lambda() {
-   operator=<F>((ConstDecayed<F>&&)f);
+  Lambda(F &&f) : Lambda() {
+   operator=<F>((F&&)f);
   }
 
   //Lambda copy constructor
@@ -1650,8 +1656,8 @@ namespace CX {
   //CompatibleLambda move constructor
   template<CompatibleLambda<Lambda> L>
   requires (!Const<L>)
-  Lambda(ConstDecayed<L> &&l) : Lambda() {
-   operator=<L>((ConstDecayed<L>&&)l);
+  Lambda(L &&l) : Lambda() {
+   operator=<L>((L&&)l);
   }
 
   ~Lambda() {
@@ -1691,15 +1697,16 @@ namespace CX {
   //FunctionOperator move assignment
   template<typename F>
   requires (!IsLambda<F>
+   && !Const<F>
    && Struct<F>
    && SupportedPrototype<F>
   )
-  Lambda& operator=(ConstDecayed<F> &&f) {
+  Lambda& operator=(F &&f) {
    //Ensure `F` will fit within `buffer`
    OperationBase::template lambdaAssignBufferCheck<F, Size, Alignment>();
 
    //Initialize buffer
-   OperationBase::moveAssignFunction(&buf(), (ConstDecayed<F>&&)f);
+   OperationBase::moveAssignFunction(&buf(), (F&&)f);
 
    return *this;
   }
@@ -1721,10 +1728,7 @@ namespace CX {
     OperationBase::copyAssignLambda(&buf(), &l.buf());
    } else {
     #ifdef CX_STL_SUPPORT
-     throw IncompatibleLambdaError{
-      "Copying an alloc-lambda to a non-alloc lambda is currently "
-      "unimplemented."
-     };
+     OperationBase::copyAssignLambda(&buf(), l.buffer.get());
     #endif //CX_STL_SUPPORT
    }
    return *this;
@@ -1733,8 +1737,14 @@ namespace CX {
   //CompatibleLambda move assignment
   template<CompatibleLambda<Lambda> L>
   requires (!Const<L>)
-  Lambda& operator=(ConstDecayed<L> &&l) {
-   OperationBase::moveAssignLambda(&buf(), &l.buf());
+  Lambda& operator=(L &&l) {
+   if constexpr(IsNonAllocLambda<L>) {
+    OperationBase::moveAssignLambda(&buf(), &l.buf());
+   } else {
+    #ifdef CX_STL_SUPPORT
+     OperationBase::moveAssignLambda(&buf(), l.buffer.get());
+    #endif //CX_STL_SUPPORT
+   }
    return *this;
   }
  };
@@ -1808,11 +1818,12 @@ namespace CX {
   //FunctionOperator move constructor
   template<typename F>
   requires (!IsLambda<F>
+   && !Const<F>
    && Struct<F>
    && SupportedPrototype<F>
   )
-  Lambda(ConstDecayed<F> &&f) : Lambda() {
-   operator=<F>((ConstDecayed<F>&&)f);
+  Lambda(F &&f) : Lambda() {
+   operator=<F>((F&&)f);
   }
 
   //Lambda copy constructor
@@ -1833,8 +1844,9 @@ namespace CX {
 
   //CompatibleLambda move constructor
   template<CompatibleLambda<Lambda> L>
-  Lambda(ConstDecayed<L> &&l) : Lambda() {
-   operator=<L>((ConstDecayed<L>&&)l);
+  requires (!Const<L>)
+  Lambda(L &&l) : Lambda() {
+   operator=<L>((L&&)l);
   }
 
   ~Lambda() {
@@ -1874,15 +1886,16 @@ namespace CX {
   //FunctionOperator move assignment
   template<typename F>
   requires (!IsLambda<F>
+   && !Const<F>
    && Struct<F>
    && SupportedPrototype<F>
   )
-  Lambda& operator=(ConstDecayed<F> &&f) {
+  Lambda& operator=(F &&f) {
    //Ensure `F` will fit within `buffer`
    OperationBase::template lambdaAssignBufferCheck<F, Size, Alignment>();
 
    //Initialize buffer
-   OperationBase::moveAssignFunction(&buf(), (ConstDecayed<F>&&)f);
+   OperationBase::moveAssignFunction(&buf(), (F&&)f);
 
    return *this;
   }
@@ -1906,7 +1919,8 @@ namespace CX {
 
   //CompatibleLambda move assignment
   template<CompatibleLambda<Lambda> L>
-  Lambda& operator=(ConstDecayed<L> &&l) {
+  requires (!Const<L>)
+  Lambda& operator=(L &&l) {
    OperationBase::moveAssignLambda(&buf(), l.buf());
    return *this;
   }
@@ -1984,11 +1998,12 @@ namespace CX {
   //FunctionOperator move constructor
   template<typename F>
   requires (!IsLambda<F>
+   && !Const<F>
    && Struct<F>
    && SupportedPrototype<F>
   )
-  Lambda(ConstDecayed<F> &&f) : Lambda() {
-   operator=<F>((ConstDecayed<F> &&)f);
+  Lambda(F &&f) : Lambda() {
+   operator=<F>((F &&)f);
   }
 
   //Lambda copy constructor
@@ -2009,8 +2024,9 @@ namespace CX {
 
   //CompatibleLambda move constructor
   template<CompatibleLambda<Lambda> L>
-  Lambda(ConstDecayed<L> &&l) : Lambda() {
-   operator=<L>((ConstDecayed<L>&&)l);
+  requires (!Const<L>)
+  Lambda(L &&l) : Lambda() {
+   operator=<L>((L&&)l);
   }
 
   ~Lambda() {
@@ -2051,15 +2067,16 @@ namespace CX {
   //FunctionOperator move assignment
   template<typename F>
   requires (!IsLambda<F>
+   && !Const<F>
    && Struct<F>
    && SupportedPrototype<F>
   )
-  Lambda& operator=(ConstDecayed<F> &&f) {
+  Lambda& operator=(F &&f) {
    //Ensure `F` will fit within `buffer`
    OperationBase::template lambdaAssignBufferCheck<F, Size, Alignment>();
 
    //Initialize buffer
-   OperationBase::moveAssignFunction(&buf(), (ConstDecayed<F>&&)f);
+   OperationBase::moveAssignFunction(&buf(), (F&&)f);
 
    return *this;
   }
@@ -2083,7 +2100,8 @@ namespace CX {
 
   //CompatibleLambda move assignment
   template<CompatibleLambda<Lambda> L>
-  Lambda& operator=(ConstDecayed<L> &&l) {
+  requires (!Const<L>)
+  Lambda& operator=(L &&l) {
    OperationBase::moveAssignLambda(&buf(), &l.buf());
    return *this;
   }
@@ -2158,11 +2176,12 @@ namespace CX {
   //FunctionOperator move constructor
   template<typename F>
   requires (!IsLambda<F>
+   && !Const<F>
    && Struct<F>
    && SupportedPrototype<F>
   )
-  Lambda(ConstDecayed<F> &&f) : Lambda() {
-   operator=<F>((ConstDecayed<F>&&)f);
+  Lambda(F &&f) : Lambda() {
+   operator=<F>((F&&)f);
   }
 
   //Lambda copy constructor
@@ -2183,8 +2202,9 @@ namespace CX {
 
   //CompatibleLambda move constructor
   template<CompatibleLambda<Lambda> L>
-  Lambda(ConstDecayed<L> &&l) {
-   operator=<L>((ConstDecayed<L>&&)l);
+  requires (!Const<L>)
+  Lambda(L &&l) {
+   operator=<L>((L&&)l);
   }
 
   ~Lambda() {
@@ -2225,15 +2245,16 @@ namespace CX {
   //FunctionOperator move assignment
   template<typename F>
   requires (!IsLambda<F>
+   && !Const<F>
    && Struct<F>
    && SupportedPrototype<F>
   )
-  Lambda& operator=(ConstDecayed<F> &&f) {
+  Lambda& operator=(F &&f) {
    //Ensure `F` will fit within `buffer`
    OperationBase::template lambdaAssignBufferCheck<F, Size, Alignment>();
 
    //Initialize buffer
-   OperationBase::moveAssignFunction(&buf(), (ConstDecayed<F>&&)f);
+   OperationBase::moveAssignFunction(&buf(), (F&&)f);
 
    return *this;
   }
@@ -2257,7 +2278,8 @@ namespace CX {
 
   //CompatibleLambda move assignment
   template<CompatibleLambda<Lambda> L>
-  Lambda& operator=(ConstDecayed<L> &&l) {
+  requires (!Const<L>)
+  Lambda& operator=(L &&l) {
    OperationBase::moveAssignLambda(&buf(), &l.buf());
    return *this;
   }
@@ -2355,11 +2377,12 @@ namespace CX {
    //FunctionOperator move constructor
    template<typename F>
    requires (!IsLambda<F>
+    && !Const<F>
     && Struct<F>
     && SupportedPrototype<F>
    )
-   AllocLambda(ConstDecayed<F> &&f) : AllocLambda() {
-    operator=<F>((ConstDecayed<F>&&)f);
+   AllocLambda(F &&f) : AllocLambda() {
+    operator=<F>((F&&)f);
    }
 
    //Lambda copy constructor
@@ -2381,8 +2404,8 @@ namespace CX {
    //CompatibleLambda move constructor
    template<CompatibleLambda<AllocLambda> L>
    requires (!Const<L>)
-   AllocLambda(ConstDecayed<L> &&l) : AllocLambda() {
-    operator=<L>((ConstDecayed<L>&&)l);
+   AllocLambda(L &&l) : AllocLambda() {
+    operator=<L>((L&&)l);
    }
 
    ~AllocLambda() = default;
@@ -2418,13 +2441,14 @@ namespace CX {
    //FunctionOperator move assignment
    template<typename F>
    requires (!IsLambda<F>
+    && !Const<F>
     && Struct<F>
     && SupportedPrototype<F>
    )
-   AllocLambda& operator=(ConstDecayed<F> &&f) {
+   AllocLambda& operator=(F &&f) {
     //Initialize buffer
     OperationBase::allocLambdaBufferOp(buffer, [&](void ** bufPtr) {
-     OperationBase::moveAssignFunction(bufPtr, (ConstDecayed<F>&&)f);
+     OperationBase::moveAssignFunction(bufPtr, (F&&)f);
     });
 
     return *this;
@@ -2458,11 +2482,13 @@ namespace CX {
    //CompatibleLambda move assignment
    template<CompatibleLambda<AllocLambda> L>
    requires (!Const<L>)
-   AllocLambda& operator=(ConstDecayed<L> &&l) {
+   AllocLambda& operator=(L &&l) {
     if constexpr (IsAllocLambda<L>) {
      buffer = l.buffer;
      l.buffer.reset();
-     //TODO consider setting the shared_ptr to `nullptr`
+     //TODO consider setting the shared_ptr to `nullptr` (this would
+     //requires many changes, but would spare an allocation when constructing
+     //an empty `AllocLambda` or moving an `AllocLambda`)
      OperationBase::allocLambdaBufferOp(l.buffer, [](void ** bufPtr) {
       OperationBase::init(
        bufPtr,
@@ -2471,9 +2497,13 @@ namespace CX {
       );
      });
     } else {
-     throw IncompatibleLambdaError{
-      "Moving non-alloc lambda to alloc lambdas is currently unimplemented"
-     };
+     Internal
+      ::LambdaOperationBase<
+       R (Args...),
+       PrototypeRestriction,
+       false
+      >
+      ::moveAssignLambda(buffer.get(), &l.buf());
     }
     return *this;
    }

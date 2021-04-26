@@ -2175,36 +2175,6 @@ namespace CX::Testing {
   }()));
  }
 
- #pragma GCC diagnostic push
- #pragma GCC diagnostic ignored "-Wvarargs"
-
- template<typename L>
- struct VariadicLambdaWrapper;
-
- template<typename T, typename R, typename... Args>
- requires (sizeof...(Args) > 0)
- struct VariadicLambdaWrapper<R (T::*)(Args..., ...)> {
-  static R invoke(Args... args, ...) {
-   CX::VaList list;
-   va_start(list, argumentAtIndex<0>(args...));
-   T t;
-   return t(args..., list);
-  }
- };
-
- template<typename T, typename R, typename... Args>
- requires (sizeof...(Args) > 0)
- struct VariadicLambdaWrapper<R (T::*)(Args..., ...) noexcept> {
-  static R invoke(Args... args, ...) noexcept {
-   CX::VaList list;
-   va_start(list, argumentAtIndex<0>(args...));
-   T t;
-   return t(args..., list);
-  }
- };
-
- #pragma GCC diagnostic pop
-
  TEST(AllocLambdaConstructor, c_variadic_alloc_lambda_function_pointer_constructor_correctly_initializes_lambda) {
   static constexpr uintptr_t const vExpected = (uintptr_t)0x571046;
   static constexpr long double const dExpected = 1.130238;

@@ -502,16 +502,6 @@ namespace CX {
     decltype(alignof(int)) bufAlignment,
     Function const &func
    ) {
-    if constexpr (!Allocating) {
-     //Ensure receiving buffer is compatible
-     wrapperBufferCheck(
-      sizeof(Wrapper),
-      alignof(Wrapper),
-      bufSize,
-      bufAlignment
-     );
-    }
-
     //Initialize buffer
     if constexpr (CopyConstructible<Function>) {
      //If `Function` is copy constructible, invoke wrapper
@@ -538,16 +528,6 @@ namespace CX {
     decltype(alignof(int)) bufAlignment,
     Function &&func
    ) {
-    if constexpr (!Allocating) {
-     //Ensure receiving buffer is compatible
-     wrapperBufferCheck(
-      sizeof(Wrapper),
-      alignof(Wrapper),
-      bufSize,
-      bufAlignment
-     );
-    }
-
     //Initialize buffer
     if constexpr(MoveConstructible<Function>) {
      //If `Function` is move constructible, invoke wrapper
@@ -660,16 +640,25 @@ namespace CX {
       lAlignment = lBase.bufferAlignment();
      }
 
-     //Check allocated buffer if `L` is `AllocLambda<...>`
-     #ifdef CX_STL_SUPPORT
-      if constexpr (IsAllocLambda<L>) {
+     //Check buffer before initializing
+     if constexpr (IsNonAllocLambda<L>) {
+      //Check non-allocated buffer
+      wrapperBufferCheck(
+       sizeof(WrapperSpecialization),
+       alignof(WrapperSpecialization),
+       lSize,
+       lAlignment
+      );
+     } else {
+      //Check allcoated buffer
+      #ifdef CX_STL_SUPPORT
        checkOrReallocate<WrapperSpecialization>(
         lBufPtr,
         lSize,
         lAlignment
        );
-      }
-     #endif
+      #endif //CX_STL_SUPPORT
+     }
 
      //Clean up `l`'s buffer
      destroy(*lBufPtr);

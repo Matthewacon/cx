@@ -560,6 +560,75 @@ namespace CX {
     }
    }
 
+   //Common function for copying lambda wrappers to new buffers
+   template<
+    typename AllocWrapper,
+    typename NonAllocWrapper,
+    typename... F
+   >
+   requires (sizeof...(F) < 2)
+   [[gnu::always_inline]]
+   static void copyWrapperCommon(
+    void ** dstBufPtr,
+    decltype(sizeof(0)) dstBufSize,
+    decltype(alignof(int)) dstBufAlignment,
+    bool dstAllocating,
+    F... f
+   ) {
+    using FUnqualified = ConstDecayed<
+     ReferenceDecayed<
+      TypeAtIndex<0, F...>
+     >
+    >;
+
+    //Initialize dst buffer with given wrapper type,
+    //buffer properties and (if specified) `f`
+    auto const init = [&]<typename Wrapper>() {
+     if constexpr (MatchAnyType<
+      Wrapper,
+      AllocLambdaWrapper<FUnqualified, SpecializationPrototype>,
+      NonAllocLambdaWrapper<FUnqualified, SpecializationPrototype>
+     >) {
+      //Initialize alloc / non-alloc lambda wrapper
+      copyInitWrapper<Wrapper>(
+       *dstBufPtr,
+       dstBufSize,
+       dstBufAlignment,
+       (F)f...
+      );
+     } else {
+      //Initialize alloc / non-alloc stub wrapper
+      new (*dstBufPtr) Wrapper {
+       dstBufSize,
+       dstBufAlignment
+      };
+     }
+    };
+
+    if (!dstAllocating) {
+     //Copy current buffer to `NonAllocLambdaWrapper*<...>` buffer
+     wrapperBufferCheck(
+      sizeof(NonAllocWrapper),
+      alignof(NonAllocWrapper),
+      dstBufSize,
+      dstBufAlignment
+     );
+
+     init.template operator()<NonAllocWrapper>();
+    } else {
+     //Copy current buffer to `AllocLambdaWrapper*<...>` buffer
+     #ifdef CX_STL_SUPPORT
+      checkOrReallocate<AllocWrapper>(
+       dstBufPtr,
+       dstBufSize,
+       dstBufAlignment
+      );
+
+      init.template operator()<AllocWrapper>();
+     #endif //CX_STL_SUPPORT
+    }
+   }
+
    //Common function for `copyAssignFunction` and `moveAssignFunction`
    template<
     typename F,
@@ -1008,43 +1077,15 @@ namespace CX {
     decltype(alignof(int)) dstBufAlignment,
     bool allocating
    ) override {
-    if (allocating) {
-     #ifdef CX_STL_SUPPORT
-      //Check before copying NonAllocLambdaWrapperStub to AllocLambda buffer
-      LambdaOperationBase<
-       Prototype,
-       Restriction,
-       true
-      >::template checkOrReallocate<NonAllocLambdaWrapperStub>(
-       dstBufPtr,
-       dstBufSize,
-       dstBufAlignment
-      );
-
-      //Initialize allocated buffer with AllocLambdaWrapperStub and
-      //buffer properties
-      new (*dstBufPtr) AllocLambdaWrapperStub<Prototype>{
-       dstBufSize,
-       dstBufAlignment
-      };
-     #endif //CX_STL_SUPPORT
-    } else {
-     //Check before copying NonAllocLambdaWrapperStub to Lambda buffer
-     //Ensure receiving buffer is compatible
-     wrapperBufferCheck(
-      typeSize(),
-      typeAlignment(),
-      dstBufSize,
-      dstBufAlignment
-     );
-
-     //Initialize non-allocated buffer with NonAllocLambdaWrapperStub
-     //and the default non-allocated lambda buffer properties
-     new (*dstBufPtr) NonAllocLambdaWrapperStub{
-      dstBufSize,
-      dstBufAlignment
-     };
-    }
+    OperationBase::template copyWrapperCommon<
+     AllocLambdaWrapperStub<Prototype>,
+     NonAllocLambdaWrapperStub<Prototype>
+    >(
+     dstBufPtr,
+     dstBufSize,
+     dstBufAlignment,
+     allocating
+    );
    }
   };
 
@@ -1107,38 +1148,15 @@ namespace CX {
      decltype(alignof(int)) dstBufAlignment,
      bool allocating
     ) override {
-     if (allocating) {
-      //Check before copying AllocLambdaWrapperStub to AllocLambda buffer
-      OperationBase::template checkOrReallocate<AllocLambdaWrapperStub>(
-       dstBufPtr,
-       dstBufSize,
-       dstBufAlignment
-      );
-
-      //Initialize allocated buffer with AllocLambdaWrapperStub and
-      //buffer properties
-      new (*dstBufPtr) AllocLambdaWrapperStub{
-       dstBufSize,
-       dstBufAlignment
-      };
-     } else {
-      using NonAllocWrapperStub = NonAllocLambdaWrapperStub<Prototype>;
-
-      //Check before copying NonAllocLambdaWrapperStub to Lambda buffer
-      wrapperBufferCheck(
-       sizeof(NonAllocWrapperStub),
-       alignof(NonAllocWrapperStub),
-       dstBufSize,
-       dstBufAlignment
-      );
-
-      //Initialize non-allocated buffer with NonAllocLambdaWrapperStub
-      //and the buffer properties
-      new (*dstBufPtr) NonAllocWrapperStub{
-       dstBufSize,
-       dstBufAlignment
-      };
-     }
+     OperationBase::template copyWrapperCommon<
+      AllocLambdaWrapperStub<Prototype>,
+      NonAllocLambdaWrapperStub<Prototype>
+     >(
+      dstBufPtr,
+      dstBufSize,
+      dstBufAlignment,
+      allocating
+     );
     }
    };
   #endif //CX_STL_SUPPORT
@@ -1232,41 +1250,16 @@ namespace CX {
     decltype(alignof(int)) dstBufAlignment,
     bool allocating
    ) override {
-    if (allocating) {
-     #ifdef CX_STL_SUPPORT
-      using AllocLambdaWrapper = AllocLambdaWrapper<F, Prototype>;
-      using AllocOperationBase = LambdaOperationBase<
-       Prototype,
-       Restriction,
-       true
-      >;
-
-      //Check before copying NonAllocLambdaWrapper to AllocLambda buffer
-      AllocOperationBase::template checkOrReallocate<AllocLambdaWrapper>(
-       dstBufPtr,
-       dstBufSize,
-       dstBufAlignment
-      );
-
-      //Initialize allocated buffer with AllocLambdaWrapper and
-      //new buffer properties
-      AllocOperationBase::template copyInitWrapper<AllocLambdaWrapper>(
-       *dstBufPtr,
-       dstBufSize,
-       dstBufAlignment,
-       (F const&)f
-      );
-
-     #endif //CX_STL_SUPPORT
-    } else {
-     //Copy encapsulated function to Lambda buffer
-     OperationBase::template copyInitWrapper<NonAllocLambdaWrapper>(
-      *dstBufPtr,
-      dstBufSize,
-      dstBufAlignment,
-      (F const&)f
-     );
-    }
+    OperationBase::template copyWrapperCommon<
+     AllocLambdaWrapper<F, Prototype>,
+     NonAllocLambdaWrapper<F, Prototype>
+    >(
+     dstBufPtr,
+     dstBufSize,
+     dstBufAlignment,
+     allocating,
+     (F&)f
+    );
    }
 
    [[gnu::always_inline]]
@@ -1357,40 +1350,16 @@ namespace CX {
     decltype(alignof(int)) dstBufAlignment,
     bool allocating
    ) override {
-    if (allocating) {
-     #ifdef CX_STL_SUPPORT
-      using AllocLambdaWrapper = AllocLambdaWrapper<F, Prototype>;
-      using AllocOperationBase = LambdaOperationBase<
-       Prototype,
-       Restriction,
-       true
-      >;
-
-      //Check before copying NonAllocLambdaWrapper to AllocLambda buffer
-      AllocOperationBase::template checkOrReallocate<AllocLambdaWrapper>(
-       dstBufPtr,
-       dstBufSize,
-       dstBufAlignment
-      );
-
-      //Initialize allocated buffer with AllocLambdaWrapper and
-      //new buffer properties
-      AllocOperationBase::template copyInitWrapper<AllocLambdaWrapper>(
-       *dstBufPtr,
-       dstBufSize,
-       dstBufAlignment,
-       (F const&)f
-      );
-     #endif //CX_STL_SUPPORT
-    } else {
-     //Copy encapsulated function to new buffer
-     OperationBase::template copyInitWrapper<NonAllocLambdaWrapper>(
-      *dstBufPtr,
-      dstBufSize,
-      dstBufAlignment,
-      (F const&)f
-     );
-    }
+    OperationBase::template copyWrapperCommon<
+     AllocLambdaWrapper<F, Prototype>,
+     NonAllocLambdaWrapper<F, Prototype>
+    >(
+     dstBufPtr,
+     dstBufSize,
+     dstBufAlignment,
+     allocating,
+     (F&)f
+    );
    }
 
    [[gnu::always_inline]]
@@ -1496,46 +1465,16 @@ namespace CX {
      decltype(alignof(int)) dstBufAlignment,
      bool allocating
     ) override {
-     if (allocating) {
-      //Check before copying AllocLambdaWrapper to AllocLambda buffer
-      OperationBase::template checkOrReallocate<AllocLambdaWrapper>(
-       dstBufPtr,
-       dstBufSize,
-       dstBufAlignment
-      );
-
-      //Initialize allocated buffer with AllocLambdaWrapper and
-      //new buffer properties
-      OperationBase::template copyInitWrapper<AllocLambdaWrapper>(
-       *dstBufPtr,
-       dstBufSize,
-       dstBufAlignment,
-       (F const&)f
-      );
-     } else {
-      using NonAllocWrapper = NonAllocLambdaWrapper<F, Prototype>;
-
-      //Check before copying NonAllocLambdaWrapper to Lambda buffer
-      wrapperBufferCheck(
-       sizeof(NonAllocWrapper),
-       alignof(NonAllocWrapper),
-       dstBufSize,
-       dstBufAlignment
-      );
-
-      //Initialize non-allocated buffer with NonAllocLambdaWrapper
-      //and buffer properties
-      LambdaOperationBase<
-       Prototype,
-       Restriction,
-       false
-      >::template copyInitWrapper<NonAllocWrapper>(
-       *dstBufPtr,
-       dstBufSize,
-       dstBufAlignment,
-       (F const&)f
-      );
-     }
+     OperationBase::template copyWrapperCommon<
+      AllocLambdaWrapper<F, Prototype>,
+      NonAllocLambdaWrapper<F, Prototype>
+     >(
+      dstBufPtr,
+      dstBufSize,
+      dstBufAlignment,
+      allocating,
+      (F&)f
+     );
     }
 
     [[gnu::always_inline]]
@@ -1634,46 +1573,16 @@ namespace CX {
      decltype(alignof(int)) dstBufAlignment,
      bool allocating
     ) override {
-     if (allocating) {
-      //Check before copying AllocLambdaWrapper to AllocLambda buffer
-      OperationBase::template checkOrReallocate<AllocLambdaWrapper>(
-       dstBufPtr,
-       dstBufSize,
-       dstBufAlignment
-      );
-
-      //Initialize allocated buffer with AllocLambdaWrapper and
-      //new buffer properties
-      OperationBase::template copyInitWrapper<AllocLambdaWrapper>(
-       *dstBufPtr,
-       dstBufSize,
-       dstBufAlignment,
-       (F const&)f
-      );
-     } else {
-      using NonAllocWrapper = NonAllocLambdaWrapper<F, Prototype>;
-
-      //Check before copying NonAllocLambdaWrapper to Lambda buffer
-      wrapperBufferCheck(
-       sizeof(NonAllocWrapper),
-       alignof(NonAllocWrapper),
-       dstBufSize,
-       dstBufAlignment
-      );
-
-      //Initialize non-allocated buffer with NonAllocLambdaWrapper
-      //and buffer properties
-      LambdaOperationBase<
-       Prototype,
-       Restriction,
-       false
-      >::template copyInitWrapper<NonAllocWrapper>(
-       *dstBufPtr,
-       dstBufSize,
-       dstBufAlignment,
-       (F const&)f
-      );
-     }
+     OperationBase::template copyWrapperCommon<
+      AllocLambdaWrapper<F, Prototype>,
+      NonAllocLambdaWrapper<F, Prototype>
+     >(
+      dstBufPtr,
+      dstBufSize,
+      dstBufAlignment,
+      allocating,
+      (F&)f
+     );
     }
 
     [[gnu::always_inline]]

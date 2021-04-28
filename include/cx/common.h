@@ -20,7 +20,7 @@ namespace CX {
  };
 
  struct FalseType {
-  static constexpr const auto Value = false;
+  static constexpr auto const Value = false;
  };
 
  //Converts type and value meta-functions to stl-compatible equivalents

@@ -289,6 +289,14 @@ namespace CX {
   template<long Index, auto... Values>
   struct ValueAtIndex;
 
+  template<auto Index, auto V, auto... Values>
+  struct ValueAtIndex<Index, V, Values...> {
+   static constexpr auto const Value = ValueAtIndex<
+    Index - 1,
+    Values...
+   >::Value;
+  };
+
   template<auto V, auto... Values>
   struct ValueAtIndex<0, V, Values...> {
    static constexpr auto const Value = V;

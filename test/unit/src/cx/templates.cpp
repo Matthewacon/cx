@@ -173,15 +173,26 @@ namespace CX::Testing {
  }
 
  TEST(ValueAtIndex, valid_indices_yield_expected_value) {
-  throw std::runtime_error{"Unimplemented"};
+  EXPECT_TRUE((ValueAtIndex<3, 0, 1, 2, 3> == 3));
+  EXPECT_TRUE((ValueAtIndex<0, 2> == 2));
+  EXPECT_TRUE((ValueAtIndex<5, 5, 4, 3, 2, 1, 0> == 0));
  }
 
  TEST(ValueAtIndex, invalid_indices_yield_default_value) {
-  throw std::runtime_error{"Unimplemented"};
+  EXPECT_TRUE((ValueAtIndex<0> == 0));
+  EXPECT_TRUE((ValueAtIndex<12, 532, 4265> == 0));
  }
 
  TEST(argumentAtIndex, valid_indices_yield_expected_argument) {
-  throw std::runtime_error{"Unimplemented"};
+  [](int i, float f, char c) {
+   auto &arg = argumentAtIndex<1>(i, f, c);
+   EXPECT_EQ(&arg, &f);
+  }(0, 0, 0);
+
+  [](void * v1, void * v2, void * v3, void * v4, void * v5) {
+   auto &arg = argumentAtIndex<3>(v1, v2, v3, v4, v5);
+   EXPECT_EQ(&arg, &v4);
+  }(0, 0, 0, 0, 0);
  }
 
  TEST(SelectType, condition_yields_expected_type) {

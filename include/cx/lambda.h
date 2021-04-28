@@ -411,18 +411,22 @@ namespace CX {
    //The static function prototype of the invoking lambda specialization
    typename SpecializationPrototype,
    //Prototype restrictions for the invoking lambda specialization
-   template<typename> typename Restriction,
-   bool Allocating
+   template<typename> typename Restriction
   >
   struct LambdaOperationBase {
   private:
+   template<bool Allocating>
    using EmptyWrapperType = CX::SelectType<
     Allocating,
     AllocLambdaWrapperStub<SpecializationPrototype>,
     NonAllocLambdaWrapperStub<SpecializationPrototype>
    >;
 
-   template<typename F, typename Prototype>
+   template<
+    bool Allocating,
+    typename F,
+    typename Prototype
+   >
    using WrapperType = CX::SelectType<
     Allocating,
     AllocLambdaWrapper<F, Prototype>,
@@ -622,6 +626,7 @@ namespace CX {
    [[gnu::always_inline]]
    static void assignFunctionCommon(L &l, F f) {
     using WrapperSpecialization = WrapperType<
+     IsAllocLambda<L>,
      ConstDecayed<ReferenceDecayed<F>>,
      SpecializationPrototype
     >;
@@ -632,7 +637,6 @@ namespace CX {
 
     //Perform assignment through `op`
     auto const assign = [&]() {
-
      //Fetch buffer size and alignment
      {
       auto &lBase = **(LambdaBase<SpecializationPrototype> **)lBufPtr;
@@ -791,11 +795,8 @@ namespace CX {
       //Re-initialize `l2` buffer as empty lambda
       //Note: `Allocating` template parameter does not matter
       //here
-      LambdaOperationBase<
-       SpecializationPrototype,
-       Restriction,
-       false
-      >::initEmptyLambda(l2);
+      LambdaOperationBase<SpecializationPrototype, Restriction>
+       ::initEmptyLambda(l2);
      }
     };
 
@@ -852,15 +853,7 @@ namespace CX {
    template<typename T, auto Size, auto Alignment>
    [[gnu::always_inline]]
    static void lambdaAssignBufferCheck() {
-    //Error if check used in incorrect context
-    static_assert(
-     !Allocating,
-     "Do not invoke `lambdaAssignBufferCheck` for allocating lambda "
-     "specializations, as they do not have strict size or alignment "
-     "limits."
-    );
-
-    //Note: Add `alognof(void *)` to account for internal
+    //Note: Add `alignof(void *)` to account for internal
     //requirements
     static_assert(
      alignof(NonAllocLambdaWrapper<T, SpecializationPrototype>) <= Alignment,
@@ -910,6 +903,7 @@ namespace CX {
    template<IsLambda L>
    [[gnu::always_inline]]
    static void initEmptyLambda(L &l) {
+    using EmptyWrapperType = EmptyWrapperType<IsAllocLambda<L>>;
     decltype(sizeof(0)) size;
     decltype(alignof(int)) alignment;
 
@@ -1021,11 +1015,7 @@ namespace CX {
    template<typename>
    using Restriction = Dummy<>;
 
-   using OperationBase = LambdaOperationBase<
-    Prototype,
-    Restriction,
-    false
-   >;
+   using OperationBase = LambdaOperationBase<Prototype, Restriction>;
 
    decltype(sizeof(0)) bufSize;
    decltype(alignof(int)) bufAlignment;
@@ -1110,11 +1100,7 @@ namespace CX {
     template<typename>
     using Restriction = Dummy<>;
 
-    using OperationBase = LambdaOperationBase<
-     Prototype,
-     Restriction,
-     true
-    >;
+    using OperationBase = LambdaOperationBase<Prototype, Restriction>;
 
    public:
     using NonAllocLambdaWrapperStub<Prototype>::NonAllocLambdaWrapperStub;
@@ -1164,11 +1150,7 @@ namespace CX {
    template<typename>
    using Restriction = Dummy<>;
 
-   using OperationBase = LambdaOperationBase<
-    Prototype,
-    Restriction,
-    false
-   >;
+   using OperationBase = LambdaOperationBase<Prototype, Restriction>;
 
   public:
    F f;
@@ -1271,11 +1253,7 @@ namespace CX {
    template<typename>
    using Restriction = Dummy<>;
 
-   using OperationBase = LambdaOperationBase<
-    Prototype,
-    Restriction,
-    false
-   >;
+   using OperationBase = LambdaOperationBase<Prototype, Restriction>;
 
   public:
    F f;
@@ -1373,11 +1351,7 @@ namespace CX {
     template<typename>
     using Restriction = Dummy<>;
 
-    using OperationBase = LambdaOperationBase<
-     Prototype,
-     Restriction,
-     true
-    >;
+    using OperationBase = LambdaOperationBase<Prototype, Restriction>;
 
     F f;
     decltype(sizeof(0)) bufSize;
@@ -1486,11 +1460,7 @@ namespace CX {
     template<typename>
     using Restriction = Dummy<>;
 
-    using OperationBase = LambdaOperationBase<
-     Prototype,
-     Restriction,
-     true
-    >;
+    using OperationBase = LambdaOperationBase<Prototype, Restriction>;
 
     F f;
     decltype(sizeof(0)) bufSize;
@@ -1593,8 +1563,7 @@ namespace CX {
 
   template<
    typename,
-   template<typename> typename,
-   bool
+   template<typename> typename
   >
   friend struct Internal::LambdaOperationBase;
 
@@ -1625,8 +1594,7 @@ namespace CX {
 
   using OperationBase = Internal::LambdaOperationBase<
    R (Args...),
-   PrototypeRestriction,
-   false
+   PrototypeRestriction
   >;
   using LambdaBase = Internal::LambdaBase<R (Args...)>;
 
@@ -1773,8 +1741,7 @@ namespace CX {
 
   template<
    typename,
-   template<typename> typename,
-   bool
+   template<typename> typename
   >
   friend struct Internal::LambdaOperationBase;
 
@@ -1802,8 +1769,7 @@ namespace CX {
 
   using OperationBase = Internal::LambdaOperationBase<
    R (Args...),
-   PrototypeRestriction,
-   false
+   PrototypeRestriction
   >;
   using LambdaBase = Internal::LambdaBase<R (Args...)>;
 
@@ -1950,8 +1916,7 @@ namespace CX {
 
   template<
    typename,
-   template<typename> typename,
-   bool
+   template<typename> typename
   >
   friend struct Internal::LambdaOperationBase;
 
@@ -1982,8 +1947,7 @@ namespace CX {
 
   using OperationBase = Internal::LambdaOperationBase<
    R (Args..., ...),
-   PrototypeRestriction,
-   false
+   PrototypeRestriction
   >;
   using LambdaBase = Internal::LambdaBase<R (Args..., ...)>;
 
@@ -2131,8 +2095,7 @@ namespace CX {
 
   template<
    typename,
-   template<typename> typename,
-   bool
+   template<typename> typename
   >
   friend struct Internal::LambdaOperationBase;
 
@@ -2160,8 +2123,7 @@ namespace CX {
 
   using OperationBase = Internal::LambdaOperationBase<
    R (Args..., ...),
-   PrototypeRestriction,
-   false
+   PrototypeRestriction
   >;
   using LambdaBase = Internal::LambdaBase<R (Args..., ...)>;
 
@@ -2337,8 +2299,7 @@ namespace CX {
 
    template<
     typename,
-    template<typename> typename,
-    bool
+    template<typename> typename
    >
    friend struct Internal::LambdaOperationBase;
 
@@ -2360,8 +2321,7 @@ namespace CX {
 
    using OperationBase = Internal::LambdaOperationBase<
     R (Args...),
-    PrototypeRestriction,
-    true
+    PrototypeRestriction
    >;
    using LambdaBase = Internal::LambdaBase<R (Args...)>;
    static constexpr auto const Deleter = &OperationBase::sharedBufferDeleter;

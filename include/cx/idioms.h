@@ -887,6 +887,7 @@ namespace CX {
   ::LValueReference<T>
   ::Value;
 
+ //TODO rename to `LValueReferenceDecayed`
  //Yields the element type of a l-value refernece;
  //ie. `T const& -> T const`
  template<typename T>
@@ -900,12 +901,19 @@ namespace CX {
   ::RValueReference<T>
   ::Value;
 
+ //TODO rename to `RValueReferenceDecayed`
  //Yields the element type of a r-value reference;
  //ie. `T&& -> T`
  template<typename T>
  using RValueReferenceElementType = typename MetaFunctions
   ::RValueReference<T>
   ::ElementType;
+
+ //Strips all reference qualifiers
+ template<typename T>
+ using ReferenceDecayed = LValueReferenceElementType<
+  RValueReferenceElementType<T>
+ >;
 
  //Produce unsigned type equivalent
  template<typename T>

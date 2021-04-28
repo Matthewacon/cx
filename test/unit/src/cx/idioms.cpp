@@ -532,6 +532,18 @@ namespace CX::Testing {
   EXPECT_TRUE((SameType<RValueReferenceElementType<TypeC>, ExpectedTypeC>));
  }
 
+ TEST(ReferenceDecayed, rvalue_reference_types_yield_the_reference_element_type) {
+  throw std::runtime_error{"Unimplemented"};
+ }
+
+ TEST(ReferenceDecayed, lvalue_reference_types_yield_the_reference_element_type) {
+  throw std::runtime_error{"Unimplemented"};
+ }
+
+ TEST(ReferenceDecayed, non_reference_types_yield_the_same_type) {
+  throw std::runtime_error{"Unimplemented"};
+ }
+
  TEST(SignDecayed, signed_types_lose_signed_qualifier) {
   EXPECT_TRUE((SameType<SignDecayed<signed char>, unsigned char>));
   EXPECT_TRUE((SameType<SignDecayed<signed int>, unsigned int>));

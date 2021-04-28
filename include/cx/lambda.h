@@ -441,6 +441,9 @@ namespace CX {
    template<typename, typename>
    friend struct AllocLambdaWrapper;
 
+   //Checks an `AllocLambda<...>` buffer against size and alignment
+   //requirements; re-allocates buffer if the buffer does not meet the
+   //requirements
    #ifdef CX_STL_SUPPORT
     template<typename Wrapper>
     [[gnu::always_inline]]
@@ -557,6 +560,7 @@ namespace CX {
     }
    }
 
+   //Common function for `copyAssignFunction` and `moveAssignFunction`
    template<
     typename F,
     bool Copy,
@@ -577,15 +581,27 @@ namespace CX {
     decltype(sizeof(0)) lSize;
     decltype(alignof(int)) lAlignment;
 
-    //Fetch existing buffer size and alignment
-    auto const getProperties = [&]() {
-     auto &lBase = **(LambdaBase<SpecializationPrototype> **)lBufPtr;
-     lSize = lBase.bufferSize();
-     lAlignment = lBase.bufferAlignment();
-    };
-
     //Perform assignment through `op`
     auto const assign = [&]() {
+
+     //Fetch buffer size and alignment
+     {
+      auto &lBase = **(LambdaBase<SpecializationPrototype> **)lBufPtr;
+      lSize = lBase.bufferSize();
+      lAlignment = lBase.bufferAlignment();
+     }
+
+     //Check allocated buffer if `L` is `AllocLambda<...>`
+     #ifdef CX_STL_SUPPORT
+      if constexpr (IsAllocLambda<L>) {
+       checkOrReallocate<WrapperSpecialization>(
+        lBufPtr,
+        lSize,
+        lAlignment
+       );
+      }
+     #endif
+
      //Clean up `l`'s buffer
      destroy(*lBufPtr);
 
@@ -609,15 +625,9 @@ namespace CX {
 
     //Deal with `AllocLambda<...>`
     #ifdef CX_STL_SUPPORT
-     if constexpr (CX::IsAllocLambda<L>) {
+     if constexpr (IsAllocLambda<L>) {
       allocLambdaBufferOp(l.buffer, [&](void ** ptr) {
        lBufPtr = ptr;
-       getProperties();
-       checkOrReallocate<WrapperSpecialization>(
-        lBufPtr,
-        lSize,
-        lAlignment
-       );
        assign();
       });
       return;
@@ -625,13 +635,173 @@ namespace CX {
     #endif //CX_STL_SUPPORT
 
     //Deal with `Lambda<...>`
-    if constexpr (CX::IsNonAllocLambda<L>) {
+    if constexpr (IsNonAllocLambda<L>) {
      void * ptr = &l.buf();
      lBufPtr = &ptr;
-     getProperties();
      assign();
      return;
     }
+   }
+
+   //Common function for `copyAssignLambda` and `moveAssignLambda`
+   template<
+    typename L2,
+    bool Copy,
+    typename L1
+   >
+   requires (CompatibleLambda<
+    ConstDecayed<ReferenceDecayed<L2>>,
+    L1
+   >)
+   [[gnu::always_inline]]
+   static void assignLambdaCommon(L1 &l1, L2 l2) {
+    constexpr auto const
+     l1Alloc = IsAllocLambda<L1>,
+     l2Alloc = IsAllocLambda<
+      ConstDecayed<ReferenceDecayed<L2>>
+     >;
+
+    //Detmine whether or not `l2`'s ref-counted buffer can be copied
+    //to `l1`'s ref-counted buffer
+    constexpr bool fastCopy
+    #ifdef CX_STL_SUPPORT
+     = l1Alloc && l2Alloc;
+    #else
+     = false;
+    #endif //CX_STL_SUPPORT
+
+    void
+     ** l1BufPtr,
+     ** l2BufPtr;
+    decltype(sizeof(0))
+     l1Size,
+     l2Size;
+    decltype(alignof(int))
+     l1Alignment,
+     l2Alignment;
+
+    auto const assign = [&] {
+     //Fetch `l1` size and alignment
+     {
+      auto &l1Base = **(LambdaBase<SpecializationPrototype> **)l1BufPtr;
+      l1Size = l1Base.bufferSize();
+      l1Alignment = l1Base.bufferAlignment();
+     }
+
+     //Clean up `l1` state
+     destroy(*l1BufPtr);
+
+     //Fetch `l2` size and alignment and copy `l2` buffer to
+     //`l1` buffer
+     {
+      auto &l2Base = **(LambdaBase<SpecializationPrototype> **)l2BufPtr;
+
+      //Fetch `l2` size and alignment
+      l2Size = l2Base.bufferSize();
+      l2Alignment = l2Base.bufferAlignment();
+
+      //Copy `l2` buffer to `l1` buffer
+      if constexpr (!fastCopy) {
+       //Slow copy; copy-initialize wrapper
+       l2Base.copyTo(
+        l1BufPtr,
+        l1Size,
+        l1Alignment,
+        l1Alloc
+       );
+      } else {
+       //Fast copy; copy-assign underlying ref-counted buffer
+       #ifdef CX_STL_SUPPORT
+        l1.buffer = l2.buffer;
+       #endif //CX_STL_SUPPORT
+      }
+     }
+
+     //If move requested, destroy `l2` buffer and re-initialize
+     //as empty lambda
+     if constexpr (!Copy) {
+      if constexpr (!l2Alloc) {
+       //Clean up `l2` state
+       destroy(*l2BufPtr);
+
+       //Re-initialize `l2` buffer as empty lambda
+       LambdaOperationBase<
+        SpecializationPrototype,
+        Restriction,
+        false
+       >::initEmptyLambda(
+        *l2BufPtr,
+        l2Size,
+        l2Alignment
+       );
+      }
+      #ifdef CX_STL_SUPPORT
+       else {
+        //Clean up `l2` state
+        l2.buffer.reset();
+
+        //Re-initialize `l2` buffer as empty lambda
+        //Note: Re-allocates `l2` buffer, since it was moved to
+        //another lambda
+        LambdaOperationBase<
+         SpecializationPrototype,
+         Restriction,
+         true
+        >::initEmptyLambda(
+         l2BufPtr,
+         0,
+         0
+        );
+       }
+      #endif //CX_STL_SUPPORT
+     }
+    };
+
+    //Prepare `l2` buffer pointer
+    auto const l2Prep = [&] {
+     if constexpr (!l2Alloc) {
+      void * l2Buf = &l2.buf();
+      l2BufPtr = &l2Buf;
+      assign();
+      return;
+     }
+     #ifdef CX_STL_SUPPORT
+      else {
+       allocLambdaBufferOp(l2.buffer, [&](void ** l2Ptr) {
+        l2BufPtr = l2Ptr;
+        assign();
+       });
+       return;
+      }
+     #endif //CX_STL_SUPPORT
+    };
+
+    //Prepare `l1` buffer pointer
+    if constexpr (!l1Alloc) {
+     void * l1Buf = &l1.buf();
+     l1BufPtr = &l1Buf;
+     l2Prep();
+     return;
+    }
+    #ifdef CX_STL_SUPPORT
+     else {
+      if constexpr (!l2Alloc) {
+       //`l1` buffer may be re-allocated; use `allocLambdaBufferOp` context
+       allocLambdaBufferOp(l1.buffer, [&](void ** l1Ptr) {
+        l1BufPtr = l1Ptr;
+        l2Prep();
+       });
+      } else {
+       //Fast-copy will be used, `l1` buffer will not be re-allocated
+       [&] {
+        void * l1Ptr = l1.buffer.get();
+        l1BufPtr = &l1Ptr;
+        l2Prep();
+       }();
+      }
+      return;
+     }
+    #endif //CX_STL_SUPPORT
    }
 
   public:
@@ -758,177 +928,20 @@ namespace CX {
     assignFunctionCommon<F&&, false>(l, (F&&)f);
    }
 
-   //Lambda copy and move assignment
-   template<
-    typename L2,
-    typename L1 = SelectType<
-     Allocating,
-     AllocLambda<SpecializationPrototype>,
-     Lambda<SpecializationPrototype>
-    >
-   >
+   //Lambda copy assignment
+   template<typename L1, typename L2>
    requires (CompatibleLambda<L2, L1>)
    [[gnu::always_inline]]
    static void copyAssignLambda(L1 &l1, L2 const &l2) {
-    //Copies the wrapper instance from `buf2` to `buf1`
-    constexpr auto const copyBuffer = [](void * buf1, void * buf2) {
-     void ** buf1Ptr = (Allocating ? (void **)buf1 : &buf1);
-     decltype(sizeof(0)) buf1Size;
-     decltype(alignof(int)) buf1Alignment;
-
-     //Fetch `buf1` size and alignment
-     {
-      auto &l1Base = **(LambdaBase<SpecializationPrototype> **)buf1Ptr;
-      buf1Size = l1Base.bufferSize();
-      buf1Alignment = l1Base.bufferAlignment();
-     }
-
-     //Clean up `buf1` state
-     destroy(*buf1Ptr);
-
-     //Copy `buf2` to `buf1`
-     auto &l2Base = *(LambdaBase<SpecializationPrototype> *)buf2;
-     l2Base.copyTo(
-      buf1Ptr,
-      buf1Size,
-      buf1Alignment,
-      Allocating
-     );
-    };
-
-    //`Lambda<...> <- Lambda<...>`
-    if constexpr(IsNonAllocLambda<L1> && IsNonAllocLambda<L2>) {
-     copyBuffer(&l1.buf(), &l2.buf());
-    }
-
-    #ifdef CX_STL_SUPPORT
-     //`AllocLambda<...> <- AllocLambda<...>`
-     if constexpr (IsAllocLambda<L1> && IsAllocLambda<L2>) {
-      //The alloc lambda uses a ref-counted buffer; no need to
-      //re-allocate and construct a new wrapper, etc...
-      l1.buffer = l2.buffer;
-     }
-
-     //`Lambda<...> <- AllocLambda<...>`
-     if constexpr (IsNonAllocLambda<L1> && IsAllocLambda<L2>) {
-      copyBuffer(&l1.buf(), &l2.buf());
-     }
-
-     //`AllocLambda<...> <- Lambda<...>`
-     if constexpr (IsAllocLambda<L1> && IsNonAllocLambda<L2>) {
-      allocLambdaBufferOp(l1.buffer, [&](void ** bufPtr) {
-       copyBuffer(bufPtr, &l2.buf());
-      });
-     }
-    #endif //CX_STL_SUPPORT
+    assignLambdaCommon<L2 const&, true>(l1, (L2 const&)l2);
    }
 
    //Lambda move assignment
-   template<
-    typename L2,
-    typename L1 = SelectType<
-     Allocating,
-     AllocLambda<SpecializationPrototype>,
-     Lambda<SpecializationPrototype>
-    >
-   >
-   requires (CompatibleLambda<L2, L1>)
+   template<typename L1, typename L2>
+   requires (!Const<L2> && CompatibleLambda<L2, L1>)
    [[gnu::always_inline]]
    static void moveAssignLambda(L1 &l1, L2 &l2) {
-    //Moves the wrapper instance from `buf2` to `buf1`
-    constexpr auto const moveBuffer = [](void * buf1, void * buf2) {
-     void ** buf1Ptr = (Allocating ? (void **)buf1 : &buf1);
-     decltype(sizeof(0))
-      buf1Size,
-      buf2Size;
-     decltype(alignof(int))
-      buf1Alignment,
-      buf2Alignment;
-
-     //Fetch `buf1` size and alignment
-     {
-      auto &l1Base = **(LambdaBase<SpecializationPrototype> **)buf1Ptr;
-      buf1Size = l1Base.bufferSize();
-      buf1Alignment = l1Base.bufferAlignment();
-     }
-
-     //Clean up `buf1` state
-     destroy(*buf1Ptr);
-
-     //Fetch `buf2` size and alignment and copy to `buf1`
-     {
-      auto &l2Base = *(LambdaBase<SpecializationPrototype> *)buf2;
-
-      //Fetch size and alignment
-      buf2Size = l2Base.bufferSize();
-      buf2Alignment = l2Base.bufferAlignment();
-
-      //Copy `buf2` to `buf1`
-      l2Base.copyTo(
-       buf1Ptr,
-       buf1Size,
-       buf1Alignment,
-       Allocating
-      );
-     }
-
-     //Clean up `buf2` state and reinitialize it as an empty
-     //lambda
-     destroy(buf2);
-     //Note: `LambdaOperationBase<...>::initEmptyLambda(...)` changes
-     //its behaviour based on the `Allocating` non-type template flag
-     //so the re-intialization of `l2` needs to switch
-     //`LambdaOperationBase` partial specializations based on the Lambda
-     //type of `L2`; either `AllocLambda` -> `true` or
-     //`Lambda` -> `false`
-     LambdaOperationBase<
-      SpecializationPrototype,
-      Restriction,
-      IsAllocLambda<L2>
-     >::initEmptyLambda(
-      (IsAllocLambda<L2> ? &buf2 : buf2),
-      buf2Size,
-      buf2Alignment
-     );
-    };
-
-    //`Lambda<...> <- Lambda<...>`
-    if constexpr(IsNonAllocLambda<L1> && IsNonAllocLambda<L2>) {
-     moveBuffer(&l1.buf(), &l2.buf());
-    }
-
-    #ifdef CX_STL_SUPPORT
-     //`AllocLambda<...> <- AllocLambda<...>`
-     if constexpr (IsAllocLambda<L1> && IsAllocLambda<L2>) {
-      //Copy `l2` buffer to `l1` and reset `l2` as an empty lambda
-
-      //Note: The alloc lambda uses a ref-counted buffer; no need
-      //to re-allocate and construct a new wrapper, etc...
-      l1.buffer = l2.buffer;
-      l2.buffer.reset();
-
-      //Re-initialize `l2` as an empty lambda
-      allocLambdaBufferOp(l2.buffer, [](void ** bufPtr) {
-       initEmptyLambda(
-        bufPtr,
-        0,
-        0
-       );
-      });
-     }
-
-     //`Lambda<...> <- AllocLambda<...>`
-     if constexpr (IsNonAllocLambda<L1> && IsAllocLambda<L2>) {
-      moveBuffer(&l1.buf(), l2.buffer.get());
-     }
-
-     //`AllocLambda<...> <- Lambda<...>`
-     if constexpr (IsAllocLambda<L1> && IsNonAllocLambda<L2>) {
-      allocLambdaBufferOp(l1.buffer, [&](void ** bufPtr) {
-       moveBuffer(bufPtr, &l2.buf());
-      });
-     }
-    #endif //CX_STL_SUPPORT
+    assignLambdaCommon<L2&, false>(l1, (L2&)l2);
    }
   };
 

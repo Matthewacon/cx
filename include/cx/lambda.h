@@ -664,11 +664,11 @@ namespace CX {
     //Detmine whether or not `l2`'s ref-counted buffer can be copied
     //to `l1`'s ref-counted buffer
     constexpr bool fastCopy
-    #ifdef CX_STL_SUPPORT
-     = l1Alloc && l2Alloc;
-    #else
-     = false;
-    #endif //CX_STL_SUPPORT
+     #ifdef CX_STL_SUPPORT
+      = l1Alloc && l2Alloc;
+     #else
+      = false;
+     #endif //CX_STL_SUPPORT
 
     void
      ** l1BufPtr,
@@ -723,37 +723,21 @@ namespace CX {
       if constexpr (!l2Alloc) {
        //Clean up `l2` state
        destroy(*l2BufPtr);
-
-       //Re-initialize `l2` buffer as empty lambda
-       LambdaOperationBase<
-        SpecializationPrototype,
-        Restriction,
-        false
-       >::initEmptyLambda(
-        *l2BufPtr,
-        l2Size,
-        l2Alignment
-       );
-      }
-      #ifdef CX_STL_SUPPORT
-       else {
+      } else {
+       #ifdef CX_STL_SUPPORT
         //Clean up `l2` state
         l2.buffer.reset();
+       #endif //CX_STL_SUPPORT
+      }
 
-        //Re-initialize `l2` buffer as empty lambda
-        //Note: Re-allocates `l2` buffer, since it was moved to
-        //another lambda
-        LambdaOperationBase<
-         SpecializationPrototype,
-         Restriction,
-         true
-        >::initEmptyLambda(
-         l2BufPtr,
-         0,
-         0
-        );
-       }
-      #endif //CX_STL_SUPPORT
+      //Re-initialize `l2` buffer as empty lambda
+      //Note: `Allocating` template parameter does not matter
+      //here
+      LambdaOperationBase<
+       SpecializationPrototype,
+       Restriction,
+       false
+      >::initEmptyLambda(l2);
      }
     };
 
@@ -764,16 +748,16 @@ namespace CX {
       l2BufPtr = &l2Buf;
       assign();
       return;
-     }
-     #ifdef CX_STL_SUPPORT
-      else {
-       allocLambdaBufferOp(l2.buffer, [&](void ** l2Ptr) {
-        l2BufPtr = l2Ptr;
+     } else {
+      #ifdef CX_STL_SUPPORT
+       [&] {
+        void * l2Ptr = l2.buffer.get();
+        l2BufPtr = &l2Ptr;
         assign();
-       });
-       return;
-      }
-     #endif //CX_STL_SUPPORT
+       }();
+      #endif //CX_STL_SUPPORT
+      return;
+     }
     };
 
     //Prepare `l1` buffer pointer
@@ -782,9 +766,8 @@ namespace CX {
      l1BufPtr = &l1Buf;
      l2Prep();
      return;
-    }
-    #ifdef CX_STL_SUPPORT
-     else {
+    } else {
+     #ifdef CX_STL_SUPPORT
       if constexpr (!l2Alloc) {
        //`l1` buffer may be re-allocated; use `allocLambdaBufferOp` context
        allocLambdaBufferOp(l1.buffer, [&](void ** l1Ptr) {
@@ -799,9 +782,9 @@ namespace CX {
         l2Prep();
        }();
       }
-      return;
-     }
-    #endif //CX_STL_SUPPORT
+     #endif //CX_STL_SUPPORT
+     return;
+    }
    }
 
   public:
@@ -863,42 +846,62 @@ namespace CX {
       buf.reset(bufPtr, sharedBufferDeleter);
      }
     }
-   #endif
+   #endif //CX_STL_SUPPORT
 
-   //Initializes buffer with empty `LambdaBase` obj
+   //Initializes `l`'s buffer with empty `LambdaBase` obj
+   template<IsLambda L>
    [[gnu::always_inline]]
-   static void initEmptyLambda(
-    void * buffer,
-    decltype(sizeof(0)) size,
-    decltype(alignof(int)) alignment
-   ) {
-    auto bufPtr = Allocating ? (void **)buffer : &buffer;
-    if constexpr (Allocating) {
-     //Allocate aligned buffer for `AllocLambda`
-     #ifdef CX_STL_SUPPORT
-      //Allocate aligned buffer
-      checkOrReallocate<EmptyWrapperType>(
-       bufPtr,
-       size,
-       alignment
+   static void initEmptyLambda(L &l) {
+    decltype(sizeof(0)) size;
+    decltype(alignof(int)) alignment;
+
+    auto const init = [&](void ** lBufPtr) {
+     if constexpr (IsAllocLambda<L>) {
+      //Set buffer properties
+      size = 0;
+      alignment = 0;
+
+      //Allocate aligned buffer for `AllocLambda`
+      #ifdef CX_STL_SUPPORT
+       //Allocate aligned buffer
+       checkOrReallocate<EmptyWrapperType>(
+        lBufPtr,
+        size,
+        alignment
+       );
+      #endif //CX_STL_SUPPORT
+     } else {
+      //Set buffer properties
+      size = CX_LAMBDA_BUF_SIZE;
+      alignment = CX_LAMBDA_BUF_ALIGN;
+
+      //Check buffer constraints for non-alloc `Lambda`
+      //Ensure receiving buffer is compatible
+      wrapperBufferCheck(
+       sizeof(EmptyWrapperType),
+       alignof(EmptyWrapperType),
+       CX_LAMBDA_BUF_SIZE,
+       CX_LAMBDA_BUF_ALIGN
       );
-     #endif //CX_STL_SUPPORT
-    } else {
-     //Check buffer constraints for non-alloc `Lambda`
-     //Ensure receiving buffer is compatible
-     wrapperBufferCheck(
-      sizeof(EmptyWrapperType),
-      alignof(EmptyWrapperType),
+     }
+
+     //Initialize buffer
+     new (*lBufPtr) EmptyWrapperType {
       size,
       alignment
-     );
-    }
-
-    //Initialize buffer
-    new (*bufPtr) EmptyWrapperType {
-     size,
-     alignment
+     };
     };
+
+    if constexpr (IsNonAllocLambda<L>) {
+     void * buf = &l.buf();
+     init(&buf);
+    } else {
+     #ifdef CX_STL_SUPPORT
+      allocLambdaBufferOp(l.buffer, [&](void ** lBufPtr) {
+       init(lBufPtr);
+      });
+     #endif //CX_STL_SUPPORT
+    }
    }
 
    //Destructs current `LambdaBase` obj in buffer
@@ -1740,7 +1743,7 @@ namespace CX {
   //Default constructor
   Lambda() {
    //Default initialize buffer for empty lambda
-   OperationBase::initEmptyLambda(&buf(), Size, Alignment);
+   OperationBase::initEmptyLambda(const_cast<Lambda&>(*this));
   }
 
   //FunctionOperator / function pointer copy constructor
@@ -1917,7 +1920,7 @@ namespace CX {
   //Default constructor
   Lambda() {
    //Default initialize buffer for empty lambda
-   OperationBase::initEmptyLambda(&buf(), Size, Alignment);
+   OperationBase::initEmptyLambda(const_cast<Lambda&>(*this));
   }
 
   //FunctionOperator / function pointer copy constructor
@@ -2097,7 +2100,7 @@ namespace CX {
   //Default constructor
   Lambda() {
    //Default initialize buffer for empty lambda
-   OperationBase::initEmptyLambda(&buf(), Size, Alignment);
+   OperationBase::initEmptyLambda(const_cast<Lambda&>(*this));
   }
 
   //FunctionOperator / function pointer copy constructor
@@ -2275,7 +2278,7 @@ namespace CX {
   //Default constructor
   Lambda() {
    //Default initialize buffer for empty lambda
-   OperationBase::initEmptyLambda(&buf(), Size, Alignment);
+   OperationBase::initEmptyLambda(const_cast<Lambda&>(*this));
   }
 
   //FunctionOperator / function pointer copy constructor
@@ -2470,13 +2473,7 @@ namespace CX {
   public:
    //Default constructor
    AllocLambda() {
-    OperationBase::allocLambdaBufferOp(buffer, [](void ** bufPtr) {
-     OperationBase::initEmptyLambda(
-      bufPtr,
-      0,
-      0
-     );
-    });
+    OperationBase::initEmptyLambda(const_cast<AllocLambda&>(*this));
    }
 
    //FunctionOperator / function pointer copy constructor

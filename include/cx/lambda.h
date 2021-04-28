@@ -2311,11 +2311,12 @@ namespace CX {
   private:
    //Note: Reuse prototype restrictions from `Lambda<R (Args...)>`
    template<typename F>
-   using PrototypeRestriction = typename Lambda<R (Args...)>::template PrototypeRestriction<F>;
+   using PrototypeRestriction = typename Lambda<R (Args...)>
+    ::template PrototypeRestriction<F>;
 
    template<typename F>
    static constexpr bool const SupportedPrototype = Internal::SupportedPrototype<
-    R (Args...),
+    F,
     PrototypeRestriction
    >;
 
@@ -2443,17 +2444,475 @@ namespace CX {
    }
   };
 
-  //TODO Noexcept qualified lambda specialization
+  //Noexcept qualified lambda specialization
   template<typename R, typename... Args>
-  struct AllocLambda<R (Args...) noexcept > {};
+  struct AllocLambda<R (Args...) noexcept> {
+   template<typename>
+   friend struct Lambda;
 
-  //TODO Unqualified c-variadic lambda specialization
-  template<typename R, typename... Args>
-  struct AllocLambda<R (Args..., ...)> {};
+   template<typename>
+   friend struct AllocLambda;
 
-  //TODO Noexcept qualified c-variadic lambda specialization
+   template<
+    typename,
+    template<typename> typename
+   >
+   friend struct Internal::LambdaOperationBase;
+
+   using ReturnType = R;
+   template<template<typename...> typename Receiver = Dummy>
+   using ArgumentTypes = Receiver<Args...>;
+   using FunctionType = R (Args...);
+
+  private:
+   //Note: Reuse prototype restrictions from `Lambda<R (Args...) noexcept>`
+   template<typename F>
+   using PrototypeRestriction = typename Lambda<R (Args...) noexcept>
+    ::template PrototypeRestriction<F>;
+
+   template<typename F>
+   static constexpr bool const SupportedPrototype = Internal::SupportedPrototype<
+    F,
+    PrototypeRestriction
+   >;
+
+   using OperationBase = Internal::LambdaOperationBase<
+    R (Args...),
+    PrototypeRestriction
+   >;
+   using LambdaBase = Internal::LambdaBase<R (Args...)>;
+   static constexpr auto const Deleter = &OperationBase::sharedBufferDeleter;
+
+   std::shared_ptr<unsigned char> mutable buffer;
+
+  public:
+   //Default constructor
+   AllocLambda() {
+    OperationBase::initEmptyLambda(const_cast<AllocLambda&>(*this));
+   }
+
+   //FunctionOperator / function pointer copy constructor
+   template<typename F>
+   requires (!IsLambda<F> && SupportedPrototype<F>)
+   AllocLambda(F const &f) : AllocLambda() {
+    operator=<F>((F const&)f);
+   }
+
+   //FunctionOperator move constructor
+   template<typename F>
+   requires (!IsLambda<F>
+    && !Const<F>
+    && Struct<F>
+    && SupportedPrototype<F>
+   )
+   AllocLambda(F &&f) : AllocLambda() {
+    operator=<F>((F&&)f);
+   }
+
+   //Lambda copy constructor
+   AllocLambda(AllocLambda const &l) : AllocLambda() {
+    operator=<AllocLambda>((AllocLambda const&)l);
+   }
+
+   //Lambda move constructor
+   AllocLambda(AllocLambda &&l) : AllocLambda() {
+    operator=<AllocLambda>((AllocLambda&&)l);
+   }
+
+   //CompatibleLambda copy constructor
+   template<CompatibleLambda<AllocLambda> L>
+   AllocLambda(L const &l) : AllocLambda() {
+    operator=<L>((L const&)l);
+   }
+
+   //CompatibleLambda move constructor
+   template<CompatibleLambda<AllocLambda> L>
+   requires (!Const<L>)
+   AllocLambda(L &&l) : AllocLambda() {
+    operator=<L>((L&&)l);
+   }
+
+   ~AllocLambda() = default;
+
+   //Lambda function operator
+   R operator()(Args... args) const noexcept {
+    return (*(LambdaBase *)buffer.get()).noexceptOp(args...);
+   }
+
+   //Presence conversion operator
+   operator bool() const noexcept {
+    return (*(LambdaBase *)buffer.get()).present();
+   }
+
+   //Implicit lambda conversion operator
+   template<CompatibleLambda<AllocLambda> L>
+   explicit operator L() const {
+    return L{*this};
+   }
+
+   //FunctionOperator / function pointer copy assignment
+   template<typename F>
+   requires (!IsLambda<F> && SupportedPrototype<F>)
+   AllocLambda& operator=(F const &f) {
+    //Initialize buffer
+    OperationBase::copyAssignFunction(*this, (F const &)f);
+
+    return *this;
+   }
+
+   //FunctionOperator move assignment
+   template<typename F>
+   requires (!IsLambda<F>
+    && !Const<F>
+    && Struct<F>
+    && SupportedPrototype<F>
+   )
+   AllocLambda& operator=(F &&f) {
+    //Initialize buffer
+    OperationBase::moveAssignFunction(*this, (F&&)f);
+
+    return *this;
+   }
+
+   //Lambda copy assignment
+   AllocLambda& operator=(AllocLambda const &l) {
+    return operator=<AllocLambda>((AllocLambda const&)l);
+   }
+
+   //Lambda move assignment
+   AllocLambda& operator=(AllocLambda &&l) {
+    return operator=<AllocLambda>((AllocLambda&&)l);
+   }
+
+   //CompatibleLambda copy assignment
+   template<CompatibleLambda<AllocLambda> L>
+   AllocLambda& operator=(L const &l) {
+    OperationBase::copyAssignLambda(*this, l);
+    return *this;
+   }
+
+   //CompatibleLambda move assignment
+   template<CompatibleLambda<AllocLambda> L>
+   requires (!Const<L>)
+   AllocLambda& operator=(L &&l) {
+    OperationBase::moveAssignLambda(*this, l);
+    return *this;
+   }
+  };
+
+  //Unqualified c-variadic lambda specialization
   template<typename R, typename... Args>
-  struct AllocLambda<R (Args..., ...) noexcept> {};
+  struct AllocLambda<R (Args..., ...)> {
+   template<typename>
+   friend struct Lambda;
+
+   template<typename>
+   friend struct AllocLambda;
+
+   template<
+    typename,
+    template<typename> typename
+   >
+   friend struct Internal::LambdaOperationBase;
+
+   using ReturnType = R;
+   template<template<typename...> typename Receiver = Dummy>
+   using ArgumentTypes = Receiver<Args...>;
+   using FunctionType = R (Args..., ...);
+
+  private:
+   //Note: Reuse prototype restrictions from `Lambda<R (Args..., ...)>`
+   template<typename F>
+   using PrototypeRestriction = typename Lambda<R (Args..., ...)>
+    ::template PrototypeRestriction<F>;
+
+   template<typename F>
+   static constexpr bool const SupportedPrototype = Internal::SupportedPrototype<
+    F,
+    PrototypeRestriction
+   >;
+
+   using OperationBase = Internal::LambdaOperationBase<
+    R (Args..., ...),
+    PrototypeRestriction
+   >;
+   using LambdaBase = Internal::LambdaBase<R (Args..., ...)>;
+   static constexpr auto const Deleter = &OperationBase::sharedBufferDeleter;
+
+   std::shared_ptr<unsigned char> mutable buffer;
+
+  public:
+   //Default constructor
+   AllocLambda() {
+    OperationBase::initEmptyLambda(const_cast<AllocLambda&>(*this));
+   }
+
+   //FunctionOperator / function pointer copy constructor
+   template<typename F>
+   requires (!IsLambda<F> && SupportedPrototype<F>)
+   AllocLambda(F const &f) : AllocLambda() {
+    operator=<F>((F const&)f);
+   }
+
+   //FunctionOperator move constructor
+   template<typename F>
+   requires (!IsLambda<F>
+    && !Const<F>
+    && Struct<F>
+    && SupportedPrototype<F>
+   )
+   AllocLambda(F &&f) : AllocLambda() {
+    operator=<F>((F&&)f);
+   }
+
+   //Lambda copy constructor
+   AllocLambda(AllocLambda const &l) : AllocLambda() {
+    operator=<AllocLambda>((AllocLambda const&)l);
+   }
+
+   //Lambda move constructor
+   AllocLambda(AllocLambda &&l) : AllocLambda() {
+    operator=<AllocLambda>((AllocLambda&&)l);
+   }
+
+   //CompatibleLambda copy constructor
+   template<CompatibleLambda<AllocLambda> L>
+   AllocLambda(L const &l) : AllocLambda() {
+    operator=<L>((L const&)l);
+   }
+
+   //CompatibleLambda move constructor
+   template<CompatibleLambda<AllocLambda> L>
+   requires (!Const<L>)
+   AllocLambda(L &&l) : AllocLambda() {
+    operator=<L>((L&&)l);
+   }
+
+   ~AllocLambda() = default;
+
+   //Lambda function operator
+   template<typename... Varargs>
+   R operator()(Args... args, Varargs... varargs) const {
+    return (*(LambdaBase *)buffer.get()).template op<false>(args..., varargs...);
+   }
+
+   //Presence conversion operator
+   operator bool() const noexcept {
+    return (*(LambdaBase *)buffer.get()).present();
+   }
+
+   //Implicit lambda conversion operator
+   template<CompatibleLambda<AllocLambda> L>
+   explicit operator L() const {
+    return L{*this};
+   }
+
+   //FunctionOperator / function pointer copy assignment
+   template<typename F>
+   requires (!IsLambda<F> && SupportedPrototype<F>)
+   AllocLambda& operator=(F const &f) {
+    //Initialize buffer
+    OperationBase::copyAssignFunction(*this, (F const &)f);
+
+    return *this;
+   }
+
+   //FunctionOperator move assignment
+   template<typename F>
+   requires (!IsLambda<F>
+    && !Const<F>
+    && Struct<F>
+    && SupportedPrototype<F>
+   )
+   AllocLambda& operator=(F &&f) {
+    //Initialize buffer
+    OperationBase::moveAssignFunction(*this, (F&&)f);
+
+    return *this;
+   }
+
+   //Lambda copy assignment
+   AllocLambda& operator=(AllocLambda const &l) {
+    return operator=<AllocLambda>((AllocLambda const&)l);
+   }
+
+   //Lambda move assignment
+   AllocLambda& operator=(AllocLambda &&l) {
+    return operator=<AllocLambda>((AllocLambda&&)l);
+   }
+
+   //CompatibleLambda copy assignment
+   template<CompatibleLambda<AllocLambda> L>
+   AllocLambda& operator=(L const &l) {
+    OperationBase::copyAssignLambda(*this, l);
+    return *this;
+   }
+
+   //CompatibleLambda move assignment
+   template<CompatibleLambda<AllocLambda> L>
+   requires (!Const<L>)
+   AllocLambda& operator=(L &&l) {
+    OperationBase::moveAssignLambda(*this, l);
+    return *this;
+   }
+  };
+
+  //Noexcept qualified c-variadic lambda specialization
+  template<typename R, typename... Args>
+  struct AllocLambda<R (Args..., ...) noexcept> {
+   template<typename>
+   friend struct Lambda;
+
+   template<typename>
+   friend struct AllocLambda;
+
+   template<
+    typename,
+    template<typename> typename
+   >
+   friend struct Internal::LambdaOperationBase;
+
+   using ReturnType = R;
+   template<template<typename...> typename Receiver = Dummy>
+   using ArgumentTypes = Receiver<Args...>;
+   using FunctionType = R (Args..., ...) noexcept;
+
+  private:
+   //Note: Reuse prototype restrictions from `Lambda<R (Args..., ...) noexcept>`
+   template<typename F>
+   using PrototypeRestriction = typename Lambda<R (Args..., ...) noexcept>
+    ::template PrototypeRestriction<F>;
+
+   template<typename F>
+   static constexpr bool const SupportedPrototype = Internal::SupportedPrototype<
+    F,
+    PrototypeRestriction
+   >;
+
+   using OperationBase = Internal::LambdaOperationBase<
+    R (Args..., ...),
+    PrototypeRestriction
+   >;
+   using LambdaBase = Internal::LambdaBase<R (Args..., ...)>;
+   static constexpr auto const Deleter = &OperationBase::sharedBufferDeleter;
+
+   std::shared_ptr<unsigned char> mutable buffer;
+
+  public:
+   //Default constructor
+   AllocLambda() {
+    OperationBase::initEmptyLambda(const_cast<AllocLambda&>(*this));
+   }
+
+   //FunctionOperator / function pointer copy constructor
+   template<typename F>
+   requires (!IsLambda<F> && SupportedPrototype<F>)
+   AllocLambda(F const &f) : AllocLambda() {
+    operator=<F>((F const&)f);
+   }
+
+   //FunctionOperator move constructor
+   template<typename F>
+   requires (!IsLambda<F>
+    && !Const<F>
+    && Struct<F>
+    && SupportedPrototype<F>
+   )
+   AllocLambda(F &&f) : AllocLambda() {
+    operator=<F>((F&&)f);
+   }
+
+   //Lambda copy constructor
+   AllocLambda(AllocLambda const &l) : AllocLambda() {
+    operator=<AllocLambda>((AllocLambda const&)l);
+   }
+
+   //Lambda move constructor
+   AllocLambda(AllocLambda &&l) : AllocLambda() {
+    operator=<AllocLambda>((AllocLambda&&)l);
+   }
+
+   //CompatibleLambda copy constructor
+   template<CompatibleLambda<AllocLambda> L>
+   AllocLambda(L const &l) : AllocLambda() {
+    operator=<L>((L const&)l);
+   }
+
+   //CompatibleLambda move constructor
+   template<CompatibleLambda<AllocLambda> L>
+   requires (!Const<L>)
+   AllocLambda(L &&l) : AllocLambda() {
+    operator=<L>((L&&)l);
+   }
+
+   ~AllocLambda() = default;
+
+   //Lambda function operator
+   template<typename... Varargs>
+   R operator()(Args... args, Varargs... varargs) const noexcept {
+    return (*(LambdaBase *)buffer.get()).template op<true>(args..., varargs...);
+   }
+
+   //Presence conversion operator
+   operator bool() const noexcept {
+    return (*(LambdaBase *)buffer.get()).present();
+   }
+
+   //Implicit lambda conversion operator
+   template<CompatibleLambda<AllocLambda> L>
+   explicit operator L() const {
+    return L{*this};
+   }
+
+   //FunctionOperator / function pointer copy assignment
+   template<typename F>
+   requires (!IsLambda<F> && SupportedPrototype<F>)
+   AllocLambda& operator=(F const &f) {
+    //Initialize buffer
+    OperationBase::copyAssignFunction(*this, (F const &)f);
+
+    return *this;
+   }
+
+   //FunctionOperator move assignment
+   template<typename F>
+   requires (!IsLambda<F>
+    && !Const<F>
+    && Struct<F>
+    && SupportedPrototype<F>
+   )
+   AllocLambda& operator=(F &&f) {
+    //Initialize buffer
+    OperationBase::moveAssignFunction(*this, (F&&)f);
+
+    return *this;
+   }
+
+   //Lambda copy assignment
+   AllocLambda& operator=(AllocLambda const &l) {
+    return operator=<AllocLambda>((AllocLambda const&)l);
+   }
+
+   //Lambda move assignment
+   AllocLambda& operator=(AllocLambda &&l) {
+    return operator=<AllocLambda>((AllocLambda&&)l);
+   }
+
+   //CompatibleLambda copy assignment
+   template<CompatibleLambda<AllocLambda> L>
+   AllocLambda& operator=(L const &l) {
+    OperationBase::copyAssignLambda(*this, l);
+    return *this;
+   }
+
+   //CompatibleLambda move assignment
+   template<CompatibleLambda<AllocLambda> L>
+   requires (!Const<L>)
+   AllocLambda& operator=(L &&l) {
+    OperationBase::moveAssignLambda(*this, l);
+    return *this;
+   }
+  };
  #endif //CX_STL_SUPPORT
 
  //Deduction guides for AllocLambda

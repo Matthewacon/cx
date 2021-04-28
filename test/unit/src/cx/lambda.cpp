@@ -2145,7 +2145,6 @@ namespace CX::Testing {
   }()));
  }
 
- /*
  TEST(AllocLambdaConstructor, noexcept_alloc_lambda_funcftion_pointer_constructor_correctly_initializes_lambda) {
   static constexpr double const dExpected = 0.571082;
   static constexpr char32_t const cExpected = 1130426;
@@ -2381,7 +2380,6 @@ namespace CX::Testing {
    EXPECT_EQ(returned, returnExpected);
   }()));
  }
- */
 
  TEST(AllocLambdaConstructor, alloc_lambda_function_move_constructor_properly_initializes_lambda) {
   static bool invoked;
@@ -2404,7 +2402,6 @@ namespace CX::Testing {
   }()));
  }
 
- /*
  TEST(AllocLambdaConstructor, noexcept_alloc_lambda_function_move_constructor_properly_initializes_lambda) {
   static constexpr int const iExpected = 2435;
   static constexpr float const fExpected = 3463457.254;
@@ -2510,7 +2507,6 @@ namespace CX::Testing {
    EXPECT_TRUE(invoked);
   }()));
  }
- */
 
  TEST(AllocLambdaConstructor, alloc_lambda_copy_constructor_properly_initializes_lambda) {
   //Test with uninitialized lambda
@@ -2566,7 +2562,6 @@ namespace CX::Testing {
   }()));
  }
 
- /*
  TEST(AllocLambdaConstructor, noexcept_alloc_lambda_copy_constructor_properly_initializes_lambda) {
   //Test with uninitialized lambda
   //Construct empty lambda and ensure it was correctly initialized
@@ -2769,7 +2764,6 @@ namespace CX::Testing {
    EXPECT_EQ(invoked, 2);
   }()));
  }
- */
 
  TEST(AllocLambdaConstructor, alloc_lambda_move_constructor_properly_initializes_lambda) {
   //Test with uninitialized lambda
@@ -2844,7 +2838,6 @@ namespace CX::Testing {
   EXPECT_EQ(invoked, 2);
  }
 
- /*
  TEST(AllocLambdaConstructor, noexcept_alloc_lambda_move_constructor_properly_initializes_lambda) {
   //Test with uninitialized lambda
   //Construct empty lambda and ensure it was correctly initialized
@@ -3109,7 +3102,6 @@ namespace CX::Testing {
    "UninitializedLambdaError"
   );
  }
- */
 
  TEST(AllocLambdaAssignment, alloc_lambda_function_pointer_assignment_operator_correctly_initializes_lambda) {
   static constexpr auto const iExpected = 3249;
@@ -3139,7 +3131,6 @@ namespace CX::Testing {
   }()));
  }
 
- /*
  TEST(AllocLambdaAssignment, noexcept_alloc_lambda_funcftion_pointer_assignment_operator_correctly_initializes_lambda) {
   static constexpr double const dExpected = 3249;
   static constexpr char const cExpected = 'A';
@@ -3255,7 +3246,6 @@ namespace CX::Testing {
    EXPECT_TRUE(returned == returnExpected);
   }()));
  }
- */
 
  TEST(AllocLambdaAssignment, alloc_lambda_function_copy_assignment_operator_properly_initializes_lambda) {
   static constexpr bool const bExpected = false;
@@ -3284,7 +3274,6 @@ namespace CX::Testing {
   }()));
  }
 
- /*
  TEST(AllocLambdaAssignment, noexcept_alloc_lambda_function_copy_assignment_operator_properly_initializes_lambda) {
   static constexpr char32_t const cExpected = 'd';
   static constexpr short const sExpected = 354;
@@ -3390,7 +3379,6 @@ namespace CX::Testing {
    EXPECT_EQ(returned, returnExpected);
   }()));
  }
- */
 
  TEST(AllocLambdaAssignment, alloc_lambda_function_move_assignment_operator_properly_initializes_lambda) {
   static bool invoked;
@@ -3413,7 +3401,6 @@ namespace CX::Testing {
   }()));
  }
 
- /*
  TEST(AllocLambdaAssignment, noexcept_alloc_lambda_function_move_assignment_operator_properly_initializes_lambda) {
   static constexpr int const iExpected = 2435;
   static constexpr float const fExpected = 3463457.254;
@@ -3519,7 +3506,6 @@ namespace CX::Testing {
    EXPECT_TRUE(invoked);
   }()));
  }
- */
 
  TEST(AllocLambdaAssignment, alloc_lambda_copy_assignment_operator_properly_initializes_lambda) {
   //Test with uninitialized lambda
@@ -3575,7 +3561,6 @@ namespace CX::Testing {
   }()));
  }
 
- /*
  TEST(AllocLambdaAssignment, noexcept_alloc_lambda_copy_assignment_operator_properly_initializes_lambda) {
   //Test with uninitialized lambda
   //Construct empty lambda and ensure it was correctly initialized
@@ -3778,7 +3763,6 @@ namespace CX::Testing {
    EXPECT_EQ(invoked, 2);
   }()));
  }
- */
 
  TEST(AllocLambdaAssignment, alloc_lambda_move_assignment_operator_properly_initializes_lambda) {
   //Test with uninitialized lambda
@@ -3853,7 +3837,6 @@ namespace CX::Testing {
   EXPECT_EQ(invoked, 2);
  }
 
- /*
  TEST(AllocLambdaAssignment, noexcept_alloc_lambda_move_assignment_operator_properly_initializes_lambda) {
   //Test with uninitialized lambda
   //Construct empty lambda and ensure it was correctly initialized
@@ -4118,7 +4101,6 @@ namespace CX::Testing {
    "UninitializedLambdaError"
   );
  }
- */
 
  //TODO
  // - Lambda <-> AllocLambda conversion tests

@@ -4102,11 +4102,153 @@ namespace CX::Testing {
   );
  }
 
+ //Lambda construction/assignment qualifier mismatch tests
+ //Note: Assignment cases not tested; internally, lambdas invoke
+ //the assignment equivalents through their respective constructors
+ //anyway
+ TEST(LambdaConstruction, unqualified_lambda_copy_noexcept_qualified_function_pointer_properly_initializes_lambda) {
+  FAIL();
+ }
+
+ TEST(LambdaConstruction, unqualified_lambda_copy_noexcept_qualified_lambda_properly_initializes_lambda) {
+  FAIL();
+ }
+
+ TEST(LambdaConstruction, unqualified_c_variadic_lambda_copy_noexcept_qualified_c_variadic_function_properly_initializes_lambda) {
+  FAIL();
+ }
+
+ TEST(LambdaConstruction, unqualified_c_variadic_lambda_copy_noexcept_qualified_c_variadic_lambda_properly_initializes_lambda) {
+  FAIL();
+ }
+
+ //AllocLambda construction/assignment qualifier mismatch tests
+ //Note: Assignment cases not tested; internally, lambdas invoke
+ //the assignment equivalents through their respective constructors
+ //anyway
+ TEST(AllocLambdaConstruction, unqualified_lambda_copy_noexcept_qualified_function_pointer_properly_initializes_lambda) {
+  FAIL();
+ }
+
+ TEST(AllocLambdaConstruction, unqualified_lambda_copy_noexcept_qualified_lambda_properly_initializes_lambda) {
+  FAIL();
+ }
+
+ TEST(AllocLambdaConstruction, unqualified_c_variadic_lambda_copy_noexcept_qualified_c_variadic_function_properly_initializes_lambda) {
+  FAIL();
+ }
+
+ TEST(AllocLambdaConstruction, unqualified_c_variadic_lambda_copy_noexcept_qualified_c_variadic_lambda_properly_initializes_lambda) {
+  FAIL();
+ }
+
+ //Matched `Lambda<...> <- AllocLambda<...>` conversion tests
+ //Note: Assignment cases not tested; internally, lambdas invoke
+ //the assignment equivalents through their respective constructors
+ //anyway
+ TEST(LambdaConversionConstruction, unqualified_lambda_copy_unqualified_alloc_lambda_properly_initializes_lambda) {
+  FAIL();
+ }
+
+ TEST(LambdaConversionConstruction, noexcept_qualified_lambda_copy_unqualified_alloc_lambda_properly_initializes_lambda) {
+  FAIL();
+ }
+
+ TEST(LambdaConversionConstruction, unqualified_c_variadic_lambda_copy_unqualified_c_variadic_alloc_lambda_properly_initializes_lambda) {
+  FAIL();
+ }
+
+ TEST(LambdaConversionConstruction, noexcept_qualified_c_variadic_lambda_copy_noexcept_qualified_c_variadic_alloc_lambda_properly_initializes_lambda) {
+  FAIL();
+ }
+
+ TEST(LambdaConversionConstruction, unqualified_lambda_move_unqualified_alloc_lambda_properly_initializes_lambda) {
+  FAIL();
+ }
+
+ TEST(LambdaConversionConstruction, noexcept_qualified_lambda_move_unqualified_alloc_lambda_properly_initializes_lambda) {
+  FAIL();
+ }
+
+ TEST(LambdaConversionConstruction, unqualified_c_variadic_lambda_move_unqualified_c_variadic_alloc_lambda_properly_initializes_lambda) {
+  FAIL();
+ }
+
+ TEST(LambdaConversionConstruction, noexcept_qualified_c_variadic_lambda_move_noexcept_qualified_c_variadic_alloc_lambda_properly_initializes_lambda) {
+  FAIL();
+ }
+
+ //Matched `AllocLambda<...> <- Lambda<...>` conversion tests
+ //Note: Assignment cases not tested; internally, lambdas invoke
+ //the assignment equivalents through their respective constructors
+ //anyway
+ TEST(AllocLambdaConversionConstruction, unqualified_alloc_lambda_copy_unqualified_lambda_properly_initializes_alloc_lambda) {
+  FAIL();
+ }
+
+ TEST(AllocLambdaConversionConstruction, noexcept_qualified_alloc_lambda_copy_unqualified_lambda_properly_initializes_alloc_lambda) {
+  FAIL();
+ }
+
+ TEST(AllocLambdaConversionConstruction, unqualified_c_variadic_alloc_lambda_copy_unqualified_c_variadic_lambda_properly_initializes_alloc_lambda) {
+  FAIL();
+ }
+
+ TEST(AllocLambdaConversionConstruction, noexcept_qualified_c_variadic_alloc_lambda_copy_noexcept_qualified_c_variadic_lambda_properly_initializes_alloc_lambda) {
+  FAIL();
+ }
+
+ TEST(AllocLambdaConversionConstruction, unqualified_alloc_lambda_move_unqualified_lambda_properly_initializes_alloc_lambda) {
+  FAIL();
+ }
+
+ TEST(AllocLambdaConversionConstruction, noexcept_qualified_alloc_lambda_move_unqualified_lambda_properly_initializes_alloc_lambda) {
+  FAIL();
+ }
+
+ TEST(AllocLambdaConversionConstruction, unqualified_c_variadic_alloc_lambda_move_unqualified_c_variadic_lambda_properly_initializes_alloc_lambda) {
+  FAIL();
+ }
+
+ TEST(AllocLambdaConversionConstruction, noexcept_qualified_c_variadic_alloc_lambda_move_noexcept_qualified_c_variadic_lambda_properly_initializes_alloc_lambda) {
+  FAIL();
+ }
+
+ //Matched `AllocLambda<...> <- Lambda<...>` implicit conversion operator tests
+ TEST(LambdaImplicitConversion, unqualified_lambda_conversion_to_unqualified_alloc_lambda_yields_correctly_initialized_alloc_lambda) {
+  FAIL();
+ }
+
+ TEST(LambdaImplicitConversion, noexcept_qualified_lambda_conversion_to_noexcept_qualified_alloc_lambda_yields_correctly_initialized_alloc_lambda) {
+  FAIL();
+ }
+
+ TEST(LambdaImplicitConversion, unqualified_c_variadic_lambda_conversion_to_unqualified_c_variadic_alloc_lambda_yields_correctly_initialized_alloc_lambda) {
+  FAIL();
+ }
+
+ TEST(LambdaImplicitConversion, noexcept_qualified_c_variadic_lambda_conversion_to_noexcept_c_variadic_alloc_lambda_yields_correctly_initialized_alloc_lambda) {
+  FAIL();
+ }
+
+ //Matched `Lambda<...> <- AllocLambda<...>` implicit conversion operator tests
+ TEST(AllocLambdaImplicitConversion, unqualified_alloc_lambda_conversion_to_unqualified_lambda_yields_correctly_initialized_lambda) {
+  FAIL();
+ }
+
+ TEST(AllocLambdaImplicitConversion, noexcept_qualified_alloc_lambda_conversion_to_noexcept_qualified_lambda_yields_correctly_initialized_lambda) {
+  FAIL();
+ }
+
+ TEST(AllocLambdaImplicitConversion, unqualified_c_variadic_alloc_lambda_conversion_to_unqualified_c_variadic_lambda_yields_correctly_initialized_lambda) {
+  FAIL();
+ }
+
+ TEST(AllocLambdaImplicitConversion, noexcept_qualified_c_variadic_alloc_lambda_conversion_to_noexcept_c_variadic_lambda_yields_correctly_initialized_lambda) {
+  FAIL();
+ }
+
  //TODO
- // - Lambda <-> AllocLambda conversion tests
- // - [Lambda, AllocLambda] implicit conversion tests
- // - [Lambda, AllocLambda] noexcept-qualified lambda inst/lambda/fptr assignment to
- //   unqualified lambda tests
  // - Lambda construction with types that are:
  //   - default constructible, copy-assignable
  //   - default constructible, move-assignable

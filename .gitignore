@@ -6,6 +6,7 @@ build*/
 
 # Do not include disabled files
 **/*-disabled
+TODO.md
 
 # Scribble files
 scribbles/

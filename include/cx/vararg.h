@@ -8,7 +8,7 @@
 
  #define CX_STL_SUPPORT_EXPR(expr) expr
 #else
- #define CX_STL_SUPPORT_EXPR(expr)
+ #define CX_STL_SUPPORT_EXPR(...)
 #endif
 
 //Conditional libc dependencies if built with libc support
@@ -231,3 +231,6 @@ namespace CX {
 
  using VaList = Internal::VaListWrapper<0>;
 }
+
+//Clean up internal macro
+#undef CX_STL_SUPPORT_EXPR

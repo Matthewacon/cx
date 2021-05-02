@@ -31,7 +31,7 @@ namespace CX {
     exit(CXError{expectedMsg})
    );
 
-   //EXPECT_STREQ(errMsg, expectedMsg);
+   EXPECT_STREQ(errMsg, expectedMsg);
   }());
  }
 
@@ -68,16 +68,14 @@ namespace CX {
   TEST(Error, error_terminates) {
    EXPECT_DEATH(
     error(CXError{"Some error"}),
-    ".*`CX::exit\\(\\.\\.\\.\\)` invoked with error:\nSome error\n.*"
+    ".*`CX::error\\(\\.\\.\\.\\)` invoked with error:\nSome error\n.*"
    );
   }
 
   TEST(DefaultErrorHandler, default_error_handler_terminates) {
-   EXPECT_NO_FATAL_FAILURE(
-    EXPECT_DEATH(
-     defaultErrorHandler()(CXError{"Some error"}),
-     ".*`CX::exit\\(\\.\\.\\.\\)` invoked with error:\nSome error\n.*"
-    )
+   EXPECT_DEATH(
+    defaultErrorHandler()(CXError{"Some error"}),
+    ".*`CX::error\\(\\.\\.\\.\\)` invoked with error:\nSome error\n.*"
    );
   }
  #endif

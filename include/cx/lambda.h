@@ -13,7 +13,7 @@
  #pragma message \
   "Building without STL support; 'CX::AllocLambda<...>' will be unavailable."
 
- #define CX_STL_SUPPORT_EXPR(expr)
+ #define CX_STL_SUPPORT_EXPR(...)
 #endif
 
 #if defined(CX_LAMBDA_BUF_ALIGN) || defined(CX_LAMBDA_BUF_SIZE)

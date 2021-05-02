@@ -1002,6 +1002,11 @@ namespace CX {
  concept Trivial = Scalar<T>
   || TriviallyCopyable<T>;
 
+ //Inheritance identity
+ //Defined by: https://en.cppreference.com/w/cpp/types/is_base_of
+ template<typename Derived, typename Base>
+ concept HasBase = __is_base_of(Derived, Base);
+
  //Function identity concepts
  //Member function identity
  //Note: Has optional return type and argument type matching

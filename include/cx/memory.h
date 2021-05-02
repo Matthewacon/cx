@@ -74,7 +74,7 @@ namespace CX {
     return *this;
    }
 
-   inline void drain() noexcept {
+   inline void drain() {
     for (auto &deferred : deferrals) {
      deferred();
     }

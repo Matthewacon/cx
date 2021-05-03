@@ -115,12 +115,12 @@ namespace CX {
  //Returns the default error handler
  inline constexpr auto defaultErrorHandler() noexcept {
   #ifdef CX_STL_SUPPORT
-   //STL exit handler
+   //STL error handler
    return +[](CXError const &err) {
     throw err;
    };
   #elif defined(CX_LIBC_SUPPORT)
-   //libc exit handler
+   //libc error handler
    return +[](CXError const &err) noexcept {
     Internal::printError("error", err);
     abort();

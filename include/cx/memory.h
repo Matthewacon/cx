@@ -8,7 +8,7 @@
 #endif
 
 namespace CX {
- //Non-allocating deferral mechanism contexts
+ //Non-allocating deferral mechanism
  template<auto N>
  struct Defer final {
  private:

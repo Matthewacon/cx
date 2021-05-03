@@ -52,7 +52,7 @@ endif()
 #All CX build flags
 set(CX_DEBUG OFF CACHE BOOL "Enable CX debug building")
 set(CX_QA OFF CACHE BOOL "Builds with sanitizers")
-set(CX_HEADER_ONLY OFF CACHE BOOL "Builds CX as a header-only library")
+set(CX_HEADER_ONLY ON CACHE BOOL "Builds CX as a header-only library")
 set(CX_UNIT_TESTS OFF CACHE BOOL "Builds CX unit tests")
 set(CX_BENCHMARKS OFF CACHE BOOL "Builds CX benchmarks")
 set(CX_COVERAGE OFF CACHE BOOL "Enable CX coverage profiling (ONLY WORKS WITH CLANG)")
@@ -76,6 +76,14 @@ if(
  message(
   FATAL_ERROR
   "'CX_COVERAGE' can only be used when building with Clang"
+ )
+endif()
+
+#Sanitize header-only flag
+if(NOT ${CX_HEADER_ONLY})
+ message(
+  FATAL_ERROR
+  "CX is currently a header-only library"
  )
 endif()
 

@@ -70,7 +70,7 @@ namespace CX::Testing {
   ExpectedTypeA const expectedValueA = 123;
   Variant<int, ExpectedTypeA> v{expectedValueA};
   EXPECT_TRUE((v.has<ExpectedTypeA>()));
-  EXPECT_NO_THROW(([&] {
+  EXPECT_NO_ERROR_BEHAVIOUR(([&] {
    EXPECT_EQ((v.get<ExpectedTypeA>()), expectedValueA);
   }()));
 
@@ -103,7 +103,7 @@ namespace CX::Testing {
   Variant<double[1234], ExpectedTypeB> v2{expectedValueB};
   EXPECT_TRUE(copyConstructorInvoked);
   EXPECT_TRUE((v2.has<ExpectedTypeB>()));
-  EXPECT_NO_THROW(([&] {
+  EXPECT_NO_ERROR_BEHAVIOUR(([&] {
    EXPECT_EQ((v2.get<ExpectedTypeB>().i), expectedValueB.i);
   }()));
  }
@@ -145,7 +145,7 @@ namespace CX::Testing {
   //Construct variant and ensure it was correctly initialized
   Variant<char8_t, ExpectedTypeA> v1{(ExpectedTypeA const&)expectedValueA};
   EXPECT_TRUE((v1.has<ExpectedTypeA>()));
-  EXPECT_NO_THROW(([&] {
+  EXPECT_NO_ERROR_BEHAVIOUR(([&] {
    EXPECT_EQ((v1.get<ExpectedTypeA>().i), expectedValueA.i);
   }()));
 
@@ -161,7 +161,7 @@ namespace CX::Testing {
   ExpectedTypeA const expectedValueA = 534;
   Variant<float, ExpectedTypeA> v1{(ExpectedTypeA&&)expectedValueA};
   EXPECT_TRUE((v1.has<ExpectedTypeA>()));
-  EXPECT_NO_THROW(([&] {
+  EXPECT_NO_ERROR_BEHAVIOUR(([&] {
    EXPECT_EQ((v1.get<ExpectedTypeA>()), expectedValueA);
   }()));
 
@@ -197,7 +197,7 @@ namespace CX::Testing {
   EXPECT_TRUE((moveConstructorInvoked));
   EXPECT_EQ(containerB.i, 0);
   EXPECT_TRUE((v2.has<ExpectedTypeB>()));
-  EXPECT_NO_THROW(([&] {
+  EXPECT_NO_ERROR_BEHAVIOUR(([&] {
    EXPECT_EQ((v2.get<ExpectedTypeB>().i), expectedValueB);
   }()));
  }
@@ -241,7 +241,7 @@ namespace CX::Testing {
   //Construct variant and ensure it was correctly initialized
   Variant<void *, char, ExpectedTypeA> v1{(ExpectedTypeA&&)temp};
   EXPECT_TRUE((v1.has<ExpectedTypeA>()));
-  EXPECT_NO_THROW(([&] {
+  EXPECT_NO_ERROR_BEHAVIOUR(([&] {
    EXPECT_EQ((v1.get<ExpectedTypeA>().f), expectedValueA);
   }()));
 
@@ -268,7 +268,7 @@ namespace CX::Testing {
   //Construct variant and ensure it was correctly initialized
   Variant<ExpectedTypeA, int (Dummy<>::*)> v1{(ExpectedTypeA const&)expectedValueA};
   EXPECT_TRUE((v1.has<ExpectedTypeA>()));
-  EXPECT_NO_THROW(([&] {
+  EXPECT_NO_ERROR_BEHAVIOUR(([&] {
    EXPECT_EQ((v1.get<ExpectedTypeA>().b.c), expectedValueA.b.c);
   }()));
  }
@@ -286,7 +286,7 @@ namespace CX::Testing {
   //Construct variant and ensure it was correctly initialized
   Variant<double, ExpectedTypeA, int> v1{(ExpectedTypeA&&)temp};
   EXPECT_TRUE((v1.has<ExpectedTypeA>()));
-  EXPECT_NO_THROW(([&] {
+  EXPECT_NO_ERROR_BEHAVIOUR(([&] {
    EXPECT_EQ(
     (memcmp(&v1.get<ExpectedTypeA>().data, &expectedValueA, sizeof(float) * 123)),
     0
@@ -301,7 +301,7 @@ namespace CX::Testing {
   //Construct first variant and ensure it was correctly initialized
   Variant<char, int> v1{expectedValue};
   EXPECT_TRUE((v1.has<ExpectedType>()));
-  EXPECT_NO_THROW(([&] {
+  EXPECT_NO_ERROR_BEHAVIOUR(([&] {
    EXPECT_EQ((v1.get<ExpectedType>()), expectedValue);
   }()));
 
@@ -310,7 +310,7 @@ namespace CX::Testing {
 
   //Ensure second variant was correctly initialized
   EXPECT_TRUE((v2.has<ExpectedType>()));
-  EXPECT_NO_THROW(([&] {
+  EXPECT_NO_ERROR_BEHAVIOUR(([&] {
    EXPECT_EQ((v2.get<ExpectedType>()), expectedValue);
   }()));
  }
@@ -322,7 +322,7 @@ namespace CX::Testing {
   //Construct first variant and ensure it was initialized correctly
   Variant<double, char, short> v1{expectedValue};
   EXPECT_TRUE((v1.has<ExpectedType>()));
-  EXPECT_NO_THROW(([&] {
+  EXPECT_NO_ERROR_BEHAVIOUR(([&] {
    EXPECT_EQ((v1.get<ExpectedType>()), expectedValue);
   }()));
 
@@ -331,14 +331,14 @@ namespace CX::Testing {
 
   //Ensure first variant was destructed
   EXPECT_FALSE((v1.has<ExpectedType>()));
-  EXPECT_THROW(
+  EXPECT_ERROR_BEHAVIOUR(
    ([&] { v1.get<ExpectedType>(); }()),
-   VariantTypeError
+   CXError 
   );
 
   //Ensure second variant was correctly initialized
   EXPECT_TRUE((v2.has<ExpectedType>()));
-  EXPECT_NO_THROW(([&] {
+  EXPECT_NO_ERROR_BEHAVIOUR(([&] {
    EXPECT_EQ((v2.get<ExpectedType>()), expectedValue);
   }()));
  }
@@ -373,7 +373,7 @@ namespace CX::Testing {
   //Construct variant and ensure it was correctly initialized
   Variant<ExpectedTypeA, char, void (Dummy<>::*)()> v1{(ExpectedTypeA const&)expectedValueA};
   EXPECT_TRUE((v1.has<ExpectedTypeA>()));
-  EXPECT_NO_THROW(([&] {
+  EXPECT_NO_ERROR_BEHAVIOUR(([&] {
    EXPECT_EQ(
     (memcmp(&v1.get<ExpectedTypeA>(), &expectedValueA, sizeof(ArrayElementType<ExpectedTypeA>) * 2)),
     0
@@ -424,7 +424,7 @@ namespace CX::Testing {
   //Construct variant and ensure it was correctly initialized
   Variant<float[12], ExpectedTypeA> v1{(ExpectedTypeA const&)expectedValueA};
   EXPECT_TRUE((v1.has<ExpectedTypeA>()));
-  EXPECT_NO_THROW(([&] {
+  EXPECT_NO_ERROR_BEHAVIOUR(([&] {
    EXPECT_EQ(
     (memcmp(&v1.get<ExpectedTypeA>(), &expectedValueA, sizeof(ArrayElementType<ExpectedTypeA>) * 3)),
     0
@@ -470,7 +470,7 @@ namespace CX::Testing {
   //Construct variant and ensure it was correctly initialized
   Variant<int (Dummy<>::*), ExpectedTypeA> v1{(ExpectedTypeA&&)temp};
   EXPECT_TRUE((v1.has<ExpectedTypeA>()));
-  EXPECT_NO_THROW(([&] {
+  EXPECT_NO_ERROR_BEHAVIOUR(([&] {
    EXPECT_EQ(
     (memcmp(&v1.get<ExpectedTypeA>(), &expectedValueA, sizeof(ArrayElementType<ExpectedTypeA>) * 5)),
     0
@@ -528,7 +528,7 @@ namespace CX::Testing {
   //Construct variant and ensure it was correctly initialized
   Variant<ExpectedTypeA> v1{(ExpectedTypeA&&)temp};
   EXPECT_TRUE((v1.has<ExpectedTypeA>()));
-  EXPECT_NO_THROW(([&] {
+  EXPECT_NO_ERROR_BEHAVIOUR(([&] {
    EXPECT_EQ(
     (memcmp(&v1.get<ExpectedTypeA>(), &expectedValueA, sizeof(ArrayElementType<ExpectedTypeA>) * 2)),
     0
@@ -555,7 +555,7 @@ namespace CX::Testing {
   //Construct variant and ensure it was correctly initialized
   Variant<ExpectedTypeA, float> v1{(ExpectedTypeA const&)expectedValueA};
   EXPECT_TRUE((v1.has<ExpectedTypeA>()));
-  EXPECT_NO_THROW(([&] {
+  EXPECT_NO_ERROR_BEHAVIOUR(([&] {
    EXPECT_EQ((v1.get<ExpectedTypeA>().f), expectedValueA.f);
   }()));
  }
@@ -569,7 +569,7 @@ namespace CX::Testing {
   //Construct variant and ensure it was correctly initialized
   Variant<ExpectedTypeA, float> v1{(ExpectedTypeA&&)expectedValueA};
   EXPECT_TRUE((v1.has<ExpectedTypeA>()));
-  EXPECT_NO_THROW(([&] {
+  EXPECT_NO_ERROR_BEHAVIOUR(([&] {
    EXPECT_EQ((v1.get<ExpectedTypeA>().d), expectedValueA.d);
   }()));
  }
@@ -582,7 +582,7 @@ namespace CX::Testing {
   Variant<int, ExpectedTypeA, long, bool> v1;
   v1 = (ExpectedTypeA&)expectedValueA;
   EXPECT_TRUE((v1.has<ExpectedTypeA>()));
-  EXPECT_NO_THROW(([&] {
+  EXPECT_NO_ERROR_BEHAVIOUR(([&] {
    EXPECT_EQ((v1.get<ExpectedTypeA>()), expectedValueA);
   }()));
 
@@ -619,7 +619,7 @@ namespace CX::Testing {
   Variant<char, int, float, ExpectedTypeB> v2{(ExpectedTypeB&)expectedValueB};
   EXPECT_TRUE(copyAssignmentOperatorInvoked);
   EXPECT_TRUE((v2.has<ExpectedTypeB>()));
-  EXPECT_NO_THROW(([&] {
+  EXPECT_NO_ERROR_BEHAVIOUR(([&] {
    EXPECT_EQ((v2.get<ExpectedTypeB>().d), expectedValueB.d);
   }()));
  }
@@ -662,7 +662,7 @@ namespace CX::Testing {
   Variant<char8_t, ExpectedTypeA> v1;
   v1 = (ExpectedTypeA const&)expectedValueA;
   EXPECT_TRUE((v1.has<ExpectedTypeA>()));
-  EXPECT_NO_THROW(([&] {
+  EXPECT_NO_ERROR_BEHAVIOUR(([&] {
    //Note can't use `EXPECT_EQ` since gtest does not support
    //extended char types in its printer specializations
    EXPECT_TRUE((v1.get<ExpectedTypeA>().c == expectedValueA.c));
@@ -681,7 +681,7 @@ namespace CX::Testing {
   Variant<float, ExpectedTypeA> v1;
   v1 = (ExpectedTypeA&&)expectedValueA;
   EXPECT_TRUE((v1.has<ExpectedTypeA>()));
-  EXPECT_NO_THROW(([&] {
+  EXPECT_NO_ERROR_BEHAVIOUR(([&] {
    EXPECT_EQ((v1.get<ExpectedTypeA>()), expectedValueA);
   }()));
 
@@ -719,7 +719,7 @@ namespace CX::Testing {
   EXPECT_TRUE((moveAssignmentOperatorInvoked));
   EXPECT_EQ((containerB.f), 0);
   EXPECT_TRUE((v2.has<ExpectedTypeB>()));
-  EXPECT_NO_THROW(([&] {
+  EXPECT_NO_ERROR_BEHAVIOUR(([&] {
    EXPECT_EQ((v2.get<ExpectedTypeB>().f), expectedValueB);
   }()));
  }
@@ -764,7 +764,7 @@ namespace CX::Testing {
   Variant<double[123], ExpectedTypeA> v1;
   v1 = (ExpectedTypeA&&)temp;
   EXPECT_TRUE((v1.has<ExpectedTypeA>()));
-  EXPECT_NO_THROW(([&] {
+  EXPECT_NO_ERROR_BEHAVIOUR(([&] {
    EXPECT_EQ((v1.get<ExpectedTypeA>().s), expectedValueA);
   }()));
 
@@ -790,7 +790,7 @@ namespace CX::Testing {
   Variant<ExpectedTypeA, int (Dummy<>::*)> v1;
   v1 = (ExpectedTypeA const&)expectedValueA;
   EXPECT_TRUE((v1.has<ExpectedTypeA>()));
-  EXPECT_NO_THROW(([&] {
+  EXPECT_NO_ERROR_BEHAVIOUR(([&] {
    EXPECT_TRUE((v1.get<ExpectedTypeA>().c == expectedValueA.c));
   }()));
  }
@@ -809,7 +809,7 @@ namespace CX::Testing {
   Variant<double, ExpectedTypeA, int> v1;
   v1 = (ExpectedTypeA&&)temp;
   EXPECT_TRUE((v1.has<ExpectedTypeA>()));
-  EXPECT_NO_THROW(([&] {
+  EXPECT_NO_ERROR_BEHAVIOUR(([&] {
    EXPECT_EQ(
     (memcmp(&v1.get<ExpectedTypeA>().data, &expectedValueA, sizeof(long double) * 123)),
     0
@@ -824,7 +824,7 @@ namespace CX::Testing {
   //Construct first variant and ensure it was correctly initialized
   Variant<long long, ExpectedType, short> v1{expectedValue};
   EXPECT_TRUE((v1.has<ExpectedType>()));
-  EXPECT_NO_THROW(([&] {
+  EXPECT_NO_ERROR_BEHAVIOUR(([&] {
    EXPECT_EQ((v1.get<ExpectedType>()), expectedValue);
   }()));
 
@@ -832,7 +832,7 @@ namespace CX::Testing {
   Variant<ExpectedType, short, long long> v2;
   v2 = (decltype(v1) const&)v1;
   EXPECT_TRUE((v2.has<ExpectedType>()));
-  EXPECT_NO_THROW(([&] {
+  EXPECT_NO_ERROR_BEHAVIOUR(([&] {
    EXPECT_EQ((v2.get<ExpectedType>()), expectedValue);
   }()));
  }
@@ -844,7 +844,7 @@ namespace CX::Testing {
   //Construct first variant and ensure it was correctly initialized
   Variant<bool, ExpectedType, int[1]> v1{expectedValue};
   EXPECT_TRUE((v1.has<ExpectedType>()));
-  EXPECT_NO_THROW(([&] {
+  EXPECT_NO_ERROR_BEHAVIOUR(([&] {
    EXPECT_EQ((v1.get<ExpectedType>()), expectedValue);
   }()));
 
@@ -853,16 +853,16 @@ namespace CX::Testing {
 
   //Ensure first variant was destructed
   EXPECT_FALSE((v1.has<ExpectedType>()));
-  EXPECT_THROW(
+  EXPECT_ERROR_BEHAVIOUR(
    ([&] {
     v1.get<ExpectedType>();
    }()),
-   VariantTypeError
+   CXError
   );
 
   //Ensure second variant was corretly initialized
   EXPECT_TRUE((v2.has<ExpectedType>()));
-  EXPECT_NO_THROW(([&] {
+  EXPECT_NO_ERROR_BEHAVIOUR(([&] {
    EXPECT_EQ((v2.get<ExpectedType>()), expectedValue);
   }()));
  }
@@ -898,7 +898,7 @@ namespace CX::Testing {
   Variant<ExpectedTypeA, char, void (Dummy<>::*)()> v1;
   v1 = (ExpectedTypeA const&)expectedValueA;
   EXPECT_TRUE((v1.has<ExpectedTypeA>()));
-  EXPECT_NO_THROW(([&] {
+  EXPECT_NO_ERROR_BEHAVIOUR(([&] {
    EXPECT_EQ(
     (memcmp(&v1.get<ExpectedTypeA>(), &expectedValueA, sizeof(ArrayElementType<ExpectedTypeA>) * 2)),
     0
@@ -950,7 +950,7 @@ namespace CX::Testing {
   Variant<float[12], ExpectedTypeA> v1;
   v1 = (ExpectedTypeA const&)expectedValueA;
   EXPECT_TRUE((v1.has<ExpectedTypeA>()));
-  EXPECT_NO_THROW(([&] {
+  EXPECT_NO_ERROR_BEHAVIOUR(([&] {
    EXPECT_EQ(
     (memcmp(&v1.get<ExpectedTypeA>(), &expectedValueA, sizeof(ArrayElementType<ExpectedTypeA>) * 3)),
     0
@@ -997,7 +997,7 @@ namespace CX::Testing {
   Variant<int (Dummy<>::*), ExpectedTypeA> v1;
   v1 = (ExpectedTypeA&&)temp;
   EXPECT_TRUE((v1.has<ExpectedTypeA>()));
-  EXPECT_NO_THROW(([&] {
+  EXPECT_NO_ERROR_BEHAVIOUR(([&] {
    EXPECT_EQ(
     (memcmp(&v1.get<ExpectedTypeA>(), &expectedValueA, sizeof(ArrayElementType<ExpectedTypeA>) * 5)),
     0
@@ -1056,7 +1056,7 @@ namespace CX::Testing {
   Variant<ExpectedTypeA> v1;
   v1 = (ExpectedTypeA&&)temp;
   EXPECT_TRUE((v1.has<ExpectedTypeA>()));
-  EXPECT_NO_THROW(([&] {
+  EXPECT_NO_ERROR_BEHAVIOUR(([&] {
    EXPECT_EQ(
     (memcmp(&v1.get<ExpectedTypeA>(), &expectedValueA, sizeof(ArrayElementType<ExpectedTypeA>) * 2)),
     0
@@ -1085,7 +1085,7 @@ namespace CX::Testing {
   Variant<ExpectedTypeA, float> v1;
   v1 = (ExpectedTypeA const&)expectedValueA;
   EXPECT_TRUE((v1.has<ExpectedTypeA>()));
-  EXPECT_NO_THROW(([&] {
+  EXPECT_NO_ERROR_BEHAVIOUR(([&] {
    EXPECT_EQ((v1.get<ExpectedTypeA>().f), expectedValueA.f);
   }()));
  }
@@ -1100,7 +1100,7 @@ namespace CX::Testing {
   Variant<ExpectedTypeA, float> v1;
   v1 = (ExpectedTypeA&&)expectedValueA;
   EXPECT_TRUE((v1.has<ExpectedTypeA>()));
-  EXPECT_NO_THROW(([&] {
+  EXPECT_NO_ERROR_BEHAVIOUR(([&] {
    EXPECT_EQ((v1.get<ExpectedTypeA>().d), expectedValueA.d);
   }()));
  }
@@ -1182,12 +1182,12 @@ namespace CX::Testing {
   ExpectedType const value = "Hello world!";
   Variant<double, bool, ExpectedType, float> v{value};
   EXPECT_TRUE((v.has<ExpectedType>()));
-  EXPECT_NO_THROW(([&] {
+  EXPECT_NO_ERROR_BEHAVIOUR(([&] {
    EXPECT_STREQ((v.get<ExpectedType>()), value);
   }()));
 
   //Ensure returned reference is correct
-  EXPECT_NO_THROW(([&] {
+  EXPECT_NO_ERROR_BEHAVIOUR(([&] {
    auto &ref = v.get<ExpectedType>();
    memcpy(&ref, expectedValue, strlen(expectedValue));
    EXPECT_STREQ(ref, expectedValue);
@@ -1218,7 +1218,7 @@ namespace CX::Testing {
   //Construct variant and ensure it was correctly initialized
   Variant<ExpectedType, char, float, bool> v{A{expectedValue}};
   EXPECT_TRUE((v.has<ExpectedType>()));
-  EXPECT_NO_THROW(([&] {
+  EXPECT_NO_ERROR_BEHAVIOUR(([&] {
    EXPECT_EQ((v.get<ExpectedType>().i), expectedValue);
   }()));
 
@@ -1226,7 +1226,7 @@ namespace CX::Testing {
   copyConstructorInvoked = false;
 
   //Drain varaint and ensure it was destructed
-  EXPECT_NO_THROW(([&] {
+  EXPECT_NO_ERROR_BEHAVIOUR(([&] {
    auto value = v.drain<ExpectedType>();
 
    //Ensure returned value matches the expected value
@@ -1262,7 +1262,7 @@ namespace CX::Testing {
   //Construct variant and ensure it was correctly initialized
   Variant<double, short, char, void *, ExpectedType> v{A{expectedValue}};
   EXPECT_TRUE((v.has<ExpectedType>()));
-  EXPECT_NO_THROW(([&] {
+  EXPECT_NO_ERROR_BEHAVIOUR(([&] {
    EXPECT_EQ((v.get<ExpectedType>().f), expectedValue);
   }()));
 
@@ -1270,7 +1270,7 @@ namespace CX::Testing {
   moveAssignmentOperatorInvoked = false;
 
   //Drain variant and ensure it was destructed
-  EXPECT_NO_THROW(([&] {
+  EXPECT_NO_ERROR_BEHAVIOUR(([&] {
    A value;
    v.rdrain(value);
 

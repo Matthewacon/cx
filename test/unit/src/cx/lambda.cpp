@@ -69,11 +69,11 @@ namespace CX::Testing {
   EXPECT_FALSE(l);
 
   //Invoking an empty lambda should throw an exception
-  EXPECT_THROW(
+  EXPECT_ERROR_BEHAVIOUR(
    ([&] {
     l();
    }()),
-   UninitializedLambdaError
+   CXError
   );
  }
 
@@ -101,7 +101,7 @@ namespace CX::Testing {
 
   //Invoke lambda, ensure all values match expected and ensure
   //lambda was actually invoked
-  EXPECT_NO_THROW(([&] {
+  EXPECT_NO_ERROR_BEHAVIOUR(([&] {
    auto returned = l(iExpected, cExpected);
    EXPECT_TRUE(invoked);
    EXPECT_FLOAT_EQ(returned, returnExpected);
@@ -130,7 +130,7 @@ namespace CX::Testing {
 
   //Invoke lambda, ensure all values match expected and ensure
   //lambda was actually invoked
-  EXPECT_NO_FATAL_FAILURE(([&] {
+  EXPECT_NO_EXIT_BEHAVIOUR(([&] {
    auto returned = l(dExpected, cExpected);
    EXPECT_TRUE(invoked);
    EXPECT_FLOAT_EQ(returned, returnExpected);
@@ -199,7 +199,7 @@ namespace CX::Testing {
 
   //Invoke lambda, ensure all values match expected and ensure
   //lambda was actually invoked
-  EXPECT_NO_THROW(([&] {
+  EXPECT_NO_ERROR_BEHAVIOUR(([&] {
    auto returned = l(vExpected, dExpected, iExpected, varargs[0], varargs[1], varargs[2], varargs[3]);
    EXPECT_TRUE(invoked);
    EXPECT_TRUE(returned == returnExpected);
@@ -238,7 +238,7 @@ namespace CX::Testing {
 
   //Invoke lambda, ensure all values match expected and ensure
   //lambda was actually invoked
-  EXPECT_NO_FATAL_FAILURE(([&] {
+  EXPECT_NO_EXIT_BEHAVIOUR(([&] {
    auto returned = l(vExpected, dExpected, iExpected, varargs[0], varargs[1], varargs[2], varargs[3]);
    EXPECT_TRUE(invoked);
    EXPECT_TRUE(returned == returnExpected);
@@ -263,7 +263,7 @@ namespace CX::Testing {
 
   //Invoke lambda, ensure all values match expected and ensure
   //lambda was actually invoked
-  EXPECT_NO_THROW(([&] {
+  EXPECT_NO_ERROR_BEHAVIOUR(([&] {
    auto returned = l();
    EXPECT_TRUE(invoked);
    EXPECT_EQ(returned, returnExpected);
@@ -290,7 +290,7 @@ namespace CX::Testing {
 
   //Invoke lambda, ensure all values match expected and ensure
   //lambda was actually invoked
-  EXPECT_NO_FATAL_FAILURE(([&] {
+  EXPECT_NO_EXIT_BEHAVIOUR(([&] {
    auto returned = l(sExpected);
    EXPECT_TRUE(invoked);
    EXPECT_EQ(returned, returnExpected);
@@ -325,7 +325,7 @@ namespace CX::Testing {
 
   //Invoke lambda, ensure all values match expected and ensure
   //lambda was actually invoked
-  EXPECT_NO_THROW(([&] {
+  EXPECT_NO_ERROR_BEHAVIOUR(([&] {
    auto returned = l(d1Expected, d2Expected, varargs[0], varargs[1]);
    EXPECT_TRUE(invoked);
    EXPECT_TRUE(returned == returnExpected);
@@ -359,7 +359,7 @@ namespace CX::Testing {
 
   //Invoke lambda, ensure all values match expected and ensure
   //lambda was actually invoked
-  EXPECT_NO_FATAL_FAILURE(([&] {
+  EXPECT_NO_EXIT_BEHAVIOUR(([&] {
    auto returned = l(
     iExpected,
     varargs[0],
@@ -389,7 +389,7 @@ namespace CX::Testing {
 
   //Invoke lambda, ensure all values match expected and ensure
   //lambda was actually invoked
-  EXPECT_NO_THROW(([&] {
+  EXPECT_NO_ERROR_BEHAVIOUR(([&] {
    l();
    EXPECT_TRUE(invoked);
   }()));
@@ -417,7 +417,7 @@ namespace CX::Testing {
 
   //Invoke lambda, ensure all values match expected and ensure
   //lambda was actually invoked
-  EXPECT_NO_FATAL_FAILURE(([&] {
+  EXPECT_NO_EXIT_BEHAVIOUR(([&] {
    auto returned = l(iExpected, fExpected);
    EXPECT_TRUE(invoked);
    EXPECT_EQ(returned, returnExpected);
@@ -452,7 +452,7 @@ namespace CX::Testing {
 
   //Invoke lambda, ensure all values match expected and ensure
   //lambda was actually invoked
-  EXPECT_NO_THROW(([&] {
+  EXPECT_NO_ERROR_BEHAVIOUR(([&] {
    auto returned = l(
     iExpected,
     dExpected,
@@ -489,7 +489,7 @@ namespace CX::Testing {
 
   //Invoke lambda, ensure all values match expected and ensure
   //lambda was actually invoked
-  EXPECT_NO_FATAL_FAILURE(([&] {
+  EXPECT_NO_EXIT_BEHAVIOUR(([&] {
    l(
     iExpected,
     varargs[0],
@@ -506,21 +506,21 @@ namespace CX::Testing {
   //Construct empty lambda and ensure it was correctly initialized
   Lambda<int (float)> l1;
   EXPECT_FALSE(l1);
-  EXPECT_THROW(
+  EXPECT_ERROR_BEHAVIOUR(
    ([&] {
     l1(0);
    }()),
-   UninitializedLambdaError
+   CXError
   );
 
   //Copy construct lambda and ensure it was correctly initialized
   Lambda l2{(decltype(l1) const&)l1};
   EXPECT_FALSE(l2);
-  EXPECT_THROW(
+  EXPECT_ERROR_BEHAVIOUR(
    ([&] {
     l2(0);
    }()),
-   UninitializedLambdaError
+   CXError
   );
 
   //Test with initialized lambda
@@ -539,7 +539,7 @@ namespace CX::Testing {
    return returnExpected;
   }};
   EXPECT_TRUE(l3);
-  EXPECT_NO_THROW(([&] {
+  EXPECT_NO_ERROR_BEHAVIOUR(([&] {
    auto returned = l3(fExpected);
    EXPECT_EQ(returned, returnExpected);
    EXPECT_EQ(invoked, 1);
@@ -548,7 +548,7 @@ namespace CX::Testing {
   //Copy construct lambda and ensure it was correctly initialized
   Lambda l4{(decltype(l3) const&)l3};
   EXPECT_TRUE(l4);
-  EXPECT_NO_THROW(([&] {
+  EXPECT_NO_ERROR_BEHAVIOUR(([&] {
    auto returned = l4(fExpected);
    EXPECT_EQ(returned, returnExpected);
    EXPECT_EQ(invoked, 2);
@@ -560,21 +560,21 @@ namespace CX::Testing {
   //Construct empty lambda and ensure it was correctly initialized
   Lambda<void () noexcept> l1;
   EXPECT_FALSE(l1);
-  EXPECT_DEATH(
+  EXPECT_EXIT_BEHAVIOUR(
    ([&] {
     l1();
    }()),
-   "UninitializedLambdaError"
+   ".*Lambda is uninitialized.*"
   );
 
   //Copy construct lambda and ensure it was correctly initialized
   Lambda l2{(decltype(l1) const&)l1};
   EXPECT_FALSE(l2);
-  EXPECT_DEATH(
+  EXPECT_EXIT_BEHAVIOUR(
    ([&] {
     l2();
    }()),
-   "UninitializedLambdaError"
+   ".*Lambda is uninitialized.*"
   );
 
   //Test with initialized lambda
@@ -588,7 +588,7 @@ namespace CX::Testing {
    invoked++;
   }};
   EXPECT_TRUE(l3);
-  EXPECT_NO_FATAL_FAILURE(([&] {
+  EXPECT_NO_EXIT_BEHAVIOUR(([&] {
    l3();
    EXPECT_EQ(invoked, 1);
   }()));
@@ -596,7 +596,7 @@ namespace CX::Testing {
   //Copy construct lambda and ensure it was correctly initialized
   Lambda l4{(decltype(l3) const&)l3};
   EXPECT_TRUE(l4);
-  EXPECT_NO_FATAL_FAILURE(([&] {
+  EXPECT_NO_EXIT_BEHAVIOUR(([&] {
    l4();
    EXPECT_EQ(invoked, 2);
   }()));
@@ -607,21 +607,21 @@ namespace CX::Testing {
   //Construct empty lambda and ensure it was correctly initialized
   Lambda<void (...)> l1;
   EXPECT_FALSE(l1);
-  EXPECT_THROW(
+  EXPECT_ERROR_BEHAVIOUR(
    ([&] {
     l1(0);
    }()),
-   UninitializedLambdaError
+   CXError
   );
 
   //Copy construct lambda and ensure it was correctly initialized
   Lambda l2{(decltype(l1) const&)l1};
   EXPECT_FALSE(l2);
-  EXPECT_THROW(
+  EXPECT_ERROR_BEHAVIOUR(
    ([&] {
     l2(0);
    }()),
-   UninitializedLambdaError
+   CXError
   );
 
   //Test with initialized lambda
@@ -646,7 +646,7 @@ namespace CX::Testing {
    return returnExpected;
   }};
   EXPECT_TRUE(l3);
-  EXPECT_NO_THROW(([&] {
+  EXPECT_NO_ERROR_BEHAVIOUR(([&] {
    auto returned = l3(
     iExpected,
     varargs[0],
@@ -664,7 +664,7 @@ namespace CX::Testing {
   //Copy construct lambda and ensure it was correctly initialized
   Lambda l4{(decltype(l3) const&)l3};
   EXPECT_TRUE(l4);
-  EXPECT_NO_THROW(([&] {
+  EXPECT_NO_ERROR_BEHAVIOUR(([&] {
    auto returned = l4(
     iExpected,
     varargs[0],
@@ -685,21 +685,21 @@ namespace CX::Testing {
   //Construct empty lambda and ensure it was correctly initialized
   Lambda<void (...) noexcept> l1;
   EXPECT_FALSE(l1);
-  EXPECT_DEATH(
+  EXPECT_EXIT_BEHAVIOUR(
    ([&] {
     l1(0);
    }()),
-   "UninitializedLambdaError"
+   ".*Lambda is uninitialized.*"
   );
 
   //Copy construct lambda and ensure it was correctly initialized
   Lambda l2{(decltype(l1) const&)l1};
   EXPECT_FALSE(l2);
-  EXPECT_DEATH(
+  EXPECT_EXIT_BEHAVIOUR(
    ([&] {
     l2(0);
    }()),
-   "UninitializedLambdaError"
+   ".*Lambda is uninitialized.*"
   );
 
   //Test with initialized lambda
@@ -724,7 +724,7 @@ namespace CX::Testing {
    return returnExpected;
   }};
   EXPECT_TRUE(l3);
-  EXPECT_NO_FATAL_FAILURE(([&] {
+  EXPECT_NO_EXIT_BEHAVIOUR(([&] {
    auto returned = l3(
     iExpected,
     varargs[0],
@@ -742,7 +742,7 @@ namespace CX::Testing {
   //Copy construct lambda and ensure it was correctly initialized
   Lambda l4{(decltype(l3) const&)l3};
   EXPECT_TRUE(l4);
-  EXPECT_NO_FATAL_FAILURE(([&] {
+  EXPECT_NO_EXIT_BEHAVIOUR(([&] {
    auto returned = l4(
     iExpected,
     varargs[0],
@@ -763,30 +763,30 @@ namespace CX::Testing {
   //Construct empty lambda and ensure it was correctly initialized
   Lambda<void ()> l1;
   EXPECT_FALSE(l1);
-  EXPECT_THROW(
+  EXPECT_ERROR_BEHAVIOUR(
    ([&] {
     l1();
    }()),
-   UninitializedLambdaError
+   CXError
   );
 
   //Move construct lambda and ensure it was correctly initialized
   Lambda l2{(decltype(l1)&&)l1};
   EXPECT_FALSE(l2);
-  EXPECT_THROW(
+  EXPECT_ERROR_BEHAVIOUR(
    ([&] {
     l2();
    }()),
-   UninitializedLambdaError
+   CXError
   );
 
   //Ensure moved lambda is uninitialized
   EXPECT_FALSE(l1);
-  EXPECT_THROW(
+  EXPECT_ERROR_BEHAVIOUR(
    ([&] {
     l1();
    }()),
-   UninitializedLambdaError
+   CXError
   );
 
   //Test with initialized lambda
@@ -805,7 +805,7 @@ namespace CX::Testing {
    return returnExpected;
   }};
   EXPECT_TRUE(l3);
-  EXPECT_NO_THROW(([&] {
+  EXPECT_NO_ERROR_BEHAVIOUR(([&] {
    auto returned = l3(fExpected);
    EXPECT_EQ(returned, returnExpected);
    EXPECT_EQ(invoked, 1);
@@ -814,7 +814,7 @@ namespace CX::Testing {
   //Move construct lambda and ensure it was correctly initialized
   Lambda l4{(decltype(l3)&&)l3};
   EXPECT_TRUE(l4);
-  EXPECT_NO_THROW(([&] {
+  EXPECT_NO_ERROR_BEHAVIOUR(([&] {
    auto returned = l4(fExpected);
    EXPECT_EQ(returned, returnExpected);
    EXPECT_EQ(invoked, 2);
@@ -822,11 +822,11 @@ namespace CX::Testing {
 
   //Ensure moved lambda is uninitialized
   EXPECT_FALSE(l3);
-  EXPECT_THROW(
+  EXPECT_ERROR_BEHAVIOUR(
    ([&] {
     l3(1254);
    }()),
-   UninitializedLambdaError
+   CXError
   );
   EXPECT_EQ(invoked, 2);
  }
@@ -836,30 +836,30 @@ namespace CX::Testing {
   //Construct empty lambda and ensure it was correctly initialized
   Lambda<void () noexcept> l1;
   EXPECT_FALSE(l1);
-  EXPECT_DEATH(
+  EXPECT_EXIT_BEHAVIOUR(
    ([&] {
     l1();
    }()),
-   "UninitializedLambdaError"
+   ".*Lambda is uninitialized.*"
   );
 
   //Move construct lambda and ensure it was correctly initialized
   Lambda l2{(decltype(l1)&&)l1};
   EXPECT_FALSE(l2);
-  EXPECT_DEATH(
+  EXPECT_EXIT_BEHAVIOUR(
    ([&] {
     l2();
    }()),
-   "UninitializedLambdaError"
+   ".*Lambda is uninitialized.*"
   );
 
   //Ensure moved lambda is uninitialized
   EXPECT_FALSE(l1);
-  EXPECT_DEATH(
+  EXPECT_EXIT_BEHAVIOUR(
    ([&] {
     l1();
    }()),
-   "UninitializedLambdaError"
+   ".*Lambda is uninitialized.*"
   );
 
   //Test with initialized lambda
@@ -880,7 +880,7 @@ namespace CX::Testing {
    return returnExpected;
   }};
   EXPECT_TRUE(l3);
-  EXPECT_NO_FATAL_FAILURE(([&] {
+  EXPECT_NO_EXIT_BEHAVIOUR(([&] {
    auto returned = l3(fExpected, dExpected);
    EXPECT_EQ(returned, returnExpected);
    EXPECT_EQ(invoked, 1);
@@ -889,7 +889,7 @@ namespace CX::Testing {
   //Move construct lambda and ensure it was correctly initialized
   Lambda l4{(decltype(l3)&&)l3};
   EXPECT_TRUE(l4);
-  EXPECT_NO_FATAL_FAILURE(([&] {
+  EXPECT_NO_EXIT_BEHAVIOUR(([&] {
    auto returned = l4(fExpected, dExpected);
    EXPECT_EQ(returned, returnExpected);
    EXPECT_EQ(invoked, 2);
@@ -897,11 +897,11 @@ namespace CX::Testing {
 
   //Ensure moved lambda is uninitialized
   EXPECT_FALSE(l3);
-  EXPECT_DEATH(
+  EXPECT_EXIT_BEHAVIOUR(
    ([&] {
     l3(-1, 1);
    }()),
-   "UninitializedLambdaError"
+   ".*Lambda is uninitialized.*"
   );
   EXPECT_EQ(invoked, 2);
  }
@@ -911,30 +911,30 @@ namespace CX::Testing {
   //Construct empty lambda and ensure it was correctly initialized
   Lambda<void (...)> l1;
   EXPECT_FALSE(l1);
-  EXPECT_THROW(
+  EXPECT_ERROR_BEHAVIOUR(
    ([&] {
     l1(0);
    }()),
-   UninitializedLambdaError
+   CXError
   );
 
   //Move construct lambda and ensure it was correctly initialized
   Lambda l2{(decltype(l1)&&)l1};
   EXPECT_FALSE(l2);
-  EXPECT_THROW(
+  EXPECT_ERROR_BEHAVIOUR(
    ([&] {
     l2(0);
    }()),
-   UninitializedLambdaError
+   CXError
   );
 
   //Ensure moved lambda is uninitialized
   EXPECT_FALSE(l1);
-  EXPECT_THROW(
+  EXPECT_ERROR_BEHAVIOUR(
    ([&] {
     l1(0);
    }()),
-   UninitializedLambdaError
+   CXError
   );
 
   //Test with initialized lambda
@@ -959,7 +959,7 @@ namespace CX::Testing {
    return returnExpected;
   }};
   EXPECT_TRUE(l3);
-  EXPECT_NO_THROW(([&] {
+  EXPECT_NO_ERROR_BEHAVIOUR(([&] {
    auto returned = l3(
     iExpected,
     varargs[0],
@@ -977,7 +977,7 @@ namespace CX::Testing {
   //Move construct lambda and ensure it was correctly initialized
   Lambda l4{(decltype(l3)&&)l3};
   EXPECT_TRUE(l4);
-  EXPECT_NO_THROW(([&] {
+  EXPECT_NO_ERROR_BEHAVIOUR(([&] {
    auto returned = l4(
     iExpected,
     varargs[0],
@@ -993,11 +993,11 @@ namespace CX::Testing {
   }()));
 
   //Ensure moved lambda is uninitialized
-  EXPECT_THROW(
+  EXPECT_ERROR_BEHAVIOUR(
    ([&] {
     l3(0);
    }()),
-   UninitializedLambdaError
+   CXError
   );
  }
 
@@ -1006,30 +1006,30 @@ namespace CX::Testing {
   //Construct empty lambda and ensure it was correctly initialized
   Lambda<void (...) noexcept> l1;
   EXPECT_FALSE(l1);
-  EXPECT_DEATH(
+  EXPECT_EXIT_BEHAVIOUR(
    ([&] {
     l1(0);
    }()),
-   "UninitializedLambdaError"
+   ".*Lambda is uninitialized.*"
   );
 
   //Move construct lambda and ensure it was correctly initialized
   Lambda l2{(decltype(l1)&&)l1};
   EXPECT_FALSE(l2);
-  EXPECT_DEATH(
+  EXPECT_EXIT_BEHAVIOUR(
    ([&] {
     l2(0);
    }()),
-   "UninitializedLambdaError"
+   ".*Lambda is uninitialized.*"
   );
 
   //Ensure moved lambda is unitialized
   EXPECT_FALSE(l1);
-  EXPECT_DEATH(
+  EXPECT_EXIT_BEHAVIOUR(
    ([&] {
     l1(0);
    }()),
-   "UninitializedLambdaError"
+   ".*Lambda is uninitialized.*"
   );
 
   //Test with initialized lambda
@@ -1054,7 +1054,7 @@ namespace CX::Testing {
    return returnExpected;
   }};
   EXPECT_TRUE(l3);
-  EXPECT_NO_FATAL_FAILURE(([&] {
+  EXPECT_NO_EXIT_BEHAVIOUR(([&] {
    auto returned = l3(
     iExpected,
     varargs[0],
@@ -1072,7 +1072,7 @@ namespace CX::Testing {
   //Move construct lambda and ensure it was correctly initialized
   Lambda l4{(decltype(l3)&&)l3};
   EXPECT_TRUE(l4);
-  EXPECT_NO_FATAL_FAILURE(([&] {
+  EXPECT_NO_EXIT_BEHAVIOUR(([&] {
    auto returned = l4(
     iExpected,
     varargs[0],
@@ -1088,11 +1088,11 @@ namespace CX::Testing {
   }()));
 
   //Ensure moved lambda is uninitialized
-  EXPECT_DEATH(
+  EXPECT_EXIT_BEHAVIOUR(
    ([&] {
     l3(0);
    }()),
-   "UninitializedLambdaError"
+   ".*Lambda is uninitialized.*"
   );
  }
 
@@ -1117,7 +1117,7 @@ namespace CX::Testing {
 
   //Invoke lambda, ensure all values match expected and ensure
   //lambda was actually invoked
-  EXPECT_NO_FATAL_FAILURE(([&] {
+  EXPECT_NO_EXIT_BEHAVIOUR(([&] {
    auto returned = l(iExpected, cExpected);
    EXPECT_TRUE(invoked);
    EXPECT_FLOAT_EQ(returned, returnExpected);
@@ -1145,7 +1145,7 @@ namespace CX::Testing {
 
   //Invoke lambda, ensure all values match expected and ensure
   //lambda was actually invoked
-  EXPECT_NO_FATAL_FAILURE(([&] {
+  EXPECT_NO_EXIT_BEHAVIOUR(([&] {
    auto returned = l(dExpected, cExpected);
    EXPECT_TRUE(invoked);
    EXPECT_FLOAT_EQ(returned, returnExpected);
@@ -1179,7 +1179,7 @@ namespace CX::Testing {
 
   //Invoke lambda, ensure all values match expected and ensure
   //lambda was actually invoked
-  EXPECT_NO_THROW(([&] {
+  EXPECT_NO_ERROR_BEHAVIOUR(([&] {
    l(
     iExpected,
     varargs[0],
@@ -1224,7 +1224,7 @@ namespace CX::Testing {
 
   //Invoke lambda, ensure all values match expected and ensure
   //lambda was actually invoked
-  EXPECT_NO_FATAL_FAILURE(([&] {
+  EXPECT_NO_EXIT_BEHAVIOUR(([&] {
    auto returned = l(
     i1Expected,
     i2Expected,
@@ -1261,7 +1261,7 @@ namespace CX::Testing {
 
   //Invoke lambda, ensure all values match expected and ensure
   //lambda was actually invoked
-  EXPECT_NO_THROW(([&] {
+  EXPECT_NO_ERROR_BEHAVIOUR(([&] {
    l(bExpected, cExpected);
    EXPECT_TRUE(invoked);
   }()));
@@ -1289,7 +1289,7 @@ namespace CX::Testing {
 
   //Invoke lambda, ensure all values match expected and ensure
   //lambda was actually invoked
-  EXPECT_NO_FATAL_FAILURE(([&] {
+  EXPECT_NO_EXIT_BEHAVIOUR(([&] {
    auto returned = l(cExpected, sExpected);
    EXPECT_TRUE(invoked);
    EXPECT_EQ(returned, returnExpected);
@@ -1324,7 +1324,7 @@ namespace CX::Testing {
 
   //Invoke lambda, ensure all values match expected and ensure
   //lambda was actually invoked
-  EXPECT_NO_THROW(([&] {
+  EXPECT_NO_ERROR_BEHAVIOUR(([&] {
    auto returned = l(d1Expected, d2Expected, varargs[0], varargs[1]);
    EXPECT_TRUE(invoked);
    EXPECT_TRUE(returned == returnExpected);
@@ -1358,7 +1358,7 @@ namespace CX::Testing {
 
   //Invoke lambda, ensure all values match expected and ensure
   //lambda was actually invoked
-  EXPECT_NO_FATAL_FAILURE(([&] {
+  EXPECT_NO_EXIT_BEHAVIOUR(([&] {
    auto returned = l(
     iExpected,
     varargs[0],
@@ -1388,7 +1388,7 @@ namespace CX::Testing {
 
   //Invoke lambda, ensure all values match expected and ensure
   //lambda was actually invoked
-  EXPECT_NO_THROW(([&] {
+  EXPECT_NO_ERROR_BEHAVIOUR(([&] {
    l();
    EXPECT_TRUE(invoked);
   }()));
@@ -1416,7 +1416,7 @@ namespace CX::Testing {
 
   //Invoke lambda, ensure all values match expected and ensure
   //lambda was actually invoked
-  EXPECT_NO_FATAL_FAILURE(([&] {
+  EXPECT_NO_EXIT_BEHAVIOUR(([&] {
    auto returned = l(iExpected, fExpected);
    EXPECT_TRUE(invoked);
    EXPECT_EQ(returned, returnExpected);
@@ -1451,7 +1451,7 @@ namespace CX::Testing {
 
   //Invoke lambda, ensure all values match expected and ensure
   //lambda was actually invoked
-  EXPECT_NO_THROW(([&] {
+  EXPECT_NO_ERROR_BEHAVIOUR(([&] {
    auto returned = l(
     iExpected,
     dExpected,
@@ -1488,7 +1488,7 @@ namespace CX::Testing {
 
   //Invoke lambda, ensure all values match expected and ensure
   //lambda was actually invoked
-  EXPECT_NO_FATAL_FAILURE(([&] {
+  EXPECT_NO_EXIT_BEHAVIOUR(([&] {
    l(
     iExpected,
     varargs[0],
@@ -1505,21 +1505,21 @@ namespace CX::Testing {
   //Construct empty lambda and ensure it was correctly initialized
   Lambda<int (float)> l1;
   EXPECT_FALSE(l1);
-  EXPECT_THROW(
+  EXPECT_ERROR_BEHAVIOUR(
    ([&] {
     l1(0);
    }()),
-   UninitializedLambdaError
+   CXError
   );
 
   //Copy assign to lambda and ensure it was correctly initialized
   Lambda l2 = (decltype(l1) const&)l1;
   EXPECT_FALSE(l2);
-  EXPECT_THROW(
+  EXPECT_ERROR_BEHAVIOUR(
    ([&] {
     l2(0);
    }()),
-   UninitializedLambdaError
+   CXError
   );
 
   //Test with initialized lambda
@@ -1538,7 +1538,7 @@ namespace CX::Testing {
    return returnExpected;
   }};
   EXPECT_TRUE(l3);
-  EXPECT_NO_THROW(([&] {
+  EXPECT_NO_ERROR_BEHAVIOUR(([&] {
    auto returned = l3(fExpected);
    EXPECT_EQ(returned, returnExpected);
    EXPECT_EQ(invoked, 1);
@@ -1547,7 +1547,7 @@ namespace CX::Testing {
   //Copy assign to lambda and ensure it was correctly initialized
   Lambda l4 = (decltype(l3) const&)l3;
   EXPECT_TRUE(l4);
-  EXPECT_NO_THROW(([&] {
+  EXPECT_NO_ERROR_BEHAVIOUR(([&] {
    auto returned = l4(fExpected);
    EXPECT_EQ(returned, returnExpected);
    EXPECT_EQ(invoked, 2);
@@ -1559,21 +1559,21 @@ namespace CX::Testing {
   //Construct empty lambda and ensure it was correctly initialized
   Lambda<void () noexcept> l1;
   EXPECT_FALSE(l1);
-  EXPECT_DEATH(
+  EXPECT_EXIT_BEHAVIOUR(
    ([&] {
     l1();
    }()),
-   "UninitializedLambdaError"
+   ".*Lambda is uninitialized.*"
   );
 
   //Copy assign to lambda and ensure it was correctly initialized
   Lambda l2 = (decltype(l1) const&)l1;
   EXPECT_FALSE(l2);
-  EXPECT_DEATH(
+  EXPECT_EXIT_BEHAVIOUR(
    ([&] {
     l2();
    }()),
-   "UninitializedLambdaError"
+   ".*Lambda is uninitialized.*"
   );
 
   //Test with initialized lambda
@@ -1587,7 +1587,7 @@ namespace CX::Testing {
    invoked++;
   }};
   EXPECT_TRUE(l3);
-  EXPECT_NO_FATAL_FAILURE(([&] {
+  EXPECT_NO_EXIT_BEHAVIOUR(([&] {
    l3();
    EXPECT_EQ(invoked, 1);
   }()));
@@ -1595,7 +1595,7 @@ namespace CX::Testing {
   //Copy assign to lambda and ensure it was correctly initialized
   Lambda l4 = (decltype(l3) const&)l3;
   EXPECT_TRUE(l4);
-  EXPECT_NO_FATAL_FAILURE(([&] {
+  EXPECT_NO_EXIT_BEHAVIOUR(([&] {
    l4();
    EXPECT_EQ(invoked, 2);
   }()));
@@ -1606,21 +1606,21 @@ namespace CX::Testing {
   //Construct empty lambda and ensure it was correctly initialized
   Lambda<void (...)> l1;
   EXPECT_FALSE(l1);
-  EXPECT_THROW(
+  EXPECT_ERROR_BEHAVIOUR(
    ([&] {
     l1(0);
    }()),
-   UninitializedLambdaError
+   CXError
   );
 
   //Copy assign to lambda and ensure it was correctly initialized
   Lambda l2 = (decltype(l1) const&)l1;
   EXPECT_FALSE(l2);
-  EXPECT_THROW(
+  EXPECT_ERROR_BEHAVIOUR(
    ([&] {
     l2(0);
    }()),
-   UninitializedLambdaError
+   CXError
   );
 
   //Test with initialized lambda
@@ -1645,7 +1645,7 @@ namespace CX::Testing {
    return returnExpected;
   }};
   EXPECT_TRUE(l3);
-  EXPECT_NO_THROW(([&] {
+  EXPECT_NO_ERROR_BEHAVIOUR(([&] {
    auto returned = l3(
     iExpected,
     varargs[0],
@@ -1663,7 +1663,7 @@ namespace CX::Testing {
   //Copy assign to lambda and ensure it was correctly initialized
   Lambda l4 = (decltype(l3) const&)l3;
   EXPECT_TRUE(l4);
-  EXPECT_NO_THROW(([&] {
+  EXPECT_NO_ERROR_BEHAVIOUR(([&] {
    auto returned = l4(
     iExpected,
     varargs[0],
@@ -1684,21 +1684,21 @@ namespace CX::Testing {
   //Construct empty lambda and ensure it was correctly initialized
   Lambda<void (...) noexcept> l1;
   EXPECT_FALSE(l1);
-  EXPECT_DEATH(
+  EXPECT_EXIT_BEHAVIOUR(
    ([&] {
     l1(0);
    }()),
-   "UninitializedLambdaError"
+   ".*Lambda is uninitialized.*"
   );
 
   //Copy assign to lambda and ensure it was correctly initialized
   Lambda l2 = (decltype(l1) const&)l1;
   EXPECT_FALSE(l2);
-  EXPECT_DEATH(
+  EXPECT_EXIT_BEHAVIOUR(
    ([&] {
     l2(0);
    }()),
-   "UninitializedLambdaError"
+   ".*Lambda is uninitialized.*"
   );
 
   //Test with initialized lambda
@@ -1723,7 +1723,7 @@ namespace CX::Testing {
    return returnExpected;
   }};
   EXPECT_TRUE(l3);
-  EXPECT_NO_FATAL_FAILURE(([&] {
+  EXPECT_NO_EXIT_BEHAVIOUR(([&] {
    auto returned = l3(
     iExpected,
     varargs[0],
@@ -1741,7 +1741,7 @@ namespace CX::Testing {
   //Copy assign to lambda and ensure it was correctly initialized
   Lambda l4 = (decltype(l3) const&)l3;
   EXPECT_TRUE(l4);
-  EXPECT_NO_FATAL_FAILURE(([&] {
+  EXPECT_NO_EXIT_BEHAVIOUR(([&] {
    auto returned = l4(
     iExpected,
     varargs[0],
@@ -1762,30 +1762,30 @@ namespace CX::Testing {
   //Construct empty lambda and ensure it was correctly initialized
   Lambda<void ()> l1;
   EXPECT_FALSE(l1);
-  EXPECT_THROW(
+  EXPECT_ERROR_BEHAVIOUR(
    ([&] {
     l1();
    }()),
-   UninitializedLambdaError
+   CXError
   );
 
   //Move assign to lambda and ensure it was correctly initialized
   Lambda l2 = (decltype(l1)&&)l1;
   EXPECT_FALSE(l2);
-  EXPECT_THROW(
+  EXPECT_ERROR_BEHAVIOUR(
    ([&] {
     l2();
    }()),
-   UninitializedLambdaError
+   CXError
   );
 
   //Ensure moved lambda is uninitialized
   EXPECT_FALSE(l1);
-  EXPECT_THROW(
+  EXPECT_ERROR_BEHAVIOUR(
    ([&] {
     l1();
    }()),
-   UninitializedLambdaError
+   CXError
   );
 
   //Test with initialized lambda
@@ -1804,7 +1804,7 @@ namespace CX::Testing {
    return returnExpected;
   }};
   EXPECT_TRUE(l3);
-  EXPECT_NO_THROW(([&] {
+  EXPECT_NO_ERROR_BEHAVIOUR(([&] {
    auto returned = l3(fExpected);
    EXPECT_EQ(returned, returnExpected);
    EXPECT_EQ(invoked, 1);
@@ -1813,7 +1813,7 @@ namespace CX::Testing {
   //Move assign to lambda and ensure it was correctly initialized
   Lambda l4 = (decltype(l3)&&)l3;
   EXPECT_TRUE(l4);
-  EXPECT_NO_THROW(([&] {
+  EXPECT_NO_ERROR_BEHAVIOUR(([&] {
    auto returned = l4(fExpected);
    EXPECT_EQ(returned, returnExpected);
    EXPECT_EQ(invoked, 2);
@@ -1821,11 +1821,11 @@ namespace CX::Testing {
 
   //Ensure moved lambda is uninitialized
   EXPECT_FALSE(l3);
-  EXPECT_THROW(
+  EXPECT_ERROR_BEHAVIOUR(
    ([&] {
     l3(1254);
    }()),
-   UninitializedLambdaError
+   CXError
   );
   EXPECT_EQ(invoked, 2);
  }
@@ -1835,30 +1835,30 @@ namespace CX::Testing {
   //Construct empty lambda and ensure it was correctly initialized
   Lambda<void () noexcept> l1;
   EXPECT_FALSE(l1);
-  EXPECT_DEATH(
+  EXPECT_EXIT_BEHAVIOUR(
    ([&] {
     l1();
    }()),
-   "UninitializedLambdaError"
+   ".*Lambda is uninitialized.*"
   );
 
   //Move assign to lambda and ensure it was correctly initialized
   Lambda l2 = (decltype(l1)&&)l1;
   EXPECT_FALSE(l2);
-  EXPECT_DEATH(
+  EXPECT_EXIT_BEHAVIOUR(
    ([&] {
     l2();
    }()),
-   "UninitializedLambdaError"
+   ".*Lambda is uninitialized.*"
   );
 
   //Ensure moved lambda is uninitialized
   EXPECT_FALSE(l1);
-  EXPECT_DEATH(
+  EXPECT_EXIT_BEHAVIOUR(
    ([&] {
     l1();
    }()),
-   "UninitializedLambdaError"
+   ".*Lambda is uninitialized.*"
   );
 
   //Test with initialized lambda
@@ -1879,7 +1879,7 @@ namespace CX::Testing {
    return returnExpected;
   }};
   EXPECT_TRUE(l3);
-  EXPECT_NO_FATAL_FAILURE(([&] {
+  EXPECT_NO_EXIT_BEHAVIOUR(([&] {
    auto returned = l3(fExpected, dExpected);
    EXPECT_EQ(returned, returnExpected);
    EXPECT_EQ(invoked, 1);
@@ -1888,7 +1888,7 @@ namespace CX::Testing {
   //Move assign to lambda and ensure it was correctly initialized
   Lambda l4 = (decltype(l3)&&)l3;
   EXPECT_TRUE(l4);
-  EXPECT_NO_FATAL_FAILURE(([&] {
+  EXPECT_NO_EXIT_BEHAVIOUR(([&] {
    auto returned = l4(fExpected, dExpected);
    EXPECT_EQ(returned, returnExpected);
    EXPECT_EQ(invoked, 2);
@@ -1896,11 +1896,11 @@ namespace CX::Testing {
 
   //Ensure moved lambda is uninitialized
   EXPECT_FALSE(l3);
-  EXPECT_DEATH(
+  EXPECT_EXIT_BEHAVIOUR(
    ([&] {
     l3(-1, 1);
    }()),
-   "UninitializedLambdaError"
+   ".*Lambda is uninitialized.*"
   );
   EXPECT_EQ(invoked, 2);
  }
@@ -1910,30 +1910,30 @@ namespace CX::Testing {
   //Construct empty lambda and ensure it was correctly initialized
   Lambda<void (...)> l1;
   EXPECT_FALSE(l1);
-  EXPECT_THROW(
+  EXPECT_ERROR_BEHAVIOUR(
    ([&] {
     l1(0);
    }()),
-   UninitializedLambdaError
+   CXError
   );
 
   //Move assign to lambda and ensure it was correctly initialized
   Lambda l2 = (decltype(l1)&&)l1;
   EXPECT_FALSE(l2);
-  EXPECT_THROW(
+  EXPECT_ERROR_BEHAVIOUR(
    ([&] {
     l2(0);
    }()),
-   UninitializedLambdaError
+   CXError
   );
 
   //Ensure moved lambda is uninitialized
   EXPECT_FALSE(l1);
-  EXPECT_THROW(
+  EXPECT_ERROR_BEHAVIOUR(
    ([&] {
     l1(0);
    }()),
-   UninitializedLambdaError
+   CXError
   );
 
   //Test with initialized lambda
@@ -1958,7 +1958,7 @@ namespace CX::Testing {
    return returnExpected;
   }};
   EXPECT_TRUE(l3);
-  EXPECT_NO_THROW(([&] {
+  EXPECT_NO_ERROR_BEHAVIOUR(([&] {
    auto returned = l3(
     iExpected,
     varargs[0],
@@ -1976,7 +1976,7 @@ namespace CX::Testing {
   //Move assign to lambda and ensure it was correctly initialized
   Lambda l4 = (decltype(l3)&&)l3;
   EXPECT_TRUE(l4);
-  EXPECT_NO_THROW(([&] {
+  EXPECT_NO_ERROR_BEHAVIOUR(([&] {
    auto returned = l4(
     iExpected,
     varargs[0],
@@ -1992,11 +1992,11 @@ namespace CX::Testing {
   }()));
 
   //Ensure moved lambda is uninitialized
-  EXPECT_THROW(
+  EXPECT_ERROR_BEHAVIOUR(
    ([&] {
     l3(0);
    }()),
-   UninitializedLambdaError
+   CXError
   );
  }
 
@@ -2005,30 +2005,30 @@ namespace CX::Testing {
   //Construct empty lambda and ensure it was correctly initialized
   Lambda<void (...) noexcept> l1;
   EXPECT_FALSE(l1);
-  EXPECT_DEATH(
+  EXPECT_EXIT_BEHAVIOUR(
    ([&] {
     l1(0);
    }()),
-   "UninitializedLambdaError"
+   ".*Lambda is uninitialized.*"
   );
 
   //Move assign to lambda and ensure it was correctly initialized
   Lambda l2 = (decltype(l1)&&)l1;
   EXPECT_FALSE(l2);
-  EXPECT_DEATH(
+  EXPECT_EXIT_BEHAVIOUR(
    ([&] {
     l2(0);
    }()),
-   "UninitializedLambdaError"
+   ".*Lambda is uninitialized.*"
   );
 
   //Ensure moved lambda is unitialized
   EXPECT_FALSE(l1);
-  EXPECT_DEATH(
+  EXPECT_EXIT_BEHAVIOUR(
    ([&] {
     l1(0);
    }()),
-   "UninitializedLambdaError"
+   ".*Lambda is uninitialized.*"
   );
 
   //Test with initialized lambda
@@ -2053,7 +2053,7 @@ namespace CX::Testing {
    return returnExpected;
   }};
   EXPECT_TRUE(l3);
-  EXPECT_NO_FATAL_FAILURE(([&] {
+  EXPECT_NO_EXIT_BEHAVIOUR(([&] {
    auto returned = l3(
     iExpected,
     varargs[0],
@@ -2071,7 +2071,7 @@ namespace CX::Testing {
   //Move assign to lambda and ensure it was correctly initialized
   Lambda l4 = (decltype(l3)&&)l3;
   EXPECT_TRUE(l4);
-  EXPECT_NO_FATAL_FAILURE(([&] {
+  EXPECT_NO_EXIT_BEHAVIOUR(([&] {
    auto returned = l4(
     iExpected,
     varargs[0],
@@ -2087,11 +2087,11 @@ namespace CX::Testing {
   }()));
 
   //Ensure moved lambda is uninitialized
-  EXPECT_DEATH(
+  EXPECT_EXIT_BEHAVIOUR(
    ([&] {
     l3(0);
    }()),
-   "UninitializedLambdaError"
+   ".*Lambda is uninitialized.*"
   );
  }
 
@@ -2103,11 +2103,11 @@ namespace CX::Testing {
    EXPECT_FALSE(l);
 
    //Invoking an empty lambda should throw an exception
-   EXPECT_THROW(
+   EXPECT_ERROR_BEHAVIOUR(
     ([&] {
      l();
     }()),
-    UninitializedLambdaError
+    CXError
    );
   }
 
@@ -2135,7 +2135,7 @@ namespace CX::Testing {
 
    //Invoke lambda, ensure all values match expected and ensure
    //lambda was actually invoked
-   EXPECT_NO_THROW(([&] {
+   EXPECT_NO_ERROR_BEHAVIOUR(([&] {
     auto returned = l(iExpected, cExpected);
     EXPECT_TRUE(invoked);
     EXPECT_FLOAT_EQ(returned, returnExpected);
@@ -2164,7 +2164,7 @@ namespace CX::Testing {
 
    //Invoke lambda, ensure all values match expected and ensure
    //lambda was actually invoked
-   EXPECT_NO_FATAL_FAILURE(([&] {
+   EXPECT_NO_EXIT_BEHAVIOUR(([&] {
     auto returned = l(dExpected, cExpected);
     EXPECT_TRUE(invoked);
     EXPECT_FLOAT_EQ(returned, returnExpected);
@@ -2203,7 +2203,7 @@ namespace CX::Testing {
 
    //Invoke lambda, ensure all values match expected and ensure
    //lambda was actually invoked
-   EXPECT_NO_THROW(([&] {
+   EXPECT_NO_ERROR_BEHAVIOUR(([&] {
     auto returned = l(vExpected, dExpected, iExpected, varargs[0], varargs[1], varargs[2], varargs[3]);
     EXPECT_TRUE(invoked);
     EXPECT_TRUE(returned == returnExpected);
@@ -2242,7 +2242,7 @@ namespace CX::Testing {
 
    //Invoke lambda, ensure all values match expected and ensure
    //lambda was actually invoked
-   EXPECT_NO_FATAL_FAILURE(([&] {
+   EXPECT_NO_EXIT_BEHAVIOUR(([&] {
     auto returned = l(vExpected, dExpected, iExpected, varargs[0], varargs[1], varargs[2], varargs[3]);
     EXPECT_TRUE(invoked);
     EXPECT_TRUE(returned == returnExpected);
@@ -2267,7 +2267,7 @@ namespace CX::Testing {
 
    //Invoke lambda, ensure all values match expected and ensure
    //lambda was actually invoked
-   EXPECT_NO_THROW(([&] {
+   EXPECT_NO_ERROR_BEHAVIOUR(([&] {
     auto returned = l();
     EXPECT_TRUE(invoked);
     EXPECT_EQ(returned, returnExpected);
@@ -2294,7 +2294,7 @@ namespace CX::Testing {
 
    //Invoke lambda, ensure all values match expected and ensure
    //lambda was actually invoked
-   EXPECT_NO_FATAL_FAILURE(([&] {
+   EXPECT_NO_EXIT_BEHAVIOUR(([&] {
     auto returned = l(sExpected);
     EXPECT_TRUE(invoked);
     EXPECT_EQ(returned, returnExpected);
@@ -2329,7 +2329,7 @@ namespace CX::Testing {
 
    //Invoke lambda, ensure all values match expected and ensure
    //lambda was actually invoked
-   EXPECT_NO_THROW(([&] {
+   EXPECT_NO_ERROR_BEHAVIOUR(([&] {
     auto returned = l(d1Expected, d2Expected, varargs[0], varargs[1]);
     EXPECT_TRUE(invoked);
     EXPECT_TRUE(returned == returnExpected);
@@ -2363,7 +2363,7 @@ namespace CX::Testing {
 
    //Invoke lambda, ensure all values match expected and ensure
    //lambda was actually invoked
-   EXPECT_NO_FATAL_FAILURE(([&] {
+   EXPECT_NO_EXIT_BEHAVIOUR(([&] {
     auto returned = l(
      iExpected,
      varargs[0],
@@ -2393,7 +2393,7 @@ namespace CX::Testing {
 
    //Invoke lambda, ensure all values match expected and ensure
    //lambda was actually invoked
-   EXPECT_NO_THROW(([&] {
+   EXPECT_NO_ERROR_BEHAVIOUR(([&] {
     l();
     EXPECT_TRUE(invoked);
    }()));
@@ -2421,7 +2421,7 @@ namespace CX::Testing {
 
    //Invoke lambda, ensure all values match expected and ensure
    //lambda was actually invoked
-   EXPECT_NO_FATAL_FAILURE(([&] {
+   EXPECT_NO_EXIT_BEHAVIOUR(([&] {
     auto returned = l(iExpected, fExpected);
     EXPECT_TRUE(invoked);
     EXPECT_EQ(returned, returnExpected);
@@ -2456,7 +2456,7 @@ namespace CX::Testing {
 
    //Invoke lambda, ensure all values match expected and ensure
    //lambda was actually invoked
-   EXPECT_NO_THROW(([&] {
+   EXPECT_NO_ERROR_BEHAVIOUR(([&] {
     auto returned = l(
      iExpected,
      dExpected,
@@ -2493,7 +2493,7 @@ namespace CX::Testing {
 
    //Invoke lambda, ensure all values match expected and ensure
    //lambda was actually invoked
-   EXPECT_NO_FATAL_FAILURE(([&] {
+   EXPECT_NO_EXIT_BEHAVIOUR(([&] {
     l(
      iExpected,
      varargs[0],
@@ -2510,21 +2510,21 @@ namespace CX::Testing {
    //Construct empty lambda and ensure it was correctly initialized
    AllocLambda<int (float)> l1;
    EXPECT_FALSE(l1);
-   EXPECT_THROW(
+   EXPECT_ERROR_BEHAVIOUR(
     ([&] {
      l1(0);
     }()),
-    UninitializedLambdaError
+    CXError
    );
 
    //Copy construct lambda and ensure it was correctly initialized
    AllocLambda l2{(decltype(l1) const&)l1};
    EXPECT_FALSE(l2);
-   EXPECT_THROW(
+   EXPECT_ERROR_BEHAVIOUR(
     ([&] {
      l2(0);
     }()),
-    UninitializedLambdaError
+    CXError
    );
 
    //Test with initialized lambda
@@ -2543,7 +2543,7 @@ namespace CX::Testing {
     return returnExpected;
    }};
    EXPECT_TRUE(l3);
-   EXPECT_NO_THROW(([&] {
+   EXPECT_NO_ERROR_BEHAVIOUR(([&] {
     auto returned = l3(fExpected);
     EXPECT_EQ(returned, returnExpected);
     EXPECT_EQ(invoked, 1);
@@ -2552,7 +2552,7 @@ namespace CX::Testing {
    //Copy construct lambda and ensure it was correctly initialized
    AllocLambda l4{(decltype(l3) const&)l3};
    EXPECT_TRUE(l4);
-   EXPECT_NO_THROW(([&] {
+   EXPECT_NO_ERROR_BEHAVIOUR(([&] {
     auto returned = l4(fExpected);
     EXPECT_EQ(returned, returnExpected);
     EXPECT_EQ(invoked, 2);
@@ -2564,21 +2564,21 @@ namespace CX::Testing {
    //Construct empty lambda and ensure it was correctly initialized
    AllocLambda<void () noexcept> l1;
    EXPECT_FALSE(l1);
-   EXPECT_DEATH(
+   EXPECT_EXIT_BEHAVIOUR(
     ([&] {
      l1();
     }()),
-    "UninitializedLambdaError"
+    ".*Lambda is uninitialized.*"
    );
 
    //Copy construct lambda and ensure it was correctly initialized
    AllocLambda l2{(decltype(l1) const&)l1};
    EXPECT_FALSE(l2);
-   EXPECT_DEATH(
+   EXPECT_EXIT_BEHAVIOUR(
     ([&] {
      l2();
     }()),
-    "UninitializedLambdaError"
+    ".*Lambda is uninitialized.*"
    );
 
    //Test with initialized lambda
@@ -2592,7 +2592,7 @@ namespace CX::Testing {
     invoked++;
    }};
    EXPECT_TRUE(l3);
-   EXPECT_NO_FATAL_FAILURE(([&] {
+   EXPECT_NO_EXIT_BEHAVIOUR(([&] {
     l3();
     EXPECT_EQ(invoked, 1);
    }()));
@@ -2600,7 +2600,7 @@ namespace CX::Testing {
    //Copy construct lambda and ensure it was correctly initialized
    AllocLambda l4{(decltype(l3) const&)l3};
    EXPECT_TRUE(l4);
-   EXPECT_NO_FATAL_FAILURE(([&] {
+   EXPECT_NO_EXIT_BEHAVIOUR(([&] {
     l4();
     EXPECT_EQ(invoked, 2);
    }()));
@@ -2611,21 +2611,21 @@ namespace CX::Testing {
    //Construct empty lambda and ensure it was correctly initialized
    AllocLambda<void (...)> l1;
    EXPECT_FALSE(l1);
-   EXPECT_THROW(
+   EXPECT_ERROR_BEHAVIOUR(
     ([&] {
      l1(0);
     }()),
-    UninitializedLambdaError
+    CXError
    );
 
    //Copy construct lambda and ensure it was correctly initialized
    AllocLambda l2{(decltype(l1) const&)l1};
    EXPECT_FALSE(l2);
-   EXPECT_THROW(
+   EXPECT_ERROR_BEHAVIOUR(
     ([&] {
      l2(0);
     }()),
-    UninitializedLambdaError
+    CXError
    );
 
    //Test with initialized lambda
@@ -2650,7 +2650,7 @@ namespace CX::Testing {
     return returnExpected;
    }};
    EXPECT_TRUE(l3);
-   EXPECT_NO_THROW(([&] {
+   EXPECT_NO_ERROR_BEHAVIOUR(([&] {
     auto returned = l3(
      iExpected,
      varargs[0],
@@ -2668,7 +2668,7 @@ namespace CX::Testing {
    //Copy construct lambda and ensure it was correctly initialized
    AllocLambda l4{(decltype(l3) const&)l3};
    EXPECT_TRUE(l4);
-   EXPECT_NO_THROW(([&] {
+   EXPECT_NO_ERROR_BEHAVIOUR(([&] {
     auto returned = l4(
      iExpected,
      varargs[0],
@@ -2689,21 +2689,21 @@ namespace CX::Testing {
    //Construct empty lambda and ensure it was correctly initialized
    AllocLambda<void (...) noexcept> l1;
    EXPECT_FALSE(l1);
-   EXPECT_DEATH(
+   EXPECT_EXIT_BEHAVIOUR(
     ([&] {
      l1(0);
     }()),
-    "UninitializedLambdaError"
+    ".*Lambda is uninitialized.*"
    );
 
    //Copy construct lambda and ensure it was correctly initialized
    AllocLambda l2{(decltype(l1) const&)l1};
    EXPECT_FALSE(l2);
-   EXPECT_DEATH(
+   EXPECT_EXIT_BEHAVIOUR(
     ([&] {
      l2(0);
     }()),
-    "UninitializedLambdaError"
+    ".*Lambda is uninitialized.*"
    );
 
    //Test with initialized lambda
@@ -2728,7 +2728,7 @@ namespace CX::Testing {
     return returnExpected;
    }};
    EXPECT_TRUE(l3);
-   EXPECT_NO_FATAL_FAILURE(([&] {
+   EXPECT_NO_EXIT_BEHAVIOUR(([&] {
     auto returned = l3(
      iExpected,
      varargs[0],
@@ -2746,7 +2746,7 @@ namespace CX::Testing {
    //Copy construct lambda and ensure it was correctly initialized
    AllocLambda l4{(decltype(l3) const&)l3};
    EXPECT_TRUE(l4);
-   EXPECT_NO_FATAL_FAILURE(([&] {
+   EXPECT_NO_EXIT_BEHAVIOUR(([&] {
     auto returned = l4(
      iExpected,
      varargs[0],
@@ -2767,30 +2767,30 @@ namespace CX::Testing {
    //Construct empty lambda and ensure it was correctly initialized
    AllocLambda<void ()> l1;
    EXPECT_FALSE(l1);
-   EXPECT_THROW(
+   EXPECT_ERROR_BEHAVIOUR(
     ([&] {
      l1();
     }()),
-    UninitializedLambdaError
+    CXError
    );
 
    //Move construct lambda and ensure it was correctly initialized
    AllocLambda l2{(decltype(l1)&&)l1};
    EXPECT_FALSE(l2);
-   EXPECT_THROW(
+   EXPECT_ERROR_BEHAVIOUR(
     ([&] {
      l2();
     }()),
-    UninitializedLambdaError
+    CXError
    );
 
    //Ensure moved lambda is uninitialized
    EXPECT_FALSE(l1);
-   EXPECT_THROW(
+   EXPECT_ERROR_BEHAVIOUR(
     ([&] {
      l1();
     }()),
-    UninitializedLambdaError
+    CXError
    );
 
    //Test with initialized lambda
@@ -2809,7 +2809,7 @@ namespace CX::Testing {
     return returnExpected;
    }};
    EXPECT_TRUE(l3);
-   EXPECT_NO_THROW(([&] {
+   EXPECT_NO_ERROR_BEHAVIOUR(([&] {
     auto returned = l3(fExpected);
     EXPECT_EQ(returned, returnExpected);
     EXPECT_EQ(invoked, 1);
@@ -2818,7 +2818,7 @@ namespace CX::Testing {
    //Move construct lambda and ensure it was correctly initialized
    AllocLambda l4{(decltype(l3)&&)l3};
    EXPECT_TRUE(l4);
-   EXPECT_NO_THROW(([&] {
+   EXPECT_NO_ERROR_BEHAVIOUR(([&] {
     auto returned = l4(fExpected);
     EXPECT_EQ(returned, returnExpected);
     EXPECT_EQ(invoked, 2);
@@ -2826,11 +2826,11 @@ namespace CX::Testing {
 
    //Ensure moved lambda is uninitialized
    EXPECT_FALSE(l3);
-   EXPECT_THROW(
+   EXPECT_ERROR_BEHAVIOUR(
     ([&] {
      l3(1254);
     }()),
-    UninitializedLambdaError
+    CXError
    );
    EXPECT_EQ(invoked, 2);
   }
@@ -2840,30 +2840,30 @@ namespace CX::Testing {
    //Construct empty lambda and ensure it was correctly initialized
    AllocLambda<void () noexcept> l1;
    EXPECT_FALSE(l1);
-   EXPECT_DEATH(
+   EXPECT_EXIT_BEHAVIOUR(
     ([&] {
      l1();
     }()),
-    "UninitializedLambdaError"
+    ".*Lambda is uninitialized.*"
    );
 
    //Move construct lambda and ensure it was correctly initialized
    AllocLambda l2{(decltype(l1)&&)l1};
    EXPECT_FALSE(l2);
-   EXPECT_DEATH(
+   EXPECT_EXIT_BEHAVIOUR(
     ([&] {
      l2();
     }()),
-    "UninitializedLambdaError"
+    ".*Lambda is uninitialized.*"
    );
 
    //Ensure moved lambda is uninitialized
    EXPECT_FALSE(l1);
-   EXPECT_DEATH(
+   EXPECT_EXIT_BEHAVIOUR(
     ([&] {
      l1();
     }()),
-    "UninitializedLambdaError"
+    ".*Lambda is uninitialized.*"
    );
 
    //Test with initialized lambda
@@ -2884,7 +2884,7 @@ namespace CX::Testing {
     return returnExpected;
    }};
    EXPECT_TRUE(l3);
-   EXPECT_NO_FATAL_FAILURE(([&] {
+   EXPECT_NO_EXIT_BEHAVIOUR(([&] {
     auto returned = l3(fExpected, dExpected);
     EXPECT_EQ(returned, returnExpected);
     EXPECT_EQ(invoked, 1);
@@ -2893,7 +2893,7 @@ namespace CX::Testing {
    //Move construct lambda and ensure it was correctly initialized
    AllocLambda l4{(decltype(l3)&&)l3};
    EXPECT_TRUE(l4);
-   EXPECT_NO_FATAL_FAILURE(([&] {
+   EXPECT_NO_EXIT_BEHAVIOUR(([&] {
     auto returned = l4(fExpected, dExpected);
     EXPECT_EQ(returned, returnExpected);
     EXPECT_EQ(invoked, 2);
@@ -2901,11 +2901,11 @@ namespace CX::Testing {
 
    //Ensure moved lambda is uninitialized
    EXPECT_FALSE(l3);
-   EXPECT_DEATH(
+   EXPECT_EXIT_BEHAVIOUR(
     ([&] {
      l3(-1, 1);
     }()),
-    "UninitializedLambdaError"
+    ".*Lambda is uninitialized.*"
    );
    EXPECT_EQ(invoked, 2);
   }
@@ -2915,30 +2915,30 @@ namespace CX::Testing {
    //Construct empty lambda and ensure it was correctly initialized
    AllocLambda<void (...)> l1;
    EXPECT_FALSE(l1);
-   EXPECT_THROW(
+   EXPECT_ERROR_BEHAVIOUR(
     ([&] {
      l1(0);
     }()),
-    UninitializedLambdaError
+    CXError
    );
 
    //Move construct lambda and ensure it was correctly initialized
    AllocLambda l2{(decltype(l1)&&)l1};
    EXPECT_FALSE(l2);
-   EXPECT_THROW(
+   EXPECT_ERROR_BEHAVIOUR(
     ([&] {
      l2(0);
     }()),
-    UninitializedLambdaError
+    CXError
    );
 
    //Ensure moved lambda is uninitialized
    EXPECT_FALSE(l1);
-   EXPECT_THROW(
+   EXPECT_ERROR_BEHAVIOUR(
     ([&] {
      l1(0);
     }()),
-    UninitializedLambdaError
+    CXError
    );
 
    //Test with initialized lambda
@@ -2963,7 +2963,7 @@ namespace CX::Testing {
     return returnExpected;
    }};
    EXPECT_TRUE(l3);
-   EXPECT_NO_THROW(([&] {
+   EXPECT_NO_ERROR_BEHAVIOUR(([&] {
     auto returned = l3(
      iExpected,
      varargs[0],
@@ -2981,7 +2981,7 @@ namespace CX::Testing {
    //Move construct lambda and ensure it was correctly initialized
    AllocLambda l4{(decltype(l3)&&)l3};
    EXPECT_TRUE(l4);
-   EXPECT_NO_THROW(([&] {
+   EXPECT_NO_ERROR_BEHAVIOUR(([&] {
     auto returned = l4(
      iExpected,
      varargs[0],
@@ -2997,11 +2997,11 @@ namespace CX::Testing {
    }()));
 
    //Ensure moved lambda is uninitialized
-   EXPECT_THROW(
+   EXPECT_ERROR_BEHAVIOUR(
     ([&] {
      l3(0);
     }()),
-    UninitializedLambdaError
+    CXError
    );
   }
 
@@ -3010,30 +3010,30 @@ namespace CX::Testing {
    //Construct empty lambda and ensure it was correctly initialized
    AllocLambda<void (...) noexcept> l1;
    EXPECT_FALSE(l1);
-   EXPECT_DEATH(
+   EXPECT_EXIT_BEHAVIOUR(
     ([&] {
      l1(0);
     }()),
-    "UninitializedLambdaError"
+    ".*Lambda is uninitialized.*"
    );
 
    //Move construct lambda and ensure it was correctly initialized
    AllocLambda l2{(decltype(l1)&&)l1};
    EXPECT_FALSE(l2);
-   EXPECT_DEATH(
+   EXPECT_EXIT_BEHAVIOUR(
     ([&] {
      l2(0);
     }()),
-    "UninitializedLambdaError"
+    ".*Lambda is uninitialized.*"
    );
 
    //Ensure moved lambda is unitialized
    EXPECT_FALSE(l1);
-   EXPECT_DEATH(
+   EXPECT_EXIT_BEHAVIOUR(
     ([&] {
      l1(0);
     }()),
-    "UninitializedLambdaError"
+    ".*Lambda is uninitialized.*"
    );
 
    //Test with initialized lambda
@@ -3058,7 +3058,7 @@ namespace CX::Testing {
     return returnExpected;
    }};
    EXPECT_TRUE(l3);
-   EXPECT_NO_FATAL_FAILURE(([&] {
+   EXPECT_NO_EXIT_BEHAVIOUR(([&] {
     auto returned = l3(
      iExpected,
      varargs[0],
@@ -3076,7 +3076,7 @@ namespace CX::Testing {
    //Move construct lambda and ensure it was correctly initialized
    AllocLambda l4{(decltype(l3)&&)l3};
    EXPECT_TRUE(l4);
-   EXPECT_NO_FATAL_FAILURE(([&] {
+   EXPECT_NO_EXIT_BEHAVIOUR(([&] {
     auto returned = l4(
      iExpected,
      varargs[0],
@@ -3092,11 +3092,11 @@ namespace CX::Testing {
    }()));
 
    //Ensure moved lambda is uninitialized
-   EXPECT_DEATH(
+   EXPECT_EXIT_BEHAVIOUR(
     ([&] {
      l3(0);
     }()),
-    "UninitializedLambdaError"
+    ".*Lambda is uninitialized.*"
    );
   }
 
@@ -3121,7 +3121,7 @@ namespace CX::Testing {
 
    //Invoke lambda, ensure all values match expected and ensure
    //lambda was actually invoked
-   EXPECT_NO_FATAL_FAILURE(([&] {
+   EXPECT_NO_EXIT_BEHAVIOUR(([&] {
     auto returned = l(iExpected, cExpected);
     EXPECT_TRUE(invoked);
     EXPECT_FLOAT_EQ(returned, returnExpected);
@@ -3149,7 +3149,7 @@ namespace CX::Testing {
 
    //Invoke lambda, ensure all values match expected and ensure
    //lambda was actually invoked
-   EXPECT_NO_FATAL_FAILURE(([&] {
+   EXPECT_NO_EXIT_BEHAVIOUR(([&] {
     auto returned = l(dExpected, cExpected);
     EXPECT_TRUE(invoked);
     EXPECT_FLOAT_EQ(returned, returnExpected);
@@ -3183,7 +3183,7 @@ namespace CX::Testing {
 
    //Invoke lambda, ensure all values match expected and ensure
    //lambda was actually invoked
-   EXPECT_NO_THROW(([&] {
+   EXPECT_NO_ERROR_BEHAVIOUR(([&] {
     l(
      iExpected,
      varargs[0],
@@ -3228,7 +3228,7 @@ namespace CX::Testing {
 
    //Invoke lambda, ensure all values match expected and ensure
    //lambda was actually invoked
-   EXPECT_NO_FATAL_FAILURE(([&] {
+   EXPECT_NO_EXIT_BEHAVIOUR(([&] {
     auto returned = l(
      i1Expected,
      i2Expected,
@@ -3265,7 +3265,7 @@ namespace CX::Testing {
 
    //Invoke lambda, ensure all values match expected and ensure
    //lambda was actually invoked
-   EXPECT_NO_THROW(([&] {
+   EXPECT_NO_ERROR_BEHAVIOUR(([&] {
     l(bExpected, cExpected);
     EXPECT_TRUE(invoked);
    }()));
@@ -3293,7 +3293,7 @@ namespace CX::Testing {
 
    //Invoke lambda, ensure all values match expected and ensure
    //lambda was actually invoked
-   EXPECT_NO_FATAL_FAILURE(([&] {
+   EXPECT_NO_EXIT_BEHAVIOUR(([&] {
     auto returned = l(cExpected, sExpected);
     EXPECT_TRUE(invoked);
     EXPECT_EQ(returned, returnExpected);
@@ -3328,7 +3328,7 @@ namespace CX::Testing {
 
    //Invoke lambda, ensure all values match expected and ensure
    //lambda was actually invoked
-   EXPECT_NO_THROW(([&] {
+   EXPECT_NO_ERROR_BEHAVIOUR(([&] {
     auto returned = l(d1Expected, d2Expected, varargs[0], varargs[1]);
     EXPECT_TRUE(invoked);
     EXPECT_TRUE(returned == returnExpected);
@@ -3362,7 +3362,7 @@ namespace CX::Testing {
 
    //Invoke lambda, ensure all values match expected and ensure
    //lambda was actually invoked
-   EXPECT_NO_FATAL_FAILURE(([&] {
+   EXPECT_NO_EXIT_BEHAVIOUR(([&] {
     auto returned = l(
      iExpected,
      varargs[0],
@@ -3392,7 +3392,7 @@ namespace CX::Testing {
 
    //Invoke lambda, ensure all values match expected and ensure
    //lambda was actually invoked
-   EXPECT_NO_THROW(([&] {
+   EXPECT_NO_ERROR_BEHAVIOUR(([&] {
     l();
     EXPECT_TRUE(invoked);
    }()));
@@ -3420,7 +3420,7 @@ namespace CX::Testing {
 
    //Invoke lambda, ensure all values match expected and ensure
    //lambda was actually invoked
-   EXPECT_NO_FATAL_FAILURE(([&] {
+   EXPECT_NO_EXIT_BEHAVIOUR(([&] {
     auto returned = l(iExpected, fExpected);
     EXPECT_TRUE(invoked);
     EXPECT_EQ(returned, returnExpected);
@@ -3455,7 +3455,7 @@ namespace CX::Testing {
 
    //Invoke lambda, ensure all values match expected and ensure
    //lambda was actually invoked
-   EXPECT_NO_THROW(([&] {
+   EXPECT_NO_ERROR_BEHAVIOUR(([&] {
     auto returned = l(
      iExpected,
      dExpected,
@@ -3492,7 +3492,7 @@ namespace CX::Testing {
 
    //Invoke lambda, ensure all values match expected and ensure
    //lambda was actually invoked
-   EXPECT_NO_FATAL_FAILURE(([&] {
+   EXPECT_NO_EXIT_BEHAVIOUR(([&] {
     l(
      iExpected,
      varargs[0],
@@ -3509,21 +3509,21 @@ namespace CX::Testing {
    //Construct empty lambda and ensure it was correctly initialized
    AllocLambda<int (float)> l1;
    EXPECT_FALSE(l1);
-   EXPECT_THROW(
+   EXPECT_ERROR_BEHAVIOUR(
     ([&] {
      l1(0);
     }()),
-    UninitializedLambdaError
+    CXError
    );
 
    //Copy assign to lambda and ensure it was correctly initialized
    AllocLambda l2 = (decltype(l1) const&)l1;
    EXPECT_FALSE(l2);
-   EXPECT_THROW(
+   EXPECT_ERROR_BEHAVIOUR(
     ([&] {
      l2(0);
     }()),
-    UninitializedLambdaError
+    CXError
    );
 
    //Test with initialized lambda
@@ -3542,7 +3542,7 @@ namespace CX::Testing {
     return returnExpected;
    }};
    EXPECT_TRUE(l3);
-   EXPECT_NO_THROW(([&] {
+   EXPECT_NO_ERROR_BEHAVIOUR(([&] {
     auto returned = l3(fExpected);
     EXPECT_EQ(returned, returnExpected);
     EXPECT_EQ(invoked, 1);
@@ -3551,7 +3551,7 @@ namespace CX::Testing {
    //Copy assign to lambda and ensure it was correctly initialized
    AllocLambda l4 = (decltype(l3) const&)l3;
    EXPECT_TRUE(l4);
-   EXPECT_NO_THROW(([&] {
+   EXPECT_NO_ERROR_BEHAVIOUR(([&] {
     auto returned = l4(fExpected);
     EXPECT_EQ(returned, returnExpected);
     EXPECT_EQ(invoked, 2);
@@ -3563,21 +3563,21 @@ namespace CX::Testing {
    //Construct empty lambda and ensure it was correctly initialized
    AllocLambda<void () noexcept> l1;
    EXPECT_FALSE(l1);
-   EXPECT_DEATH(
+   EXPECT_EXIT_BEHAVIOUR(
     ([&] {
      l1();
     }()),
-    "UninitializedLambdaError"
+    ".*Lambda is uninitialized.*"
    );
 
    //Copy assign to lambda and ensure it was correctly initialized
    AllocLambda l2 = (decltype(l1) const&)l1;
    EXPECT_FALSE(l2);
-   EXPECT_DEATH(
+   EXPECT_EXIT_BEHAVIOUR(
     ([&] {
      l2();
     }()),
-    "UninitializedLambdaError"
+    ".*Lambda is uninitialized.*"
    );
 
    //Test with initialized lambda
@@ -3591,7 +3591,7 @@ namespace CX::Testing {
     invoked++;
    }};
    EXPECT_TRUE(l3);
-   EXPECT_NO_FATAL_FAILURE(([&] {
+   EXPECT_NO_EXIT_BEHAVIOUR(([&] {
     l3();
     EXPECT_EQ(invoked, 1);
    }()));
@@ -3599,7 +3599,7 @@ namespace CX::Testing {
    //Copy assign to lambda and ensure it was correctly initialized
    AllocLambda l4 = (decltype(l3) const&)l3;
    EXPECT_TRUE(l4);
-   EXPECT_NO_FATAL_FAILURE(([&] {
+   EXPECT_NO_EXIT_BEHAVIOUR(([&] {
     l4();
     EXPECT_EQ(invoked, 2);
    }()));
@@ -3610,21 +3610,21 @@ namespace CX::Testing {
    //Construct empty lambda and ensure it was correctly initialized
    AllocLambda<void (...)> l1;
    EXPECT_FALSE(l1);
-   EXPECT_THROW(
+   EXPECT_ERROR_BEHAVIOUR(
     ([&] {
      l1(0);
     }()),
-    UninitializedLambdaError
+    CXError
    );
 
    //Copy assign to lambda and ensure it was correctly initialized
    AllocLambda l2 = (decltype(l1) const&)l1;
    EXPECT_FALSE(l2);
-   EXPECT_THROW(
+   EXPECT_ERROR_BEHAVIOUR(
     ([&] {
      l2(0);
     }()),
-    UninitializedLambdaError
+    CXError
    );
 
    //Test with initialized lambda
@@ -3649,7 +3649,7 @@ namespace CX::Testing {
     return returnExpected;
    }};
    EXPECT_TRUE(l3);
-   EXPECT_NO_THROW(([&] {
+   EXPECT_NO_ERROR_BEHAVIOUR(([&] {
     auto returned = l3(
      iExpected,
      varargs[0],
@@ -3667,7 +3667,7 @@ namespace CX::Testing {
    //Copy assign to lambda and ensure it was correctly initialized
    AllocLambda l4 = (decltype(l3) const&)l3;
    EXPECT_TRUE(l4);
-   EXPECT_NO_THROW(([&] {
+   EXPECT_NO_ERROR_BEHAVIOUR(([&] {
     auto returned = l4(
      iExpected,
      varargs[0],
@@ -3688,21 +3688,21 @@ namespace CX::Testing {
    //Construct empty lambda and ensure it was correctly initialized
    AllocLambda<void (...) noexcept> l1;
    EXPECT_FALSE(l1);
-   EXPECT_DEATH(
+   EXPECT_EXIT_BEHAVIOUR(
     ([&] {
      l1(0);
     }()),
-    "UninitializedLambdaError"
+    ".*Lambda is uninitialized.*"
    );
 
    //Copy assign to lambda and ensure it was correctly initialized
    AllocLambda l2 = (decltype(l1) const&)l1;
    EXPECT_FALSE(l2);
-   EXPECT_DEATH(
+   EXPECT_EXIT_BEHAVIOUR(
     ([&] {
      l2(0);
     }()),
-    "UninitializedLambdaError"
+    ".*Lambda is uninitialized.*"
    );
 
    //Test with initialized lambda
@@ -3727,7 +3727,7 @@ namespace CX::Testing {
     return returnExpected;
    }};
    EXPECT_TRUE(l3);
-   EXPECT_NO_FATAL_FAILURE(([&] {
+   EXPECT_NO_EXIT_BEHAVIOUR(([&] {
     auto returned = l3(
      iExpected,
      varargs[0],
@@ -3745,7 +3745,7 @@ namespace CX::Testing {
    //Copy assign to lambda and ensure it was correctly initialized
    AllocLambda l4 = (decltype(l3) const&)l3;
    EXPECT_TRUE(l4);
-   EXPECT_NO_FATAL_FAILURE(([&] {
+   EXPECT_NO_EXIT_BEHAVIOUR(([&] {
     auto returned = l4(
      iExpected,
      varargs[0],
@@ -3766,30 +3766,30 @@ namespace CX::Testing {
    //Construct empty lambda and ensure it was correctly initialized
    AllocLambda<void ()> l1;
    EXPECT_FALSE(l1);
-   EXPECT_THROW(
+   EXPECT_ERROR_BEHAVIOUR(
     ([&] {
      l1();
     }()),
-    UninitializedLambdaError
+    CXError
    );
 
    //Move assign to lambda and ensure it was correctly initialized
    AllocLambda l2 = (decltype(l1)&&)l1;
    EXPECT_FALSE(l2);
-   EXPECT_THROW(
+   EXPECT_ERROR_BEHAVIOUR(
     ([&] {
      l2();
     }()),
-    UninitializedLambdaError
+    CXError
    );
 
    //Ensure moved lambda is uninitialized
    EXPECT_FALSE(l1);
-   EXPECT_THROW(
+   EXPECT_ERROR_BEHAVIOUR(
     ([&] {
      l1();
     }()),
-    UninitializedLambdaError
+    CXError
    );
 
    //Test with initialized lambda
@@ -3808,7 +3808,7 @@ namespace CX::Testing {
     return returnExpected;
    }};
    EXPECT_TRUE(l3);
-   EXPECT_NO_THROW(([&] {
+   EXPECT_NO_ERROR_BEHAVIOUR(([&] {
     auto returned = l3(fExpected);
     EXPECT_EQ(returned, returnExpected);
     EXPECT_EQ(invoked, 1);
@@ -3817,7 +3817,7 @@ namespace CX::Testing {
    //Move assign to lambda and ensure it was correctly initialized
    AllocLambda l4 = (decltype(l3)&&)l3;
    EXPECT_TRUE(l4);
-   EXPECT_NO_THROW(([&] {
+   EXPECT_NO_ERROR_BEHAVIOUR(([&] {
     auto returned = l4(fExpected);
     EXPECT_EQ(returned, returnExpected);
     EXPECT_EQ(invoked, 2);
@@ -3825,11 +3825,11 @@ namespace CX::Testing {
 
    //Ensure moved lambda is uninitialized
    EXPECT_FALSE(l3);
-   EXPECT_THROW(
+   EXPECT_ERROR_BEHAVIOUR(
     ([&] {
      l3(1254);
     }()),
-    UninitializedLambdaError
+    CXError
    );
    EXPECT_EQ(invoked, 2);
   }
@@ -3839,30 +3839,30 @@ namespace CX::Testing {
    //Construct empty lambda and ensure it was correctly initialized
    AllocLambda<void () noexcept> l1;
    EXPECT_FALSE(l1);
-   EXPECT_DEATH(
+   EXPECT_EXIT_BEHAVIOUR(
     ([&] {
      l1();
     }()),
-    "UninitializedLambdaError"
+    ".*Lambda is uninitialized.*"
    );
 
    //Move assign to lambda and ensure it was correctly initialized
    AllocLambda l2 = (decltype(l1)&&)l1;
    EXPECT_FALSE(l2);
-   EXPECT_DEATH(
+   EXPECT_EXIT_BEHAVIOUR(
     ([&] {
      l2();
     }()),
-    "UninitializedLambdaError"
+    ".*Lambda is uninitialized.*"
    );
 
    //Ensure moved lambda is uninitialized
    EXPECT_FALSE(l1);
-   EXPECT_DEATH(
+   EXPECT_EXIT_BEHAVIOUR(
     ([&] {
      l1();
     }()),
-    "UninitializedLambdaError"
+    ".*Lambda is uninitialized.*"
    );
 
    //Test with initialized lambda
@@ -3883,7 +3883,7 @@ namespace CX::Testing {
     return returnExpected;
    }};
    EXPECT_TRUE(l3);
-   EXPECT_NO_FATAL_FAILURE(([&] {
+   EXPECT_NO_EXIT_BEHAVIOUR(([&] {
     auto returned = l3(fExpected, dExpected);
     EXPECT_EQ(returned, returnExpected);
     EXPECT_EQ(invoked, 1);
@@ -3892,7 +3892,7 @@ namespace CX::Testing {
    //Move assign to lambda and ensure it was correctly initialized
    AllocLambda l4 = (decltype(l3)&&)l3;
    EXPECT_TRUE(l4);
-   EXPECT_NO_FATAL_FAILURE(([&] {
+   EXPECT_NO_EXIT_BEHAVIOUR(([&] {
     auto returned = l4(fExpected, dExpected);
     EXPECT_EQ(returned, returnExpected);
     EXPECT_EQ(invoked, 2);
@@ -3900,11 +3900,11 @@ namespace CX::Testing {
 
    //Ensure moved lambda is uninitialized
    EXPECT_FALSE(l3);
-   EXPECT_DEATH(
+   EXPECT_EXIT_BEHAVIOUR(
     ([&] {
      l3(-1, 1);
     }()),
-    "UninitializedLambdaError"
+    ".*Lambda is uninitialized.*"
    );
    EXPECT_EQ(invoked, 2);
   }
@@ -3914,30 +3914,30 @@ namespace CX::Testing {
    //Construct empty lambda and ensure it was correctly initialized
    AllocLambda<void (...)> l1;
    EXPECT_FALSE(l1);
-   EXPECT_THROW(
+   EXPECT_ERROR_BEHAVIOUR(
     ([&] {
      l1(0);
     }()),
-    UninitializedLambdaError
+    CXError
    );
 
    //Move assign to lambda and ensure it was correctly initialized
    AllocLambda l2 = (decltype(l1)&&)l1;
    EXPECT_FALSE(l2);
-   EXPECT_THROW(
+   EXPECT_ERROR_BEHAVIOUR(
     ([&] {
      l2(0);
     }()),
-    UninitializedLambdaError
+    CXError
    );
 
    //Ensure moved lambda is uninitialized
    EXPECT_FALSE(l1);
-   EXPECT_THROW(
+   EXPECT_ERROR_BEHAVIOUR(
     ([&] {
      l1(0);
     }()),
-    UninitializedLambdaError
+    CXError
    );
 
    //Test with initialized lambda
@@ -3962,7 +3962,7 @@ namespace CX::Testing {
     return returnExpected;
    }};
    EXPECT_TRUE(l3);
-   EXPECT_NO_THROW(([&] {
+   EXPECT_NO_ERROR_BEHAVIOUR(([&] {
     auto returned = l3(
      iExpected,
      varargs[0],
@@ -3980,7 +3980,7 @@ namespace CX::Testing {
    //Move assign to lambda and ensure it was correctly initialized
    AllocLambda l4 = (decltype(l3)&&)l3;
    EXPECT_TRUE(l4);
-   EXPECT_NO_THROW(([&] {
+   EXPECT_NO_ERROR_BEHAVIOUR(([&] {
     auto returned = l4(
      iExpected,
      varargs[0],
@@ -3996,11 +3996,11 @@ namespace CX::Testing {
    }()));
 
    //Ensure moved lambda is uninitialized
-   EXPECT_THROW(
+   EXPECT_ERROR_BEHAVIOUR(
     ([&] {
      l3(0);
     }()),
-    UninitializedLambdaError
+    CXError
    );
   }
 
@@ -4009,30 +4009,30 @@ namespace CX::Testing {
    //Construct empty lambda and ensure it was correctly initialized
    AllocLambda<void (...) noexcept> l1;
    EXPECT_FALSE(l1);
-   EXPECT_DEATH(
+   EXPECT_EXIT_BEHAVIOUR(
     ([&] {
      l1(0);
     }()),
-    "UninitializedLambdaError"
+    ".*Lambda is uninitialized.*"
    );
 
    //Move assign to lambda and ensure it was correctly initialized
    AllocLambda l2 = (decltype(l1)&&)l1;
    EXPECT_FALSE(l2);
-   EXPECT_DEATH(
+   EXPECT_EXIT_BEHAVIOUR(
     ([&] {
      l2(0);
     }()),
-    "UninitializedLambdaError"
+    ".*Lambda is uninitialized.*"
    );
 
    //Ensure moved lambda is unitialized
    EXPECT_FALSE(l1);
-   EXPECT_DEATH(
+   EXPECT_EXIT_BEHAVIOUR(
     ([&] {
      l1(0);
     }()),
-    "UninitializedLambdaError"
+    ".*Lambda is uninitialized.*"
    );
 
    //Test with initialized lambda
@@ -4057,7 +4057,7 @@ namespace CX::Testing {
     return returnExpected;
    }};
    EXPECT_TRUE(l3);
-   EXPECT_NO_FATAL_FAILURE(([&] {
+   EXPECT_NO_EXIT_BEHAVIOUR(([&] {
     auto returned = l3(
      iExpected,
      varargs[0],
@@ -4075,7 +4075,7 @@ namespace CX::Testing {
    //Move assign to lambda and ensure it was correctly initialized
    AllocLambda l4 = (decltype(l3)&&)l3;
    EXPECT_TRUE(l4);
-   EXPECT_NO_FATAL_FAILURE(([&] {
+   EXPECT_NO_EXIT_BEHAVIOUR(([&] {
     auto returned = l4(
      iExpected,
      varargs[0],
@@ -4091,11 +4091,11 @@ namespace CX::Testing {
    }()));
 
    //Ensure moved lambda is uninitialized
-   EXPECT_DEATH(
+   EXPECT_EXIT_BEHAVIOUR(
     ([&] {
      l3(0);
     }()),
-    "UninitializedLambdaError"
+    ".*Lambda is uninitialized.*"
    );
   }
 

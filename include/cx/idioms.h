@@ -8,7 +8,7 @@
  #include <new>
 #else
  [[nodiscard]]
- void * operator new(decltype(sizeof(0)), void *) noexcept;
+ void * operator new(CX::SizeType, void *) noexcept;
 #endif
 
 namespace CX {

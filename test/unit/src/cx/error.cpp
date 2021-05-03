@@ -4,14 +4,14 @@
 
 namespace CX {
  TEST(Exit, exit_without_error_terminates_with_default_message) {
-  EXPECT_DEATH(
+  EXPECT_EXIT_BEHAVIOUR(
    exit(),
    "`CX::exit\\(\\.\\.\\.\\)` invoked without an error\n"
   );
  }
 
  TEST(Exit, exit_with_error_terminates_with_error_message) {
-  EXPECT_DEATH(
+  EXPECT_EXIT_BEHAVIOUR(
    exit(CX::CXError{"Custom message"}),
    ".*`CX::exit\\(\\.\\.\\.\\)` invoked with error:\nCustom message\n.*"
   );
@@ -27,7 +27,7 @@ namespace CX {
     errMsg = err.what();
    });
 
-   EXPECT_NO_THROW(
+   EXPECT_NO_EXIT_BEHAVIOUR(
     exit(CXError{expectedMsg})
    );
 
@@ -36,7 +36,7 @@ namespace CX {
  }
 
  TEST(DefaultExitHandler, default_exit_handler_terminates) {
-  EXPECT_DEATH(
+  EXPECT_EXIT_BEHAVIOUR(
    defaultExitHandler()(CXError{nullptr}),
    "`CX::exit\\(\\.\\.\\.\\)` invoked without an error\n"
   );
@@ -52,32 +52,36 @@ namespace CX {
 
  #ifdef CX_STL_SUPPORT
   TEST(Error, error_rethrows_given_error) {
-   EXPECT_THROW(
+   EXPECT_ERROR_BEHAVIOUR(
     error(CXError{""}),
     CXError
    );
   }
 
   TEST(DefaultErrorHandler, default_error_handler_rethrows_error) {
-   EXPECT_THROW(
+   EXPECT_ERROR_BEHAVIOUR(
     defaultErrorHandler()(CXError{""}),
     CXError
    );
   }
- #else
+ #elif defined(CX_LIBC_SUPPORT)
   TEST(Error, error_terminates) {
-   EXPECT_DEATH(
+   EXPECT_ERROR_BEHAVIOUR(
     error(CXError{"Some error"}),
     ".*`CX::error\\(\\.\\.\\.\\)` invoked with error:\nSome error\n.*"
    );
   }
 
   TEST(DefaultErrorHandler, default_error_handler_terminates) {
-   EXPECT_DEATH(
+   EXPECT_ERROR_BEHAVIOUR(
     defaultErrorHandler()(CXError{"Some error"}),
     ".*`CX::error\\(\\.\\.\\.\\)` invoked with error:\nSome error\n.*"
    );
   }
+ #else
+  #pragma message \
+   "Neither `CX_STL_SUPPORT` nor `CX_LIBC_SUPPORT` have are enabled; "\
+   "`CX::error(...)` tests will be disabled"
  #endif
 
  TEST(Error, error_with_custom_handler_invokes_custom_handler) {
@@ -90,7 +94,7 @@ namespace CX {
     errMsg = err.what();
    });
 
-   EXPECT_NO_THROW(error(CXError{expectedMsg}));
+   EXPECT_NO_ERROR_BEHAVIOUR(error(CXError{expectedMsg}));
   }());
  }
 

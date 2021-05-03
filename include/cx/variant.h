@@ -1,16 +1,9 @@
 #pragma once
 
+#include <cx/common.h>
 #include <cx/idioms.h>
 #include <cx/templates.h>
-
-//Conditional dependency if CX was built with stl support enabled
-#ifdef CX_STL_SUPPORT
- #define CX_STL_SUPPORT_EXPR(expr) expr
-
- #include <exception>
-#else
- #define CX_STL_SUPPORT_EXPR(expr)
-#endif
+#include <cx/error.h>
 
 //Conditional dependency if CX was built with libc support enabled
 #ifdef CX_LIBC_SUPPORT
@@ -79,16 +72,16 @@ namespace CX {
   ::Value;
 
  //Supporting exceptions
- struct VariantTypeError CX_STL_SUPPORT_EXPR(: std::exception) {
-  char const * what() const noexcept CX_STL_SUPPORT_EXPR(override) {
-   return "Variant type not present";
-  }
+ struct VariantTypeError : CXError {
+  VariantTypeError() :
+   CXError{"Variant type not present"}
+  {}
  };
 
- struct IncompatibleVariantError CX_STL_SUPPORT_EXPR(: std::exception) {
-  char const * what() const noexcept CX_STL_SUPPORT_EXPR(override) {
-   return "Variant types are not convertible";
-  }
+ struct IncompatibleVariantError : CXError {
+  IncompatibleVariantError() :
+   CXError{"Variant types are not convertible"}
+  {}
  };
 
  //Variant impl
@@ -394,7 +387,7 @@ namespace CX {
    if (has<E>()) {
     return *(E *)&data;
    }
-   throw VariantTypeError{};
+   return error<E&>(VariantTypeError{});
   }
 
   //Return encapsulated element and clear variant
@@ -411,7 +404,7 @@ namespace CX {
     } gc{*this};
     return *(E *)&data;
    }
-   throw VariantTypeError{};
+   return error<E>(VariantTypeError{});
   }
 
   //Similar to `drain()`, however, instead of returning a value,
@@ -430,7 +423,7 @@ namespace CX {
     } gc{*this};
     e = (E&&)*(E *)&data;
    } else {
-    throw VariantTypeError{};
+    error(VariantTypeError{});
    }
   }
 
@@ -484,10 +477,10 @@ namespace CX {
  //Empty variant
  template<>
  struct Variant<> final {
-  static constexpr decltype(sizeof(0)) const Size = 0;
+  static constexpr SizeType const Size = 0;
   //Note: `alignof(expression)` is a GNU-extension; using
   //`alignof(char)` as a portable substitute
-  static constexpr decltype(alignof(char)) const Alignment = 1;
+  static constexpr AlignType const Alignment = 1;
 
  private:
   template<typename... Types>
@@ -503,7 +496,7 @@ namespace CX {
 
   template<typename E>
   void assign(E) {
-   throw IncompatibleVariantError{};
+   error(IncompatibleVariantError{});
   }
 
  public:
@@ -531,7 +524,7 @@ namespace CX {
    tag(0),
    data{}
   {
-   throw VariantTypeError{};
+   error(VariantTypeError{});
   };
 
   //Element move constructor
@@ -541,7 +534,7 @@ namespace CX {
    tag(0),
    data{}
   {
-   throw VariantTypeError{};
+   error(VariantTypeError{});
   };
 
   template<typename E>
@@ -552,19 +545,19 @@ namespace CX {
   template<typename E>
   requires false
   E& get() {
-   throw VariantTypeError{};
+   return error<E&>(VariantTypeError{});
   }
 
   template<typename E>
   requires false
   E drain() {
-   throw VariantTypeError{};
+   return error<E>(VariantTypeError{});
   }
 
   template<typename E>
   requires false
   void rdrain(E&) {
-   throw VariantTypeError{};
+   error(VariantTypeError{});
   }
 
   //Copy assignment operator
@@ -581,14 +574,14 @@ namespace CX {
   template<typename E>
   requires false
   Variant& operator=(E const&) {
-   throw VariantTypeError{};
+   return error<Variant&>(VariantTypeError{});
   }
 
   //Element move assignment operator
   template<typename E>
   requires false
   Variant& operator=(E&&) {
-   throw VariantTypeError{};
+   return error<Variant&>(VariantTypeError{});
   }
  };
 

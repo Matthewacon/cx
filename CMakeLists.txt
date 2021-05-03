@@ -99,6 +99,12 @@ if(${CX_STL_SUPPORT})
   APPEND CX_COMPILE_FLAGS
   -DCX_STL_SUPPORT
  )
+else()
+ list(
+  APPEND CX_COMPILE_FLAGS
+  -nostdlib++
+  -fno-exceptions
+ )
 endif()
 
 if(${CX_LIBC_SUPPORT})
@@ -115,6 +121,10 @@ else()
  #  <cx/vararg.h>\
  # "
  #)
+ list(
+  APPEND CX_COMPILE_FLAGS
+  -nostdlib
+ )
 endif()
 
 if(${CX_VARIANT_HARD_CLEAR})

@@ -36,7 +36,7 @@ namespace CX {
 
  //Utilities for universal exit function (see below)
  namespace Internal {
-  #if defined(CX_STL_SUPORT) || defined(CX_LIBC_SUPPORT)
+  #if defined(CX_STL_SUPPORT) || defined(CX_LIBC_SUPPORT)
    inline void printError(char const * funcName, CXError const &err) {
     char const
      * msg = err.what(),
@@ -99,28 +99,38 @@ namespace CX {
  }
 
  //Universal exit function
- template<typename Error = NullptrType>
- void exit(Error err = nullptr) noexcept {
-  auto const exitFunc = getExitHandler();
-  if constexpr (HasBase<decltype(err), CXError>) {
-   //Propagate user-provided error
-   exitFunc(err);
-  } else {
-   //Exit with default error
-   CXError abruptExit{nullptr};
-   exitFunc(abruptExit);
+ //Note: Return type present to prevent compiler errors for
+ //`exit` invocations in non-returning contexts
+ #pragma GCC diagnostic push
+ #pragma GCC diagnostic ignored "-Wreturn-type"
+  template<typename R = void, typename Error = NullptrType>
+  R exit(Error err = nullptr) noexcept {
+   auto const exitFunc = getExitHandler();
+   if constexpr (HasBase<decltype(err), CXError>) {
+    //Propagate user-provided error
+    exitFunc(err);
+   } else {
+    //Exit with default error
+    CXError abruptExit{nullptr};
+    exitFunc(abruptExit);
+   }
   }
- }
+ #pragma GCC diagnostic pop
 
  //Returns the default error handler
- inline constexpr auto defaultErrorHandler() noexcept {
-  #ifdef CX_STL_SUPPORT
+ inline auto defaultErrorHandler() noexcept {
+  #if defined(CX_STL_SUPPORT) && defined(__cpp_exceptions)
    //STL error handler
+   #pragma message \
+    "`CX_STL_SUPPORT` enabled; using STL error handler"
    return +[](CXError const &err) {
     throw err;
    };
   #elif defined(CX_LIBC_SUPPORT)
    //libc error handler
+   #pragma message \
+    "`CX_LIBC_SUPPORT` enabled or `__cpp_exceptions` diabled; using "\
+    "LIBC error handler"
    return +[](CXError const &err) noexcept {
     Internal::printError("error", err);
     abort();
@@ -128,13 +138,18 @@ namespace CX {
   #else
    //If neither `CX_STL_SUPPORT` nor `CX_LIBC_SUPPORT` are
    //enabled, use exit
+   #pragma message \
+    "Neither `CX_STL_SUPPORT` nor `CX_LIBC_SUPPORT` are enabled; "\
+    "using exit handler instead. Note: You can change this behaviour "\
+    "by setting the error handler for the current thread with "\
+    "`CX::setErrorHandler(...)`"
    return getExitHandler();
   #endif
  }
 
  //Return the current CX error handler
  inline auto& getErrorHandler() noexcept {
-  static constinit thread_local void (*handler)(CXError const&) = defaultErrorHandler();
+  static thread_local void (*handler)(CXError const&) = defaultErrorHandler();
   return handler;
  }
 
@@ -144,9 +159,15 @@ namespace CX {
  }
 
  //Universal error function
- void error(auto err) {
-  getErrorHandler()(err);
- }
+ //Note: Return type present to prevent compiler errors for
+ //`error` invocations in non-returning contexts
+ #pragma GCC diagnostic push
+ #pragma GCC diagnostic ignored "-Wreturn-type"
+  template<typename R = void>
+  R error(auto err) {
+   getErrorHandler()(err);
+  }
+ #pragma GCC diagnostic pop
 }
 
 //Clean up internal macros

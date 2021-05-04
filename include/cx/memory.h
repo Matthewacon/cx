@@ -37,7 +37,7 @@ namespace CX {
      "restrictions."
     });
    } else {
-    deferrals[count++] = {f};
+    deferrals[count++] = f;
    }
    return *this;
   }
@@ -46,9 +46,9 @@ namespace CX {
    for (int i = 0; i < count; i++) {
     auto &deferred = deferrals[i];
     deferred();
-    //TODO uncomment when this is implemented in 'cx/lambda.h'
-    //deferred.reset();
+    deferred.reset();
    }
+   count = 0;
   }
  };
 
@@ -78,6 +78,8 @@ namespace CX {
     for (auto &deferred : deferrals) {
      deferred();
     }
+    //TODO consider re-using existing lambda entries by copy-assigning
+    //new deferred functions when they're pushed
     deferrals.clear();
    }
   };

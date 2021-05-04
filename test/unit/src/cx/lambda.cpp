@@ -4247,6 +4247,7 @@ namespace CX::Testing {
  #endif //CX_STL_SUPPORT
 
  //TODO
+ // - Lambda reset tests
  // - Lambda construction with types that are:
  //   - default constructible, copy-assignable
  //   - default constructible, move-assignable

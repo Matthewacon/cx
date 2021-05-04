@@ -941,6 +941,22 @@ namespace CX {
     (*(LambdaBase *)buffer).~LambdaBase();
    }
 
+   //Resets a lambda buffer to an empty `LambdaBase` object
+   template<IsLambda L>
+   [[gnu::always_inline]]
+   static void reset(L &l) {
+    //Destroy lambda buffer
+    if constexpr (IsNonAllocLambda<L>) {
+     destroy(&l.buf());
+    } else {
+     #ifdef CX_STL_SUPPORT
+      destroy(l.buffer.get());
+     #endif
+    }
+    //Re-initialize lambda buffer
+    initEmptyLambda(l);
+   }
+
    //FunctionOperator move assignment
    template<SupportedPrototype<Restriction> F>
    requires (CopyConstructible<F>
@@ -1646,6 +1662,11 @@ namespace CX {
    return (*(LambdaBase *)&buffer).present();
   }
 
+  //Resets current lambda buffer state to empty
+  void reset() {
+   OperationBase::reset(*this);
+  }
+
   //Implicit lambda conversion operator
   template<CompatibleLambda<Lambda> L>
   explicit operator L() const {
@@ -1819,6 +1840,11 @@ namespace CX {
   //Presence conversion operator
   operator bool() const noexcept {
    return (*(LambdaBase *)&buffer).present();
+  }
+
+  //Resets current lambda buffer state to empty
+  void reset() {
+   OperationBase::reset(*this);
   }
 
   //Implicit lambda conversion operator
@@ -2000,6 +2026,11 @@ namespace CX {
    return (*(LambdaBase *)&buffer).present();
   }
 
+  //Resets current lambda buffer state to empty
+  void reset() {
+   OperationBase::reset(*this);
+  }
+
   //Implicit lambda conversion operator
   template<CompatibleLambda<Lambda> L>
   explicit operator L() const {
@@ -2174,6 +2205,11 @@ namespace CX {
   //Presence conversion operator
   operator bool() const noexcept {
    return (*(LambdaBase *)&buffer).present();
+  }
+
+  //Resets current lambda buffer state to empty
+  void reset() {
+   OperationBase::reset(*this);
   }
 
   //Explicit lambda conversion operator
@@ -2366,6 +2402,11 @@ namespace CX {
     return (*(LambdaBase *)buffer.get()).present();
    }
 
+   //Resets current lambda buffer state to empty
+   void reset() {
+    OperationBase::reset(*this);
+   }
+
    //Implicit lambda conversion operator
    template<CompatibleLambda<AllocLambda> L>
    explicit operator L() const {
@@ -2520,6 +2561,11 @@ namespace CX {
    //Presence conversion operator
    operator bool() const noexcept {
     return (*(LambdaBase *)buffer.get()).present();
+   }
+
+   //Resets current lambda buffer state to empty
+   void reset() {
+    OperationBase::reset(*this);
    }
 
    //Implicit lambda conversion operator
@@ -2679,6 +2725,11 @@ namespace CX {
     return (*(LambdaBase *)buffer.get()).present();
    }
 
+   //Resets current lambda buffer state to empty
+   void reset() {
+    OperationBase::reset(*this);
+   }
+
    //Implicit lambda conversion operator
    template<CompatibleLambda<AllocLambda> L>
    explicit operator L() const {
@@ -2834,6 +2885,11 @@ namespace CX {
    //Presence conversion operator
    operator bool() const noexcept {
     return (*(LambdaBase *)buffer.get()).present();
+   }
+
+   //Resets current lambda buffer state to empty
+   void reset() {
+    OperationBase::reset(*this);
    }
 
    //Implicit lambda conversion operator

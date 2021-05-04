@@ -200,14 +200,6 @@ endif()
 
 #Conditional library build type
 if(${CX_HEADER_ONLY})
- #Warning for header-only builds and flag to disable headers with linkage
- message(
-  WARNING
-  "CX is building in header-only mode; the following headers will be unavailable:\
-   <cx/memory.h>\
-  "
- )
-
  #Add source flag for header-only builds
  list(
   APPEND CX_COMPILE_FLAGS

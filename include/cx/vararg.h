@@ -1,6 +1,8 @@
 #pragma once
 
+#include <cx/common.h>
 #include <cx/idioms.h>
+#include <cx/error.h>
 
 //Conditional stl dependencies if built with stl support
 #ifdef CX_STL_SUPPORT
@@ -103,9 +105,9 @@ namespace CX {
 
    //Stub to prevent incomprehensible compiler backtraces
    operator va_list&() {
-    throw InvalidPlatformVaListError{
+    return error<va_list&>(InvalidPlatformVaListError{
      "Unsupported platform"
-    };
+    });
    }
   };
 
@@ -160,9 +162,9 @@ namespace CX {
    VaListWrapper(PlatformListType list) :
     list([&] {
      if (!list) {
-      throw InvalidPlatformVaListError{
+      error(InvalidPlatformVaListError{
        "Null platform va_list"
-      };
+      });
      }
      return *list;
     }())

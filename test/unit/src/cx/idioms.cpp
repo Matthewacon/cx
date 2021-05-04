@@ -1244,7 +1244,7 @@ namespace CX::Testing {
    template<typename A> void operator--(A) {}
    template<typename = void> void operator!() {}
    template<typename A> void operator&(A) {}
-   template<typename A> operator A() { throw; }
+   template<typename A> [[noreturn]] operator A() { while (true); }
   };
 
   TEST(Operators, templated_operators_satisfy_conditional_constraints) {

@@ -18,20 +18,18 @@ namespace CX {
  }
 
  TEST(Exit, exit_with_custom_handler_invokes_custom_handler) {
-  static char const * errMsg = "";
+  static char const * expectedMsg = "expected message";
 
   EXPECT_NO_FATAL_FAILURE([] {
-   char const * const expectedMsg = "expected message";
-
    setExitHandler(+[](CXError const &err) {
-    errMsg = err.what();
+    fprintf(stderr, "%s\n", expectedMsg);
+    defaultExitHandler()(err);
    });
 
-   EXPECT_NO_EXIT_BEHAVIOUR(
-    exit(CXError{expectedMsg})
+   EXPECT_EXIT_BEHAVIOUR(
+    exit(CXError{nullptr}),
+    ".*expected message\n.*"
    );
-
-   EXPECT_STREQ(errMsg, expectedMsg);
   }());
  }
 

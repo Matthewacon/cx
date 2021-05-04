@@ -99,13 +99,11 @@ namespace CX {
  }
 
  //Universal exit function
- //Note: Return type present to prevent compiler errors for
- //`exit` invocations in non-returning contexts
- #pragma GCC diagnostic push
- #pragma GCC diagnostic ignored "-Wreturn-type"
-  template<typename R = void, typename Error = NullptrType>
-  R exit(Error err = nullptr) noexcept {
-   auto const exitFunc = getExitHandler();
+ template<typename Error = NullptrType>
+ [[noreturn]]
+ void exit(Error err = nullptr) noexcept {
+  auto const exitFunc = getExitHandler();
+  while (true) {
    if constexpr (HasBase<decltype(err), CXError>) {
     //Propagate user-provided error
     exitFunc(err);
@@ -115,7 +113,7 @@ namespace CX {
     exitFunc(abruptExit);
    }
   }
- #pragma GCC diagnostic pop
+ }
 
  //Returns the default error handler
  inline auto defaultErrorHandler() noexcept {

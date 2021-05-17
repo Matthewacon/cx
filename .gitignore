@@ -9,10 +9,13 @@ build*/
 TODO.md
 
 # Scribble files
-scribbles/
+**/scribbles/
 
 # Dependencies
 dependencies/
+
+# mdbook output
+docs/book/
 
 # Prerequisites
 build

@@ -2095,6 +2095,10 @@ namespace CX::Testing {
   );
  }
 
+ TEST(Lambda, reset_destructs_and_reinitializes_lambda_as_uninitialized) {
+  FAIL();
+ }
+
  //`AllocLambda` is not supported when building without STL support
  #ifdef CX_STL_SUPPORT
   TEST(AllocLambdaConstructor, alloc_lambda_default_constructor_initializes_empty_lambda) {
@@ -4097,6 +4101,10 @@ namespace CX::Testing {
     }()),
     ".*Lambda is uninitialized.*"
    );
+  }
+
+  TEST(AllocLambda, reset_destructs_and_reinitializes_alloc_lambda_as_uninitialized) {
+   FAIL();
   }
 
   //Lambda construction/assignment qualifier mismatch tests

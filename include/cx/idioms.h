@@ -851,6 +851,7 @@ namespace CX {
    ::Array<T>
    ::Sized;
 
+ //TODO Rename to `ArrayTypeDecayed`
  //Yields element type of an array type
  //ie. `T[...] -> T`
  template<typename T>

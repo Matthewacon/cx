@@ -10,7 +10,7 @@ namespace CX {
  T&& declval() noexcept(true);
 
  //Value consumer meta-function with no external linkage; useful
- //for both SFINAT and concept meta-functions
+ //for both SFINAE and concept meta-functions
  //Note: Can only be used in unevaluated contexts
  template<typename T>
  void expect(T) noexcept(true);

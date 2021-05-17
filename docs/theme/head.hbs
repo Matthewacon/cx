@@ -177,42 +177,39 @@
   "version": 4
  };
  $(function() {
-  $('pre')
+  $('pre > div.buttons')
    .each(function(index) {
-    var parent = this;
-
-    //If the parent contains an `<area class="no-interactive-code">`
-    //tag, do not add a button
-    var areaElements = $(this)
+    const parent = this;
+    //If the parent contains an adjacent `<area class="no-interactive-code">`
+    //element, do not add a run button
+    const shouldSkip = $(this)
+     .parent('pre')
      .prev('p')
-     .find('area#no-interactive-code');
-    if (areaElements.length == 0) {
-     console.log("Not adding button to: " + index);
+     .find('area#no-interactive-code')
+     .length != 0;
 
+    if (!shouldSkip) {
      //Add button
-     var button = $(`<div class="buttons"><button class="fa" title="Try it out">Try it out       </button></div>`);
-     button
-      .children('button')
-      .attr('id', "code-button-" + index);
-     button.prependTo(this);
+     const button = $(`<button class="fa fa-play play-button" title="Run this code" aria-label="Run this code" id="code-button-${index}"></button>`);
+     button.appendTo(this);
 
      //Get code from code block
      var rawCode = $(parent)
+      .parent('pre')
       .children('code')
       .text()
       .replace("\<cx\/", "<https://raw.githubusercontent.com/Matthewacon/CX/main/include/cx/");
-     console.log(`Index ${index}:\n${rawCode}`);
 
      //Encode code for godbolt request
      var request = godboltEmbeddedRequest;
      request.g[0].g[0].g[0].i.source = rawCode;
 
      const encodedRequest = `https://godbolt.org/e?hideEditorToolbars=true#${risonEncode(request)}`;
-     console.log(encodedRequest);
 
      //Add parent replacement on button click
      button.click(function() {
       $(parent)
+       .parent('pre')
        .html(`<iframe id="godbolt" src=${encodedRequest}></iframe>`);
      });
     }

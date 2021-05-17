@@ -8,8 +8,6 @@ struct CX::TrueType {
 ```
 Base for all `bool` value meta-functions with the value `true`.
 
-# TODO CHANGE BUTTON TO THE PLAY BUTTON FROM MDBOOK
-
 ## Example Usage
 ```c++
 #include <cx/common.h>

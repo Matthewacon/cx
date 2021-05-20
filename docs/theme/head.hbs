@@ -30,12 +30,175 @@
 
 <!--Styling for embedded complier explorer iframes-->
 <style>
- #godbolt {
+ [id^="godbolt-"] {
   position: relative;
   width: 100%;
-  height: 400px;
  }
 </style>
+
+<!--Function to handle replacement of headers for interactive examples-->
+<script type="text/javascript">
+function findIncludes(exampleCode) {
+ const includeRegex = /\#include\s*\<cx\/.*.h\>/g;
+ var includedHeaders = [];
+
+ //Find all headers
+ {
+  var match;
+  do {
+   match = includeRegex.exec(exampleCode);
+   if (match) {
+    includedHeaders.push(match[0]);
+   }
+  } while (match);
+ }
+
+ return includedHeaders;
+}
+
+function removeInclude(exampleCode, include) {
+ return exampleCode.replaceAll(
+  `\#include\w*\<cx\/#{include}>`,
+  ""
+ );
+}
+
+function getIncludeInfo(include) {
+ const rawContentLink = "https://raw.githubusercontent.com/Matthewacon/CX/main/include/cx";
+ const headerRegex = /\w+.h/g;
+ //Get header from include
+ var header; {
+  const match = headerRegex.exec(include);
+  if (match) {
+   header = match[0];
+  }
+ }
+
+ //Construct raw github content link
+ if (header) {
+  const link = `${rawContentLink}/${header}`;
+  return {
+   header: header,
+   origInclude: include,
+   newInclude: `#include <${link}>`,
+   link: link
+  };
+ }
+
+ return undefined;
+}
+
+function formatCodeExample(exampleCode) {
+ var processedHeaders = [];
+
+ function headerAlreadyProcessed(header) {
+  for (const processedHeader of processedHeaders) {
+   if (processedHeader.header === header) {
+    return true;
+   }
+  }
+  return false;
+ }
+
+ function transformIncludes(src, depth = 0) {
+  const includes = findIncludes(src);
+  for (var i = 0; i < includes.length; i++) {
+   const include = includes[i];
+   //Get header info for include
+   const includeInfo = getIncludeInfo(include);
+   if (!includeInfo) {
+    console.error(
+     `Error in example: could not find header '${include}'`
+    );
+    return undefined;
+   }
+
+   //Skip header if it has already been processed
+   if (headerAlreadyProcessed(includeInfo.header)) {
+    //Remove already-processed dependent header
+    src = src.replace(
+     `${includeInfo.origInclude}\n`,
+     ""
+    );
+    console.log(`Skipping already processed header: '${includeInfo.header}'`);
+   } else {
+    console.log(`Processing header: ${includeInfo.header}`);
+
+    //Get header content from github
+    const request = new XMLHttpRequest();
+    request.open("GET", includeInfo.link, false);
+    request.send(null);
+    if (request.status != 200) {
+     console.error(
+      `Error in example: could not find header '${include}' at link ${includeInfo.link}\n`
+     );
+     return undefined;
+    }
+    const header = request.responseText;
+
+    //Adds begin example comment
+    function addExampleComment(str) {
+     if (depth == 0 && i == includes.length - 1) {
+      return `${str}\n//BEGIN EXAMPLE`;
+     }
+     return str;
+    }
+
+    //Deal with dependent includes
+    const headerIncludes = findIncludes(header);
+    processedHeaders.push({
+     header: includeInfo.header,
+     src: src
+    });
+    if (headerIncludes.length != 0) {
+     console.log(`Substituting transformed header for include [${depth}]: ${includeInfo.origInclude}`);
+     var transformed = transformIncludes(header, depth + 1);
+     if (!transformed) {
+      return undefined;
+     }
+
+     //If the header contains a `#pragma once` declaration, remove it
+     transformed = transformed.replaceAll(
+      /#pragma\s+once\n*/g,
+      ""
+     );
+
+     //Add comments before and after header to mark it out
+     transformed = `//BEGIN: ${includeInfo.origInclude}\n${transformed}\n//END: ${includeInfo.origInclude}`;
+
+     //Parse and transform dependent includes in `header`,
+     //and substitute transformed header for the original include
+     src = src.replace(
+      includeInfo.origInclude,
+      addExampleComment(transformed)
+     );
+    } else {
+     console.log(`Substituting raw link for include [${depth}]: ${includeInfo.origInclude}`);
+
+     //Substitute the original include for the raw link
+     src = src.replace(
+      includeInfo.origInclude,
+      addExampleComment(
+       `//BEGIN: ${includeInfo.origInclude}\n${includeInfo.newInclude}\n//END: ${includeInfo.origInclude}`
+      )
+     );
+    }
+   }
+  }
+
+  return src;
+ }
+
+ //If the code example does not contain a main function,
+ //add one so the example will run
+ var newCode = transformIncludes(exampleCode);
+ const hasMain = /int\s+main(\s+)+\(/;
+ if (!hasMain.test(newCode)) {
+  newCode += `\nint main() {}\n`;
+ }
+ return newCode;
+}
+</script>
 
 <!--Adds button to reveal embedded compiler explorer iframe-->
 <script type="text/javascript">
@@ -53,13 +216,13 @@
          "j": 1,
          "lang": "c++",
          "selection": {
-          "endColumn": 179,
+          "endColumn": 1,
           "endLineNumber": 1,
-          "positionColumn": 179,
+          "positionColumn": 1,
           "positionLineNumber": 1,
-          "selectionStartColumn": 179,
+          "selectionStartColumn": 1,
           "selectionStartLineNumber": 1,
-          "startColumn": 179,
+          "startColumn": 1,
           "startLineNumber": 1
          },
          "source": "REPLACEME"
@@ -186,30 +349,54 @@
      const button = $(`<button class="fa fa-play play-button" title="Run this code" aria-label="Run this code" id="code-button-${index}"></button>`);
      button.appendTo(this);
 
-     //Get code from code block
-     var rawCode = $(parent)
+     //Get code element
+     const codeElement = $(parent)
       .parent('pre')
-      .children('code')
-      .text()
-      .replace("\<cx\/", "<https://raw.githubusercontent.com/Matthewacon/CX/main/include/cx/");
+      .children('code');
 
-     //If the code does not contain a main function, add it so the example will run
-     const hasMain = /int\s+main(\s?)+\(/;
-     if (!hasMain.test(rawCode)) {
-      rawCode += '\nint main() {}\n';
-     }
+     //Get code from code element
+     const exampleCode = codeElement.text();
 
-     //Encode code for godbolt request
-     var request = godboltEmbeddedRequest;
-     request.g[0].g[0].g[0].i.source = rawCode;
+     //Get the pixel height of the code element and calculate
+     //the new height of the iframe
+     const codeHeight = codeElement.height();
+     const pageHeight = $(`html`)
+      .height();
+     const newHeight = Math.floor(
+      Math.min(codeHeight, 0.25 * pageHeight)
+     );
 
-     const encodedRequest = `https://godbolt.org/e?hideEditorToolbars=true#${risonEncode(request)}`;
+     //Add styling for compiler explorer iframe
+     $(`head`)
+      .append(`<style> [id="godbolt-${index}"] { height: ${newHeight}px; }</style>`);
 
      //Add parent replacement on button click
      button.click(function() {
+      //Encode code for godbolt request
+      var request = godboltEmbeddedRequest;
+      const originalExample = codeElement.text();
+      var formattedExample = formatCodeExample(originalExample);
+      var lineNumber = 1;
+      if (!formattedExample) {
+       formattedExample = `There was an error transforming this example, please report this to https://github.com/Matthewacon/CX/issues`;
+      } else {
+       lineNumber = formattedExample
+        .substring(0, formattedExample.indexOf("BEGIN EXAMPLE"))
+        .split('\n')
+        .length;
+      }
+      request.g[0].g[0].g[0].i.source = formattedExample;
+      request.g[0].g[0].g[0].i.selection.startLineNumber = lineNumber;
+      request.g[0].g[0].g[0].i.selection.positionLineNumber = lineNumber;
+      request.g[0].g[0].g[0].i.selection.selectionStartLineNumber = lineNumber;
+      request.g[0].g[0].g[0].i.selection.endLineNumber = lineNumber;
+
+      const encodedRequest = `https://godbolt.org/e?hideEditorToolbars=true#${risonEncode(request)}`;
+
+      //Add compiler explorer iframe
       $(parent)
        .parent('pre')
-       .html(`<iframe id="godbolt" src=${encodedRequest}></iframe>`);
+       .html(`<iframe id="godbolt-${index}" src=${encodedRequest}></iframe>`);
      });
     }
    });

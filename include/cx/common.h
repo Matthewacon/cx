@@ -71,6 +71,14 @@ namespace CX {
  template<typename...>
  struct Dummy {};
 
+ //General purpose dummy template template class
+ template<template<typename...> typename...>
+ struct DummyTemplate {};
+
+ //General purpose dummy non-type template class
+ template<auto...>
+ struct DummyValueTemplate {};
+
  //Unique internal type with no-linkage, used for template meta-functions
  template<typename...>
  struct ImpossibleType;
@@ -81,5 +89,5 @@ namespace CX {
 
  //Unique internal type with no-linkage, used for template meta-functions
  template<auto...>
- struct ImpossibleValueType;
+ struct ImpossibleValueTemplateType;
 }

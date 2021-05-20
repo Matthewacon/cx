@@ -71,3 +71,5 @@ int main() {
 
 ## See Also
  - [`<cx/common.h>`](../cx_common_h.md)
+ - [`CX::DummyTemplate`](./dummy_template.md)
+ - [`CX::DummyValueTemplate`](./dummy_value_template.md)

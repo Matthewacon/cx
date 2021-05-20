@@ -192,7 +192,7 @@ function formatCodeExample(exampleCode) {
  //If the code example does not contain a main function,
  //add one so the example will run
  var newCode = transformIncludes(exampleCode);
- const hasMain = /int\s+main(\s+)+\(/;
+ const hasMain = /int\s+main\s*\(/g;
  if (!hasMain.test(newCode)) {
   newCode += `\nint main() {}\n`;
  }
@@ -363,7 +363,10 @@ function formatCodeExample(exampleCode) {
      const pageHeight = $(`html`)
       .height();
      const newHeight = Math.floor(
-      Math.min(codeHeight, 0.25 * pageHeight)
+      Math.max(
+       Math.min(codeHeight, 0.3 * pageHeight),
+       0.3 * pageHeight
+      )
      );
 
      //Add styling for compiler explorer iframe

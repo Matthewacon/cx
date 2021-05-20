@@ -11,9 +11,11 @@ This header provides the base definitions for all other headers in CX.
 | [`CX::AlignType`](./cx_common_h/align_type.md) | The type of the value returned by `alignof(...)` expressions. |
 | [`CX::NullptrType`](./cx_common_h/nullptr_type.md) | The type of `nullptr`. |
 | [`CX::Dummy<typename...>`](./cx_common_h/dummy.md) | A defined (has linkage) type for deductions in compile-time meta-functions and conversions in runtime contexts. |
-| [`CX::ImpossibleType`](./cx_common_h/impossible_type.md) | An undefined (no linkage) type for compile-time meta-functions. |
-| [`CX::ImpossibleTemplateType`](./cx_common_h/impossible_template_type.md) | An undefined (no linkage) type for compile-time meta-functions. |
-| [`CX::ImpossibleValueType`](./cx_common_h/impossible_value_type.md) | An undefined (no linkage) type for compile-time meta-functions. |
+| [`CX::DummyTemplate<template<typename...> typename...>`](./cx_common_h/dummy_template.md) | A defined (has linkage) type for deductions in compile-time meta-functions and conversions in runtime contexts. |
+| [`CX::DummyValueTemplate<auto...>`](./cx_common_h/dummy_value_template.md) | A defined (has linkage) type for deductions in compile-time meta-functions and conversions in runtime contexts. |
+| [`CX::ImpossibleType<typename...>`](./cx_common_h/impossible_type.md) | An undefined (no linkage) type for compile-time meta-functions. |
+| [`CX::ImpossibleTemplateType<template<typename...> typename...>`](./cx_common_h/impossible_template_type.md) | An undefined (no linkage) type for compile-time meta-functions. |
+| [`CX::ImpossibleValueTemplateType<auto...>`](./cx_common_h/impossible_value_template_type.md) | An undefined (no linkage) type for compile-time meta-functions. |
 
 ## Type Meta-Functions
 | Name | Description |

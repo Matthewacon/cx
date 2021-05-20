@@ -121,4 +121,4 @@ static_assert(!FunctionWithPrototype<
 ## See Also
  - [`<cx/common.h>`](../cx_common_h.md)
  - [`CX::ImpossibleTemplateType`](./impossible_template_type.md)
- - [`CX::ImpossibleValueType`](./impossible_value_type.md)
+ - [`CX::ImpossibleValueTemplateType`](./impossible_value_template_type.md)

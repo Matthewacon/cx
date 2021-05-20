@@ -23,7 +23,7 @@ struct CxStyleTypeMetaFunction {
  using Type = void;
 };
 
-//`void`
+//Anonymous type with a member alias `type`, which is `void`
 using StlCompatibleTypeMetaFunction = CX::AsStlCompatible<CxStyleTypeMetaFunction>;
 ```
 

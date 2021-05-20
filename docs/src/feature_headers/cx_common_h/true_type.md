@@ -9,6 +9,7 @@ struct CX::TrueType {
 Base for all `bool` value meta-functions with the value `true`.
 
 ## Example Usage
+### Int identity idiom
 ```c++
 #include <cx/common.h>
 

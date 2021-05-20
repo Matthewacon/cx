@@ -254,7 +254,7 @@ namespace CX {
   >
   requires (Index < 0 || Index >= sizeof...(Types))
   struct TemplateTypeAtIndex<Index, Receiver, Types...> {
-   using Type = Receiver<ImpossibleType<>>;
+   using Type = Receiver<ImpossibleType>;
   };
 
   template<auto Match, auto... Values>

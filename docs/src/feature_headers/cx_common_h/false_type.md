@@ -9,6 +9,7 @@ struct CX::FalseType {
 Base for all `bool` value meta-functions with the value `false`.
 
 ## Example Usage
+### Int identity idiom
 ```c++
 #include <cx/common.h>
 

@@ -3,7 +3,7 @@
 <area id="no-interactive-code"></area>
 ```c++
 template<typename...>
-struct ImpossibleType;
+struct CX::ImpossibleType;
 ```
 An undefined (no linkage) type for compile-time meta-functions. Useful for
 type meta-functions as an error type and optional default parameters for

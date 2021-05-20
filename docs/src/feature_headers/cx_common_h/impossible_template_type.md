@@ -3,7 +3,7 @@
 <area id="no-interactive-code"></area>
 ```c++
 template<template<typename...> typename>
-struct ImpossibleTemplateType;
+struct CX::ImpossibleTemplateType;
 ```
 An undefined (no linkage) type for compile-time meta-functions. Useful for
 type meta-functions as an error type and optional default parameters for
@@ -15,6 +15,7 @@ concepts.
 > hence its usefullness as an error type for meta-functions.
 
 ## Example Usage
+### Template-template type forwarding
 ```c++
 #include <cx/common.h>
 

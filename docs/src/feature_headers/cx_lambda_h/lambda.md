@@ -288,7 +288,6 @@ struct CX::Lambda<Prototype> {
   void reset();
   ```
   ---
-
   Destructs the function or functor encapsulated by the `CX::Lambda`
   instance. ie.
   ```c++
@@ -349,8 +348,24 @@ struct CX::Lambda<Prototype> {
   Lambda& operator=(F const&);
   ```
   ---
+  Function and functor copy assignment operator. The behaviour of this
+  member function is the same as the
+  [copy constructor (2)](#constructor-2).
   ```c++
+  #define CX_STL_SUPPORT
+  #include <cx/lambda.h>
 
+  //Note: This header is not required to use `CX::Lambda`,
+  //it is part of the example
+  #include <iostream>
+
+  int main() {
+   CX::Lambda l;
+   l = [] {
+    std::cout << "Hello world!" << std::endl;
+   };
+   l();
+  }
   ```
 
  </td></tr>
@@ -366,12 +381,55 @@ struct CX::Lambda<Prototype> {
   )
   Lambda& operator=(F&&);
   ```
+  ---
+  Functor move assignment operator. The behaviour of this
+  member function is the same as the
+  [copy constructor (3)](#constructor-3).
+  ```c++
+  #define CX_STL_SUPPORT
+  #include <cx/lambda.h>
+
+  //Note: These headers are not required to use `CX::Lambda`,
+  //they are part of the example
+  #include <iostream>
+  #include <memory>
+
+  int main() {
+   CX::Lambda l;
+   auto anonymousLambda = [] {
+    std::cout << "Hello world!" << std::endl;
+   };
+
+   l = std::move(anonymousLambda);
+   l();
+  }
+  ```
 
  </td></tr>
  <tr><td>
 
   ```c++
   Lambda& operator=(Lambda const&);
+  ```
+  ---
+  `CX::Lambda` copy assignment operator. The behaviour of this
+  function is the same as the
+  [copy constructor (4)](#constructor-4).
+  ```c++
+  #define CX_STL_SUPPORT
+  #include <cx/lambda.h>
+
+  //Note: This header is not required to use `CX::Lambda`,
+  //it is part of the example
+  #include <iostream>
+
+  int main() {
+   CX::Lambda l1 = [] {
+    std::cout << "Hello world!" << std::endl;
+   };
+   CX::Lambda l2 = l1;
+   l2();
+  }
   ```
 
  </td></tr>
@@ -380,6 +438,32 @@ struct CX::Lambda<Prototype> {
   ```c++
   Lambda& operator=(Lambda&&);
   ```
+  ---
+  `CX::Lambda` move assignment operator. The behaviour of this
+  function is the same as the
+  [move constructor (5)](#constructor-5).
+  ```c++
+  #define CX_STL_SUPPORT
+  #include <cx/lambda.h>
+
+  //Note: These headers are not required to use `CX::Lambda`,
+  //they are part of the example
+  #include <iostream>
+  #include <memory>
+
+  int main() {
+   CX::Lambda l1 = [] {
+    std::cout << "Hello world!" << std::endl;
+   };
+
+   CX::Lambda l2 = std::move(l1);
+   if (!l1) {
+    std::cout << "`l1` does not contain a value!" << std::endl;
+   }
+
+   l2();
+  }
+  ```
 
  </td></tr>
  <tr><td>
@@ -387,6 +471,26 @@ struct CX::Lambda<Prototype> {
   ```c++
   template<CompatibleLambda L>
   Lambda& operator=(L const&);
+  ```
+  ---
+  The copy assignment operator for compatible function encapsulators.
+  The behaviour of this function is the same as the
+  [copy constructor (6)](#constructor-6).
+  ```c++
+  #define CX_STL_SUPPORT
+  #include <cx/lambda.h>
+
+  //Note: This header is not required to use `CX::Lambda`,
+  //it is part of the example
+  #include <iostream>
+
+  int main() {
+   CX::AllocLambda l1 = [] {
+    std::cout << "Hello world!" << std::endl;
+   };
+   CX::Lambda l2 = l1;
+   l2();
+  }
   ```
 
  </td></tr>
@@ -397,6 +501,32 @@ struct CX::Lambda<Prototype> {
   requires (!CX::Const<L>)
   Lambda& operator=(L&&);
   ```
+  ---
+  The move assignment operator for compatible function encapsulators.
+  The behaviour of this function is the same as the
+  [move constructor (7)](#constructor-7).
+  ```c++
+  #define CX_STL_SUPPORT
+  #include <cx/lambda.h>
+
+  //Note: These headers are not required to use `CX::Lambda`,
+  //they are part of the example
+  #include <iostream>
+  #include <memory>
+
+  int main() {
+   CX::AllocLambda l1 = [] {
+    std::cout << "Hello world!" << std::endl;
+   };
+
+   CX::Lambda l2 = std::move(l1);
+   if (!l1) {
+    std::cout << "`l1` does not contain a value!" << std::endl;
+   }
+
+   l2();
+  }
+  ```
 
  </td></tr>
 </table>
@@ -404,7 +534,7 @@ struct CX::Lambda<Prototype> {
 TODO docs for `CX::Lambda::operator()`
 
 ### Deduction Guides
-
+TODO
 
 ## Example Usage
 ### `CX::Lambda` Usage

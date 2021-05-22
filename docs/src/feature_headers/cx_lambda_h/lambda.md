@@ -37,7 +37,8 @@ A fast and general-purpose non-allocating function encapsulation abstraction.
 
    <area id="no-interactive-code"></area>
    ```c++
-   typename Prototype   
+   typename
+   Prototype   
    ```
 
   </td>
@@ -129,8 +130,8 @@ struct CX::Lambda<Prototype> {
   ```c++
   template<typename F>
   requires (!IsLambda<F>
-   && !Const<F>
-   && !Struct<F>
+   && !CX::Const<F>
+   && !CX::Struct<F>
    && SupportedPrototype<F>
   )
   Lambda(F&&) {/*...*/}
@@ -232,10 +233,178 @@ struct CX::Lambda<Prototype> {
  </li>
 </ol>
 
-### Member functions
-| | |
-| :- | :- |
-| | |
+### Member Functions
+All of the following member functions are defined for the following
+partial specializations of `CX::Lambda`:
+<area id="no-interactive-code"></area>
+```c++
+template<typename R, typename... Args>
+//Where `Prototype` is any of:
+// - `R (Args...)`
+// - `R (Args..., ...)`
+// - `R (Args...) noexcept`
+// - `R (Args..., ...) noexcept`
+struct CX::Lambda<Prototype> {
+ /*Member function definition here*/
+};
+```
+<!--Member function definitions-->
+<table id="member-function-table">
+ <tr><td>
+
+   ```c++
+   operator bool() const noexcept;
+   ```
+   ---
+   Presence conversion operator. Used for detecting whether or not
+   an instance of `CX::Lambda` has a value. ie.
+   ```c++
+   #define CX_STL_SUPPORT
+   #include <cx/lambda.h>
+
+   //Note: This header is not required to use `CX::Lambda`,
+   //it is part of the example
+   #include <iostream>
+
+   int main() {
+    CX::Lambda l;
+
+    if (!l) {
+     std::cout << "`l` does not have a value!" << std::endl;
+    }
+
+    l = [] {};
+
+    if (l) {
+     std::cout << "`l` has a value!" << std::endl;
+    }
+   }
+   ```
+
+ </td></tr>
+ <tr><td>
+
+  ```c++
+  void reset();
+  ```
+  ---
+
+  Destructs the function or functor encapsulated by the `CX::Lambda`
+  instance. ie.
+  ```c++
+  #define CX_STL_SUPPORT
+  #include <cx/lambda.h>
+
+  //Note: This header is not required to use `CX::Lambda`,
+  //it is part of the example
+  #include <iostream>
+
+  int main() {
+   CX::Lambda l = [] {};
+
+   l.reset();
+
+   if (!l) {
+    std::cout << "`l` does not have a value!" << std::endl;
+   }
+  }
+  ```
+
+ </td></tr>
+ <tr><td>
+
+  ```c++
+  template<CompatibleLambda L>
+  explicit operator L() const;
+  ```
+  ---
+  Implicit lambda conversion operator. Allows conversions to compatible
+  lambda types. ie.
+  ```c++
+  #define CX_STL_SUPPORT
+  #include <cx/lambda.h>
+
+  //Note: This header is not required to use `CX::Lambda`,
+  //it is part of the example
+  #include <iostream>
+
+  int main() {
+   int i = 0;
+   CX::Lambda l1 = [&] {
+    std::cout << "Hello world: " << i++ << std::endl;
+   };
+   l1();
+
+   auto l2 = (CX::AllocLambda<void ()>)l1;
+   l2();
+  }
+  ```
+
+ </td></tr>
+ <tr><td>
+
+  ```c++
+  template<typename F>
+  requires (!IsLambda<F> && SupportedPrototype<F>)
+  Lambda& operator=(F const&);
+  ```
+  ---
+  ```c++
+
+  ```
+
+ </td></tr>
+ <tr><td>
+
+  <area id="no-interactive-code"></area>
+  ```c++
+  template<typename F>
+  requires (!IsLambda<F>
+   && !CX::Const<F>
+   && !CX::Struct<F>
+   && SupportedPrototype<F>
+  )
+  Lambda& operator=(F&&);
+  ```
+
+ </td></tr>
+ <tr><td>
+
+  ```c++
+  Lambda& operator=(Lambda const&);
+  ```
+
+ </td></tr>
+ <tr><td>
+
+  ```c++
+  Lambda& operator=(Lambda&&);
+  ```
+
+ </td></tr>
+ <tr><td>
+
+  ```c++
+  template<CompatibleLambda L>
+  Lambda& operator=(L const&);
+  ```
+
+ </td></tr>
+ <tr><td>
+
+  ```c++
+  template<CompatibleLambda L>
+  requires (!CX::Const<L>)
+  Lambda& operator=(L&&);
+  ```
+
+ </td></tr>
+</table>
+
+TODO docs for `CX::Lambda::operator()`
+
+### Deduction Guides
+
 
 ## Example Usage
 ### `CX::Lambda` Usage

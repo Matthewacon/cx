@@ -28,6 +28,17 @@
  }
 </style>
 
+<!--Styling for custom links-->
+<style>
+ a#custom-link {
+  text-decoration-line: none;
+  color: currentcolor;
+ }
+ a#custom-link:hover {
+  color: var(--links);
+ }
+</style>
+
 <!--Styling for constructor description ordered lists-->
 <style>
  ol[id="constructor-list"] {
@@ -69,7 +80,7 @@
     $(this)
      .append(`
       <td>
-       <a href="#constructor-${index + 1}">(${index + 1})</a>
+       <a id="custom-link" href="#constructor-${index + 1}">(${index + 1})</a>
       </td>
      `);
 
@@ -78,6 +89,73 @@
      .find(`td > pre`)
      .parent()
      .prepend(`<p><area id="no-interactive-code"></area></p>`);
+   });
+ });
+</script>
+
+<!--Styling for nested member function definition tables-->
+<style>
+ table[id^="member-function-definition-"] {
+  border-collapse: collapse;
+  border: hidden;
+ }
+ td[id^="member-function-"] {
+  position: relative;
+  width: 1px;
+  border: hidden;
+ }
+ td[id^="member-function-"]:target > a::before {
+  content: "» ";
+  margin-left: -1.325ch;
+ }
+</style>
+
+<!--Transformer for member function definition tables-->
+<script type="text/javascript">
+ $(function() {
+  //Add element to disable running first code example and
+  //put the code example in a table
+  $(`table#member-function-table`)
+   .each(function(table_index) {
+    const tableWidth = $(this).width();
+    console.log(`Found member function table: ${table_index}`);
+    $(this)
+     .find(`tbody > tr`)
+     .each(function(member_function_index) {
+      const function_index = member_function_index + 1;
+      console.log(`Found member function [${table_index}]: ${function_index}`);
+      $(this)
+       .find(`td`)
+       .each(function(unused) {
+        //Get the original code example
+        const codeElement = $(this)
+         .find(`pre > code`)
+         .first()
+         .parent();
+
+        //Create new code element
+        const newCodeElement = $(`
+         <table id="member-function-definition-${table_index}">
+          <td id="member-function-${table_index}-${function_index}">
+           <a id="custom-link" href="#member-function-${table_index}-${function_index}">
+            (${function_index})
+           </a>
+          </td>
+          <td>
+           <p><area id="no-interactive-code"></area></p>
+           <pre>${codeElement.html()}</pre>
+          </td>
+         </table>
+        `);
+
+        //Add new code element to parent
+        $(this)
+         .prepend(newCodeElement);
+
+        //Remove old code example
+        codeElement.remove();
+       });
+     });
    });
  });
 </script>
@@ -414,8 +492,7 @@
      //Get the pixel height of the code element and calculate
      //the new height of the iframe
      const codeHeight = codeElement.height();
-     const pageHeight = $(`html`)
-      .height();
+     const pageHeight = window.innerHeight;
      const newHeight = Math.floor(
       Math.max(
        Math.min(codeHeight, 0.3 * pageHeight),

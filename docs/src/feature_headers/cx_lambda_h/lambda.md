@@ -108,7 +108,7 @@ struct CX::Lambda<Prototype> {
 ```
 
 <!--Constructor definitions-->
-<table id="constructor-table">
+<table id="constructor-table-1">
  <tr><td>
 
   ```c++
@@ -171,7 +171,7 @@ struct CX::Lambda<Prototype> {
 </table>
 
 <!--Constructor descriptions-->
-<ol id="constructor-list">
+<ol id="constructor-list-1">
  <li>
 
    The default `CX::Lambda` constructor; creates an uninitialized
@@ -257,7 +257,9 @@ struct CX::Lambda<Prototype> {
    ```
    ---
    Presence conversion operator. Used for detecting whether or not
-   an instance of `CX::Lambda` has a value. ie.
+   an instance of `CX::Lambda` has a value.
+
+   #### Example Usage
    ```c++
    #define CX_STL_SUPPORT
    #include <cx/lambda.h>
@@ -289,7 +291,9 @@ struct CX::Lambda<Prototype> {
   ```
   ---
   Destructs the function or functor encapsulated by the `CX::Lambda`
-  instance. ie.
+  instance.
+
+  #### Example Usage
   ```c++
   #define CX_STL_SUPPORT
   #include <cx/lambda.h>
@@ -318,7 +322,9 @@ struct CX::Lambda<Prototype> {
   ```
   ---
   Implicit lambda conversion operator. Allows conversions to compatible
-  lambda types. ie.
+  lambda types.
+
+  #### Example Usage
   ```c++
   #define CX_STL_SUPPORT
   #include <cx/lambda.h>
@@ -351,6 +357,8 @@ struct CX::Lambda<Prototype> {
   Function and functor copy assignment operator. The behaviour of this
   member function is the same as the
   [copy constructor (2)](#constructor-2).
+
+  #### Example Usage
   ```c++
   #define CX_STL_SUPPORT
   #include <cx/lambda.h>
@@ -385,6 +393,8 @@ struct CX::Lambda<Prototype> {
   Functor move assignment operator. The behaviour of this
   member function is the same as the
   [copy constructor (3)](#constructor-3).
+
+  #### Example Usage
   ```c++
   #define CX_STL_SUPPORT
   #include <cx/lambda.h>
@@ -415,6 +425,8 @@ struct CX::Lambda<Prototype> {
   `CX::Lambda` copy assignment operator. The behaviour of this
   function is the same as the
   [copy constructor (4)](#constructor-4).
+
+  #### Example Usage
   ```c++
   #define CX_STL_SUPPORT
   #include <cx/lambda.h>
@@ -442,6 +454,8 @@ struct CX::Lambda<Prototype> {
   `CX::Lambda` move assignment operator. The behaviour of this
   function is the same as the
   [move constructor (5)](#constructor-5).
+
+  #### Example Usage
   ```c++
   #define CX_STL_SUPPORT
   #include <cx/lambda.h>
@@ -476,6 +490,8 @@ struct CX::Lambda<Prototype> {
   The copy assignment operator for compatible function encapsulators.
   The behaviour of this function is the same as the
   [copy constructor (6)](#constructor-6).
+
+  #### Example Usage
   ```c++
   #define CX_STL_SUPPORT
   #include <cx/lambda.h>
@@ -505,6 +521,8 @@ struct CX::Lambda<Prototype> {
   The move assignment operator for compatible function encapsulators.
   The behaviour of this function is the same as the
   [move constructor (7)](#constructor-7).
+
+  #### Example Usage
   ```c++
   #define CX_STL_SUPPORT
   #include <cx/lambda.h>
@@ -531,52 +549,165 @@ struct CX::Lambda<Prototype> {
  </td></tr>
 </table>
 
-TODO docs for `CX::Lambda::operator()`
+<!--Member function operators-->
+The member function operator definition, `operator()`, is slightly
+different for each partial specialization of `CX::Lambda`:
 
-### Deduction Guides
-TODO
+<table id="member-function-table">
+ <tr><td>
 
-## Example Usage
-### `CX::Lambda` Usage
-```c++
-#define CX_STL_SUPPORT
-#include <cx/lambda.h>
+  ```c++
+  template<typename R, typename... Args>
+  struct CX::Lambda<R (Args...)> {
+   R operator()(Args...);
+  };
+  ```
+  ---
+  #### Description
+  The member function operator definition for the `CX::Lambda`
+  partial specialization for non-c-variadic functions that *may*
+  throw.
 
-//Note: This header is not required to use `CX::Lambda`,
-//it is part of the example
-#include <iostream>
+  #### Example Usage
+  ```c++
+  #define CX_STL_SUPPORT
+  #include <cx/lambda.h>
 
-void f1(float f, char const * str);
+  //Note: This header is not required to use `CX::Lambda`,
+  //it is part of the example
+  #include <iostream>
 
-int main() {
- CX::Lambda l1{[] {
-  std::cout << "Hello from CX::Lambda (l1)!" << std::endl;
- }};
- l1();
+  int main() {
+   CX::Lambda l = [](int i, float f) {
+    std::cout << "l(" << i << ", " << f << ")" << std::endl;
+   };
+   l(1234, 5.678);
+  }
+  ```
 
- CX::Lambda l2 = [](int i) {
-  std::cout << "Hello from CX::Lambda (l2): " << i << "!" << std::endl;
- };
- l2(31415);
+ </td></tr>
+ <tr><td>
 
- CX::Lambda l3{&f1};
- l3(2.71, "hello cx");
-}
+  ```c++
+  template<typename R, typename... Args>
+  struct CX::Lambda<R (Args..., ...)> {
+   template<typename... Varargs>
+   R operator()(Args..., Varargs...);
+  };
+  ```
+  ---
+  #### Description
+  The member function operator definition for the `CX::Lambda`
+  partial specialization for c-variadic functions that *may*
+  throw.
 
-void f1(float f, char const * str) {
- std::cout << "Hello from f1(" << f << ", '" << str << "')!" << std::endl;
-}
-```
+  #### Example Usage
+  ```c++
+  #define CX_STL_SUPPORT
+  #include <cx/lambda.h>
 
-### `CX::Lambda` <=> [`CX::AllocLambda`](./alloc_lambda.md) Interaction
-```c++
-#define CX_STL_SUPPORT
-#include <cx/lambda.h>
+  //Note: These headers are not required to use `CX::Lambda`,
+  //they are part of the example
+  #include <iostream>
+  #include <cx/vararg.h>
 
-TODO
-```
+  int main() {
+   CX::Lambda l = [](int n, ...) {
+    CX::VaList list;
+    va_start(list, n);
+    for (int i = 0; i < n; i++) {
+     std::cout << "[" << i << "]: " << list.arg<int>() << std::endl;
+    }
+   };
+
+   l(3, 1, 2, 3);
+  }
+  ```
+
+ </td></tr>
+ <tr><td>
+
+  ```c++
+  template<typename R, typename... Args>
+  struct CX::Lambda<R (Args...) noexcept> {
+   R operator()(Args...) noexcept;
+  };
+  ```
+  ---
+  #### Description
+  The member function operator definition for the `CX::Lambda`
+  partial specialization for non-c-variadic functions that
+  *should not* throw.
+
+  #### Example Usage
+  ```c++
+  #define CX_STL_SUPPORT
+  #include <cx/lambda.h>
+
+  //Note: This header is not required to use `CX::Lambda`,
+  //it is part of the example
+  #include <stdexcept>
+
+  int main() {
+   CX::Lambda l = [] noexcept {
+    throw std::runtime_error{
+     "Uh oh! Time to terminate!"
+    };
+   };
+   l();
+  }
+  ```
+
+ </td></tr>
+ <tr><td>
+
+  ```c++
+  template<typename R, typename... Args>
+  struct CX::Lambda<R (Args..., ...) noexcept> {
+   template<typename... Varargs>
+   R operator()(Args..., Varargs...) noexcept;
+  };
+  ```
+  ---
+  #### Description
+  The member function operator definition for the `CX::Lambda` partial
+  specialization for c-variadic functions that *should not* throw.
+
+  #### Example Usage
+  ```c++
+  #define CX_STL_SUPPORT
+  #include <cx/lambda.h>
+
+  //Note: These headers are not required to use `CX::Lambda`,
+  //they are part of the example
+  #include <iostream>
+  #include <stdexcept>
+  #include <cx/vararg.h>
+
+  int main() {
+   CX::Lambda l = [](int n, ...) noexcept {
+    CX::VaList list;
+    va_start(list, n);
+    for (int i = 0; i < n; i++) {
+     auto const arg = list.arg<int>();
+     std::cout << "[" << i << "]: " << arg << std::endl;
+     if (arg == 0xdead) {
+      throw std::runtime_error{
+       "Uh oh! Time to terminate!"
+      };
+     }
+    }
+   };
+
+   l(4, 1, 2, 0xdead, 4);
+  }
+  ```
+
+ </td></tr>
+</table>
 
 ## See Also
  - [`<cx/lambda.h>`](../cx_lambda_h.md)
  - [`CX::AllocLambda`](./alloc_lambda.md)
  - [`<cx/error.h>`](../cx_error_h.md)
+ - [`<cx/vararg.h>`](../cx_vararg_h.md)

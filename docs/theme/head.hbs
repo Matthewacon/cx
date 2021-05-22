@@ -41,21 +41,21 @@
 
 <!--Styling for constructor description ordered lists-->
 <style>
- ol[id="constructor-list"] {
+ ol[id^="constructor-list-"] {
   list-style: none;
   counter-reset: styled-counter;
  }
- ol[id="constructor-list"] > li {
+ ol[id^="constructor-list-"] > li {
   counter-increment: styled-counter;
  }
- ol[id="constructor-list"] > li::before {
+ ol[id^="constructor-list-"] > li::before {
   content: counter(styled-counter) ") ";
   color: var(--fg);
   font-weight: bold;
   position: absolute;
   text-indent: -25px;
  }
- ol[id="constructor-list"] > li:target::before {
+ ol[id^="constructor-list-"] > li:target::before {
   content: "»  " counter(styled-counter) ") ";
   /*margin-left: -13.5px;*/
   margin-left: -1.5ch;
@@ -65,30 +65,39 @@
 <!--Transformer for constructor definition tables and constructor lists-->
 <script type="text/javascript">
  $(function() {
-  //Add the id for each constructor description
-  $(`ol#constructor-list > li`)
-   .each(function(index) {
-    $(this)
-     .attr(`id`, `constructor-${index + 1}`);
-   });
+  $(`table[id^=constructor-table-]`)
+   .each(function(table_index) {
+    const constructorTableIndex = table_index + 1;
 
-  //Add a column with a link to the description for each constructor
-  //definition and disable code examples
-  $(`table#constructor-table > tbody > tr`)
-   .each(function(index) {
-    //Add column with link to description
-    $(this)
-     .append(`
-      <td>
-       <a id="custom-link" href="#constructor-${index + 1}">(${index + 1})</a>
-      </td>
-     `);
+    //Transform constructor description list
+    $(`ol#constructor-list-${constructorTableIndex} > li`)
+     .each(function(list_index) {
+      //Add the id for each constructor description to each entry in the
+      //list for this constructor table
+      $(this)
+       .attr(`id`, `constructor-${constructorTableIndex}-${list_index + 1}`);
+     });
 
-    //Add element to disable code example
-    $(this)
-     .find(`td > pre`)
-     .parent()
-     .prepend(`<p><area id="no-interactive-code"></area></p>`);
+     //Transform constructor definition table
+     $(this)
+      .find(`tbody > tr`)
+      .each(function(constructor_index) {
+       //Add column with link to description
+       $(this)
+        .append(`
+         <td>
+          <a id="custom-link" href="#constructor-${constructorTableIndex}-${constructor_index + 1}">
+           (${constructor_index + 1})
+          </a>
+         </td>
+        `);
+
+       //Add element to disable code example
+       $(this)
+        .find(`td > pre`)
+        .parent()
+        .prepend(`<p><area id="no-interactive-code"></area></p>`);
+      });
    });
  });
 </script>
@@ -117,13 +126,10 @@
   //put the code example in a table
   $(`table#member-function-table`)
    .each(function(table_index) {
-    const tableWidth = $(this).width();
-    console.log(`Found member function table: ${table_index}`);
     $(this)
      .find(`tbody > tr`)
      .each(function(member_function_index) {
       const function_index = member_function_index + 1;
-      console.log(`Found member function [${table_index}]: ${function_index}`);
       $(this)
        .find(`td`)
        .each(function(unused) {

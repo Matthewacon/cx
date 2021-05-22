@@ -1,4 +1,6 @@
 # Summary
+[Sponsor Development]()
+[F.A.Q.](./getting_started/faq.md)
 
 - [Getting Started](./getting_started/index.md)
   - [Supported Platforms](./getting_started/supported_platforms.md)
@@ -6,8 +8,7 @@
   - [ABI and API Guarantees](./getting_started/abi_and_api_guarantees.md)
   - [Core Concepts](./getting_started/core_concepts.md)
   - [Limitations](./getting_started/limitations.md)
-  - [License]()
-  - [Sponsoring Development]()
+  - [License](./getting_started/license.md)
 
 - [Feature Headers](./feature_headers/index.md)
   - [<cx/common.h>](./feature_headers/cx_common_h.md)
@@ -31,6 +32,15 @@
   - [<cx/templates.h>](./feature_headers/cx_templates_h.md)
   - [<cx/vararg.h>](./feature_headers/cx_vararg_h.md)
   - [<cx/error.h>](./feature_headers/cx_error_h.md)
+    - [`CX::CXError`](./feature_headers/cx_error_h/cx_error.md)
+    - [`CX::defaultExitHandler`](./feature_headers/cx_error_h/exit.md)
+    - [`CX::getExitHandler`](./feature_headers/cx_error_h/get_exit_handler.md)
+    - [`CX::setExitHandler`](./feature_headers/cx_error_h/set_exit_handler.md)
+    - [`CX::exit`](./feature_headers/cx_error_h/exit.md)
+    - [`CX::defaultErrorHandler`](./feature_headers/cx_error_h/default_error_handler.md)
+    - [`CX::getErrorHandler`](./feature_headers/cx_error_h/get_error_handler.md)
+    - [`CX::setErrorHandler`](./feature_headers/cx_error_h/set_error_handler.md)
+    - [`CX::error`](./feature_headers/cx_error_h/error.md)
   - [<cx/memory.h>](./feature_headers/cx_memory_h.md)
   - [<cx/variant.h>](./feature_headers/cx_variant_h.md)
   - [<cx/lambda.h>](./feature_headers/cx_lambda_h.md)
@@ -45,5 +55,3 @@
     - [`CX::IsAllocLambda`](./feature_headers/cx_lambda_h/is_alloc_lambda.md)
     - [`CX::CompatibleLambda`](./feature_headers/cx_lambda_h/compatible_lambda.md)
   - [<cx/unsafe.h>](./feature_headers/cx_unsafe_h.md)
-
-[F.A.Q.](./getting_started/faq.md)

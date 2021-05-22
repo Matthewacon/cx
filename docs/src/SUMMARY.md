@@ -6,6 +6,8 @@
   - [ABI and API Guarantees](./getting_started/abi_and_api_guarantees.md)
   - [Core Concepts](./getting_started/core_concepts.md)
   - [Limitations](./getting_started/limitations.md)
+  - [License]()
+  - [Sponsoring Development]()
 
 - [Feature Headers](./feature_headers/index.md)
   - [<cx/common.h>](./feature_headers/cx_common_h.md)

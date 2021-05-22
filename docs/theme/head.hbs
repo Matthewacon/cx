@@ -28,6 +28,60 @@
  }
 </style>
 
+<!--Styling for constructor description ordered lists-->
+<style>
+ ol[id="constructor-list"] {
+  list-style: none;
+  counter-reset: styled-counter;
+ }
+ ol[id="constructor-list"] > li {
+  counter-increment: styled-counter;
+ }
+ ol[id="constructor-list"] > li::before {
+  content: counter(styled-counter) ") ";
+  color: var(--fg);
+  font-weight: bold;
+  position: absolute;
+  text-indent: -25px;
+ }
+ ol[id="constructor-list"] > li:target::before {
+  content: "»  " counter(styled-counter) ") ";
+  /*margin-left: -13.5px;*/
+  margin-left: -1.5ch;
+ }
+</style>
+
+<!--Transformer for constructor definition tables and constructor lists-->
+<script type="text/javascript">
+ $(function() {
+  //Add the id for each constructor description
+  $(`ol#constructor-list > li`)
+   .each(function(index) {
+    $(this)
+     .attr(`id`, `constructor-${index + 1}`);
+   });
+
+  //Add a column with a link to the description for each constructor
+  //definition and disable code examples
+  $(`table#constructor-table > tbody > tr`)
+   .each(function(index) {
+    //Add column with link to description
+    $(this)
+     .append(`
+      <td>
+       <a href="#constructor-${index + 1}">(${index + 1})</a>
+      </td>
+     `);
+
+    //Add element to disable code example
+    $(this)
+     .find(`td > pre`)
+     .parent()
+     .prepend(`<p><area id="no-interactive-code"></area></p>`);
+   });
+ });
+</script>
+
 <!--Styling for embedded complier explorer iframes-->
 <style>
  [id^="godbolt-"] {
@@ -38,166 +92,166 @@
 
 <!--Function to handle replacement of headers for interactive examples-->
 <script type="text/javascript">
-function findIncludes(exampleCode) {
- const includeRegex = /\#include\s*\<cx\/.*.h\>/g;
- var includedHeaders = [];
+ function findIncludes(exampleCode) {
+  const includeRegex = /\#include\s*\<cx\/.*.h\>/g;
+  var includedHeaders = [];
 
- //Find all headers
- {
-  var match;
-  do {
-   match = includeRegex.exec(exampleCode);
+  //Find all headers
+  {
+   var match;
+   do {
+    match = includeRegex.exec(exampleCode);
+    if (match) {
+     includedHeaders.push(match[0]);
+    }
+   } while (match);
+  }
+
+  return includedHeaders;
+ }
+
+ function removeInclude(exampleCode, include) {
+  return exampleCode.replaceAll(
+   `\#include\w*\<cx\/#{include}>`,
+   ""
+  );
+ }
+
+ function getIncludeInfo(include) {
+  const rawContentLink = "https://raw.githubusercontent.com/Matthewacon/CX/main/include/cx";
+  const headerRegex = /\w+.h/g;
+  //Get header from include
+  var header; {
+   const match = headerRegex.exec(include);
    if (match) {
-    includedHeaders.push(match[0]);
-   }
-  } while (match);
- }
-
- return includedHeaders;
-}
-
-function removeInclude(exampleCode, include) {
- return exampleCode.replaceAll(
-  `\#include\w*\<cx\/#{include}>`,
-  ""
- );
-}
-
-function getIncludeInfo(include) {
- const rawContentLink = "https://raw.githubusercontent.com/Matthewacon/CX/main/include/cx";
- const headerRegex = /\w+.h/g;
- //Get header from include
- var header; {
-  const match = headerRegex.exec(include);
-  if (match) {
-   header = match[0];
-  }
- }
-
- //Construct raw github content link
- if (header) {
-  const link = `${rawContentLink}/${header}`;
-  return {
-   header: header,
-   origInclude: include,
-   newInclude: `#include <${link}>`,
-   link: link
-  };
- }
-
- return undefined;
-}
-
-function formatCodeExample(exampleCode) {
- var processedHeaders = [];
-
- function headerAlreadyProcessed(header) {
-  for (const processedHeader of processedHeaders) {
-   if (processedHeader.header === header) {
-    return true;
+    header = match[0];
    }
   }
-  return false;
+
+  //Construct raw github content link
+  if (header) {
+   const link = `${rawContentLink}/${header}`;
+   return {
+    header: header,
+    origInclude: include,
+    newInclude: `#include <${link}>`,
+    link: link
+   };
+  }
+
+  return undefined;
  }
 
- function transformIncludes(src, depth = 0) {
-  const includes = findIncludes(src);
-  for (var i = 0; i < includes.length; i++) {
-   const include = includes[i];
-   //Get header info for include
-   const includeInfo = getIncludeInfo(include);
-   if (!includeInfo) {
-    console.error(
-     `Error in example: could not find header '${include}'`
-    );
-    return undefined;
+ function formatCodeExample(exampleCode) {
+  var processedHeaders = [];
+
+  function headerAlreadyProcessed(header) {
+   for (const processedHeader of processedHeaders) {
+    if (processedHeader.header === header) {
+     return true;
+    }
    }
+   return false;
+  }
 
-   //Skip header if it has already been processed
-   if (headerAlreadyProcessed(includeInfo.header)) {
-    //Remove already-processed dependent header
-    src = src.replace(
-     `${includeInfo.origInclude}\n`,
-     ""
-    );
-    console.log(`Skipping already processed header: '${includeInfo.header}'`);
-   } else {
-    console.log(`Processing header: ${includeInfo.header}`);
-
-    //Get header content from github
-    const request = new XMLHttpRequest();
-    request.open("GET", includeInfo.link, false);
-    request.send(null);
-    if (request.status != 200) {
+  function transformIncludes(src, depth = 0) {
+   const includes = findIncludes(src);
+   for (var i = 0; i < includes.length; i++) {
+    const include = includes[i];
+    //Get header info for include
+    const includeInfo = getIncludeInfo(include);
+    if (!includeInfo) {
      console.error(
-      `Error in example: could not find header '${include}' at link ${includeInfo.link}\n`
+      `Error in example: could not find header '${include}'`
      );
      return undefined;
     }
-    const header = request.responseText;
 
-    //Adds begin example comment
-    function addExampleComment(str) {
-     if (depth == 0 && i == includes.length - 1) {
-      return `${str}\n//BEGIN EXAMPLE`;
-     }
-     return str;
-    }
-
-    //Deal with dependent includes
-    const headerIncludes = findIncludes(header);
-    processedHeaders.push({
-     header: includeInfo.header,
-     src: src
-    });
-    if (headerIncludes.length != 0) {
-     console.log(`Substituting transformed header for include [${depth}]: ${includeInfo.origInclude}`);
-     var transformed = transformIncludes(header, depth + 1);
-     if (!transformed) {
-      return undefined;
-     }
-
-     //If the header contains a `#pragma once` declaration, remove it
-     transformed = transformed.replaceAll(
-      /#pragma\s+once\n*/g,
+    //Skip header if it has already been processed
+    if (headerAlreadyProcessed(includeInfo.header)) {
+     //Remove already-processed dependent header
+     src = src.replace(
+      `${includeInfo.origInclude}\n`,
       ""
      );
-
-     //Add comments before and after header to mark it out
-     transformed = `//BEGIN: ${includeInfo.origInclude}\n${transformed}\n//END: ${includeInfo.origInclude}`;
-
-     //Parse and transform dependent includes in `header`,
-     //and substitute transformed header for the original include
-     src = src.replace(
-      includeInfo.origInclude,
-      addExampleComment(transformed)
-     );
+     console.log(`Skipping already processed header: '${includeInfo.header}'`);
     } else {
-     console.log(`Substituting raw link for include [${depth}]: ${includeInfo.origInclude}`);
+     console.log(`Processing header: ${includeInfo.header}`);
 
-     //Substitute the original include for the raw link
-     src = src.replace(
-      includeInfo.origInclude,
-      addExampleComment(
-       `//BEGIN: ${includeInfo.origInclude}\n${includeInfo.newInclude}\n//END: ${includeInfo.origInclude}`
-      )
-     );
+     //Get header content from github
+     const request = new XMLHttpRequest();
+     request.open("GET", includeInfo.link, false);
+     request.send(null);
+     if (request.status != 200) {
+      console.error(
+       `Error in example: could not find header '${include}' at link ${includeInfo.link}\n`
+      );
+      return undefined;
+     }
+     const header = request.responseText;
+
+     //Adds begin example comment
+     function addExampleComment(str) {
+      if (depth == 0 && i == includes.length - 1) {
+       return `${str}\n//BEGIN EXAMPLE`;
+      }
+      return str;
+     }
+
+     //Deal with dependent includes
+     const headerIncludes = findIncludes(header);
+     processedHeaders.push({
+      header: includeInfo.header,
+      src: src
+     });
+     if (headerIncludes.length != 0) {
+      console.log(`Substituting transformed header for include [${depth}]: ${includeInfo.origInclude}`);
+      var transformed = transformIncludes(header, depth + 1);
+      if (!transformed) {
+       return undefined;
+      }
+
+      //If the header contains a `#pragma once` declaration, remove it
+      transformed = transformed.replaceAll(
+       /#pragma\s+once\n*/g,
+       ""
+      );
+
+      //Add comments before and after header to mark it out
+      transformed = `//BEGIN: ${includeInfo.origInclude}\n${transformed}\n//END: ${includeInfo.origInclude}`;
+
+      //Parse and transform dependent includes in `header`,
+      //and substitute transformed header for the original include
+      src = src.replace(
+       includeInfo.origInclude,
+       addExampleComment(transformed)
+      );
+     } else {
+      console.log(`Substituting raw link for include [${depth}]: ${includeInfo.origInclude}`);
+
+      //Substitute the original include for the raw link
+      src = src.replace(
+       includeInfo.origInclude,
+       addExampleComment(
+        `//BEGIN: ${includeInfo.origInclude}\n${includeInfo.newInclude}\n//END: ${includeInfo.origInclude}`
+       )
+      );
+     }
     }
    }
+
+   return src;
   }
 
-  return src;
+  //If the code example does not contain a main function,
+  //add one so the example will run
+  var newCode = transformIncludes(exampleCode);
+  const hasMain = /int\s+main\s*\(/g;
+  if (!hasMain.test(newCode)) {
+   newCode += `\nint main() {}\n`;
+  }
+  return newCode;
  }
-
- //If the code example does not contain a main function,
- //add one so the example will run
- var newCode = transformIncludes(exampleCode);
- const hasMain = /int\s+main\s*\(/g;
- if (!hasMain.test(newCode)) {
-  newCode += `\nint main() {}\n`;
- }
- return newCode;
-}
 </script>
 
 <!--Adds button to reveal embedded compiler explorer iframe-->

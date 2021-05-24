@@ -1,0 +1,1 @@
+# CX::TriviallyCopyable

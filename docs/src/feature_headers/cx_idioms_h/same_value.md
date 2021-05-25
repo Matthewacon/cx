@@ -7,7 +7,7 @@ concept CX::SameValue = /*...*/;
 ```
 Utility concept that compares two values; `V1` and `V2`.
 
-## Satisfaction Conditions
+## Satisfaction Criterion
 <table id="member-function-table">
  <tr><td>
 
@@ -15,6 +15,7 @@ Utility concept that compares two values; `V1` and `V2`.
   decltype(V1) == decltype(V2) && V1 == V2
   ```
   ---
+  The following constraints must be satisfied for this condition:
   1. The underlying types of `V1` and `V2` are the same.
   2. The values of `V1` and `V2` the same.
 

@@ -7,7 +7,7 @@ concept CX::SameType = /*...*/;
 ```
 Utility concept that compares two types; `T1` and `T2`.
 
-## Satisfaction Conditions
+## Satisfaction Criterion
 <table id="member-function-table">
  <tr><td>
 
@@ -15,7 +15,8 @@ Utility concept that compares two types; `T1` and `T2`.
   T1 == T2
   ```
   ---
-  `T1` and `T2` are the same type.
+  The following constraints must be satisfied for this condition:
+  1. `T1` and `T2` are the same type.
 
  </td></tr>
 </table>

@@ -8,7 +8,7 @@ concept CX::MatchAnyValue = /*...*/;
 Utility concept that compares `V` against any number of values;
 `Values...`.
 
-## Satisfaction Conditions
+## Satisfaction Criterion
 <table id="member-function-table">
  <tr><td>
 

@@ -7,7 +7,7 @@ concept CX::MatchAnyType = /*...*/;
 ```
 Utility concept that compares `T` against any number of types; `Types...`.
 
-## Satisfaction Conditions
+## Satisfaction Criterion
 <table id="member-function-table">
  <tr><td>
 
@@ -15,7 +15,8 @@ Utility concept that compares `T` against any number of types; `Types...`.
   (T == Types || ...)
   ```
   ---
-  `T` is present in the type parameter pack `Types`.
+  The following constraints must be satisfied for this condition:
+  1. `T` is present in the type parameter pack `Types`.
 
  </td></tr>
 </table>

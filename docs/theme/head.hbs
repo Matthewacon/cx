@@ -476,11 +476,17 @@
     const parent = this;
     //If the parent contains an adjacent `<area class="no-interactive-code">`
     //element, do not add a run button
-    const shouldSkip = $(this)
-     .parent('pre')
-     .prev('p')
-     .find('area#no-interactive-code')
-     .length != 0;
+    const parentPre = $(this)
+     .parent(`pre`);
+
+    const shouldSkip =
+     parentPre
+      .prev(`p`)
+      .find(`area#no-interactive-code`)
+      .length != 0
+     || parentPre
+      .prev(`area#no-interactive-code`)
+      .length != 0;
 
     if (!shouldSkip) {
      //Add button

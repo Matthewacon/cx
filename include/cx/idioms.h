@@ -214,6 +214,11 @@ namespace CX {
    using DecayedType = T;
   };
 
+  template<typename T>
+  struct Unqualified<T const volatile> : Unqualified<T volatile> {
+   using DecayedType = T volatile;
+  };
+
   //Const qualifier identity
   template<typename T>
   struct Const : FalseType {

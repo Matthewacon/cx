@@ -144,9 +144,9 @@ namespace CX {
       if constexpr (Destructible<E>) {
        //Destruct encapsulated element
        (*(E *)&ref.data).~E();
-      } else if constexpr (Array<E> && Destructible<ArrayElementType<E>>) {
+      } else if constexpr (Array<E> && Destructible<ArrayDecayed<E>>) {
        //Destruct all elements of encapsulated array
-       using ElementType = ArrayElementType<E>;
+       using ElementType = ArrayDecayed<E>;
        static constexpr auto const Length = ArraySize<E>;
        using LengthType = ConstVolatileDecayed<decltype(Length)>;
        auto &array = *(ElementType(*)[Length])&ref.data;
@@ -241,13 +241,13 @@ namespace CX {
   template<MatchAnyType<Elements...> E>
   requires (
    SizedArray<E>
-    && (Trivial<ArrayElementType<E>>
-     || CopyConstructible<ArrayElementType<E>>
-     || (Constructible<ArrayElementType<E>> && CopyAssignable<ArrayElementType<E>>)
+    && (Trivial<ArrayDecayed<E>>
+     || CopyConstructible<ArrayDecayed<E>>
+     || (Constructible<ArrayDecayed<E>> && CopyAssignable<ArrayDecayed<E>>)
     )
   )
   void assign(E const &src) const {
-   using ElementType = ArrayElementType<E>;
+   using ElementType = ArrayDecayed<E>;
    static constexpr auto const Length = ArraySize<E>;
    using LengthType = ConstVolatileDecayed<decltype(Length)>;
    auto &variantRef = const_cast<Variant&>(*this);
@@ -282,13 +282,13 @@ namespace CX {
   template<MatchAnyType<Elements...> E>
   requires (
    SizedArray<E>
-    && (Trivial<ArrayElementType<E>>
-     || MoveConstructible<ArrayElementType<E>>
-     || (Constructible<ArrayElementType<E>> && MoveAssignable<ArrayElementType<E>>)
+    && (Trivial<ArrayDecayed<E>>
+     || MoveConstructible<ArrayDecayed<E>>
+     || (Constructible<ArrayDecayed<E>> && MoveAssignable<ArrayDecayed<E>>)
     )
   )
   void assign(ConstDecayed<E> &&src) {
-   using ElementType = ArrayElementType<E>;
+   using ElementType = ArrayDecayed<E>;
    static constexpr auto const Length = ArraySize<E>;
    using LengthType = ConstVolatileDecayed<decltype(Length)>;
    auto &variantRef = const_cast<Variant&>(*this);

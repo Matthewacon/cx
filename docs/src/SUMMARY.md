@@ -55,7 +55,7 @@
     - [`CX::Array`](./feature_headers/cx_idioms_h/array.md)
     - [`CX::SizedArray`](./feature_headers/cx_idioms_h/sized_array.md)
     - [`CX::UnsizedArray`](./feature_headers/cx_idioms_h/unsized_array.md)
-    - [`CX::ArrayTypeDecayed`](./feature_headers/cx_idioms_h/array_type_decayed.md)
+    - [`CX::ArrayDecayed`](./feature_headers/cx_idioms_h/array_decayed.md)
     - [`CX::ArraySize`](./feature_headers/cx_idioms_h/array_size.md)
     - [`CX::Pointer`](./feature_headers/cx_idioms_h/pointer.md)
     - [`CX::MemberPointer`](./feature_headers/cx_idioms_h/member_pointer.md)

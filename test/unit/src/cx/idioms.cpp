@@ -385,36 +385,36 @@ namespace CX::Testing {
   EXPECT_FALSE((UnsizedArray<void (Dummy<>::*[5])()>));
  }
 
- TEST(ArrayElementType, array_types_yield_array_element_type) {
+ TEST(ArrayDecayed, array_types_yield_array_element_type) {
   using TypeA = char[123];
   using ExpectedTypeA = char;
-  EXPECT_TRUE((SameType<ArrayElementType<TypeA>, ExpectedTypeA>));
+  EXPECT_TRUE((SameType<ArrayDecayed<TypeA>, ExpectedTypeA>));
 
   using TypeB = float[];
   using ExpectedTypeB = float;
-  EXPECT_TRUE((SameType<ArrayElementType<TypeB>, ExpectedTypeB>));
+  EXPECT_TRUE((SameType<ArrayDecayed<TypeB>, ExpectedTypeB>));
 
   using TypeC = void * const[34];
   using ExpectedTypeC = void * const;
-  EXPECT_TRUE((SameType<ArrayElementType<TypeC>, ExpectedTypeC>));
+  EXPECT_TRUE((SameType<ArrayDecayed<TypeC>, ExpectedTypeC>));
 
   using TypeD = float (Dummy<>::* const[5124])() const;
   using ExpectedTypeD = float (Dummy<>::* const)() const;
-  EXPECT_TRUE((SameType<ArrayElementType<TypeD>, ExpectedTypeD>));
+  EXPECT_TRUE((SameType<ArrayDecayed<TypeD>, ExpectedTypeD>));
  }
 
- TEST(ArrayElementType, non_array_types_yield_the_same_type) {
+ TEST(ArrayDecayed, non_array_types_yield_the_same_type) {
   using TypeA = char (Dummy<>::*)() noexcept;
   using ExpectedTypeA = TypeA;
-  EXPECT_TRUE((SameType<ArrayElementType<TypeA>, ExpectedTypeA>));
+  EXPECT_TRUE((SameType<ArrayDecayed<TypeA>, ExpectedTypeA>));
 
   using TypeB = float const * const;
   using ExpectedTypeB = TypeB;
-  EXPECT_TRUE((SameType<ArrayElementType<TypeB>, ExpectedTypeB>));
+  EXPECT_TRUE((SameType<ArrayDecayed<TypeB>, ExpectedTypeB>));
 
   using TypeC = void;
   using ExpectedTypeC = TypeC;
-  EXPECT_TRUE((SameType<ArrayElementType<TypeC>, ExpectedTypeC>));
+  EXPECT_TRUE((SameType<ArrayDecayed<TypeC>, ExpectedTypeC>));
  }
 
  TEST(ArraySize, sized_array_types_yield_the_correct_size) {
@@ -464,32 +464,32 @@ namespace CX::Testing {
   EXPECT_FALSE((LValueReference<char *>));
  }
 
- TEST(LValueReferenceElementType, lvalue_reference_types_yield_the_reference_element_type) {
+ TEST(LValueReferenceDecayed, lvalue_reference_types_yield_the_reference_element_type) {
   using TypeA = int&;
   using ExpectedTypeA = int;
-  EXPECT_TRUE((SameType<LValueReferenceElementType<TypeA>, ExpectedTypeA>));
+  EXPECT_TRUE((SameType<LValueReferenceDecayed<TypeA>, ExpectedTypeA>));
 
   using TypeB = char * const&;
   using ExpectedTypeB = char * const;
-  EXPECT_TRUE((SameType<LValueReferenceElementType<TypeB>, ExpectedTypeB>));
+  EXPECT_TRUE((SameType<LValueReferenceDecayed<TypeB>, ExpectedTypeB>));
 
   using TypeC = void (&)();
   using ExpectedTypeC = void ();
-  EXPECT_TRUE((SameType<LValueReferenceElementType<TypeC>, ExpectedTypeC>));
+  EXPECT_TRUE((SameType<LValueReferenceDecayed<TypeC>, ExpectedTypeC>));
  }
 
- TEST(LValueReferenceElementType, non_lvalue_reference_types_yield_the_same_type) {
+ TEST(LValueReferenceDecayed, non_lvalue_reference_types_yield_the_same_type) {
   using TypeA = char *;
   using ExpectedTypeA = TypeA;
-  EXPECT_TRUE((SameType<LValueReferenceElementType<TypeA>, ExpectedTypeA>));
+  EXPECT_TRUE((SameType<LValueReferenceDecayed<TypeA>, ExpectedTypeA>));
 
   using TypeB = float ();
   using ExpectedTypeB = TypeB;
-  EXPECT_TRUE((SameType<LValueReferenceElementType<TypeB>, ExpectedTypeB>));
+  EXPECT_TRUE((SameType<LValueReferenceDecayed<TypeB>, ExpectedTypeB>));
 
   using TypeC = void;
   using ExpectedTypeC = TypeC;
-  EXPECT_TRUE((SameType<LValueReferenceElementType<TypeC>, ExpectedTypeC>));
+  EXPECT_TRUE((SameType<LValueReferenceDecayed<TypeC>, ExpectedTypeC>));
  }
 
  TEST(RValueReference, rvalue_reference_types_satisfy_constraint) {
@@ -504,32 +504,32 @@ namespace CX::Testing {
   EXPECT_FALSE((RValueReference<Dummy<>>));
  }
 
- TEST(RValueReferenceElementType, rvalue_reference_types_yield_the_reference_element_type) {
+ TEST(RValueReferenceDecayed, rvalue_reference_types_yield_the_reference_element_type) {
   using TypeA = Dummy<>&&;
   using ExpectedTypeA = Dummy<>;
-  EXPECT_TRUE((SameType<RValueReferenceElementType<TypeA>, ExpectedTypeA>));
+  EXPECT_TRUE((SameType<RValueReferenceDecayed<TypeA>, ExpectedTypeA>));
 
   using TypeB = char (Dummy<>::*&&)();
   using ExpectedTypeB = char (Dummy<>::*)();
-  EXPECT_TRUE((SameType<RValueReferenceElementType<TypeB>, ExpectedTypeB>));
+  EXPECT_TRUE((SameType<RValueReferenceDecayed<TypeB>, ExpectedTypeB>));
 
   using TypeC = void *&&;
   using ExpectedTypeC = void *;
-  EXPECT_TRUE((SameType<RValueReferenceElementType<TypeC>, ExpectedTypeC>));
+  EXPECT_TRUE((SameType<RValueReferenceDecayed<TypeC>, ExpectedTypeC>));
  }
 
- TEST(RValueReferenceElementType, non_rvalue_reference_types_yield_the_same_type) {
+ TEST(RValueReferenceDecayed, non_rvalue_reference_types_yield_the_same_type) {
   using TypeA = float *;
   using ExpectedTypeA = TypeA;
-  EXPECT_TRUE((SameType<RValueReferenceElementType<TypeA>, ExpectedTypeA>));
+  EXPECT_TRUE((SameType<RValueReferenceDecayed<TypeA>, ExpectedTypeA>));
 
   using TypeB = void (Dummy<>::*[])() const;
   using ExpectedTypeB = TypeB;
-  EXPECT_TRUE((SameType<RValueReferenceElementType<TypeB>, ExpectedTypeB>));
+  EXPECT_TRUE((SameType<RValueReferenceDecayed<TypeB>, ExpectedTypeB>));
 
   using TypeC = void *;
   using ExpectedTypeC = TypeC;
-  EXPECT_TRUE((SameType<RValueReferenceElementType<TypeC>, ExpectedTypeC>));
+  EXPECT_TRUE((SameType<RValueReferenceDecayed<TypeC>, ExpectedTypeC>));
  }
 
  TEST(ReferenceDecayed, rvalue_reference_types_yield_the_reference_element_type) {

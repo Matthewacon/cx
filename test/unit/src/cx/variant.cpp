@@ -375,7 +375,7 @@ namespace CX::Testing {
   EXPECT_TRUE((v1.has<ExpectedTypeA>()));
   EXPECT_NO_ERROR_BEHAVIOUR(([&] {
    EXPECT_EQ(
-    (memcmp(&v1.get<ExpectedTypeA>(), &expectedValueA, sizeof(ArrayElementType<ExpectedTypeA>) * 2)),
+    (memcmp(&v1.get<ExpectedTypeA>(), &expectedValueA, sizeof(ArrayDecayed<ExpectedTypeA>) * 2)),
     0
    );
   }()));
@@ -426,7 +426,7 @@ namespace CX::Testing {
   EXPECT_TRUE((v1.has<ExpectedTypeA>()));
   EXPECT_NO_ERROR_BEHAVIOUR(([&] {
    EXPECT_EQ(
-    (memcmp(&v1.get<ExpectedTypeA>(), &expectedValueA, sizeof(ArrayElementType<ExpectedTypeA>) * 3)),
+    (memcmp(&v1.get<ExpectedTypeA>(), &expectedValueA, sizeof(ArrayDecayed<ExpectedTypeA>) * 3)),
     0
    );
   }()));
@@ -472,7 +472,7 @@ namespace CX::Testing {
   EXPECT_TRUE((v1.has<ExpectedTypeA>()));
   EXPECT_NO_ERROR_BEHAVIOUR(([&] {
    EXPECT_EQ(
-    (memcmp(&v1.get<ExpectedTypeA>(), &expectedValueA, sizeof(ArrayElementType<ExpectedTypeA>) * 5)),
+    (memcmp(&v1.get<ExpectedTypeA>(), &expectedValueA, sizeof(ArrayDecayed<ExpectedTypeA>) * 5)),
     0
    );
   }()));
@@ -530,7 +530,7 @@ namespace CX::Testing {
   EXPECT_TRUE((v1.has<ExpectedTypeA>()));
   EXPECT_NO_ERROR_BEHAVIOUR(([&] {
    EXPECT_EQ(
-    (memcmp(&v1.get<ExpectedTypeA>(), &expectedValueA, sizeof(ArrayElementType<ExpectedTypeA>) * 2)),
+    (memcmp(&v1.get<ExpectedTypeA>(), &expectedValueA, sizeof(ArrayDecayed<ExpectedTypeA>) * 2)),
     0
    );
   }()));
@@ -900,7 +900,7 @@ namespace CX::Testing {
   EXPECT_TRUE((v1.has<ExpectedTypeA>()));
   EXPECT_NO_ERROR_BEHAVIOUR(([&] {
    EXPECT_EQ(
-    (memcmp(&v1.get<ExpectedTypeA>(), &expectedValueA, sizeof(ArrayElementType<ExpectedTypeA>) * 2)),
+    (memcmp(&v1.get<ExpectedTypeA>(), &expectedValueA, sizeof(ArrayDecayed<ExpectedTypeA>) * 2)),
     0
    );
   }()));
@@ -952,7 +952,7 @@ namespace CX::Testing {
   EXPECT_TRUE((v1.has<ExpectedTypeA>()));
   EXPECT_NO_ERROR_BEHAVIOUR(([&] {
    EXPECT_EQ(
-    (memcmp(&v1.get<ExpectedTypeA>(), &expectedValueA, sizeof(ArrayElementType<ExpectedTypeA>) * 3)),
+    (memcmp(&v1.get<ExpectedTypeA>(), &expectedValueA, sizeof(ArrayDecayed<ExpectedTypeA>) * 3)),
     0
    );
   }()));
@@ -999,7 +999,7 @@ namespace CX::Testing {
   EXPECT_TRUE((v1.has<ExpectedTypeA>()));
   EXPECT_NO_ERROR_BEHAVIOUR(([&] {
    EXPECT_EQ(
-    (memcmp(&v1.get<ExpectedTypeA>(), &expectedValueA, sizeof(ArrayElementType<ExpectedTypeA>) * 5)),
+    (memcmp(&v1.get<ExpectedTypeA>(), &expectedValueA, sizeof(ArrayDecayed<ExpectedTypeA>) * 5)),
     0
    );
   }()));
@@ -1058,7 +1058,7 @@ namespace CX::Testing {
   EXPECT_TRUE((v1.has<ExpectedTypeA>()));
   EXPECT_NO_ERROR_BEHAVIOUR(([&] {
    EXPECT_EQ(
-    (memcmp(&v1.get<ExpectedTypeA>(), &expectedValueA, sizeof(ArrayElementType<ExpectedTypeA>) * 2)),
+    (memcmp(&v1.get<ExpectedTypeA>(), &expectedValueA, sizeof(ArrayDecayed<ExpectedTypeA>) * 2)),
     0
    );
   }()));

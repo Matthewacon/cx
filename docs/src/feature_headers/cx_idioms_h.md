@@ -95,7 +95,7 @@ meta-functions for CX.
 | [`CX::VolatileDecayed`](./cx_idioms_h/volatile_decayed.md) | |
 | [`CX::ConstVolatileDecayed`](./cx_idioms_h/const_volatile_decayed.md) | |
 | [`CX::ConstVolatilePropagated`](./cx_idioms_h/const_volatile_propagated.md) | |
-| [`CX::ArrayTypeDecayed`](./cx_idioms_h/array_type_decayed.md) | |
+| [`CX::ArrayDecayed`](./cx_idioms_h/array_decayed.md) | |
 | [`CX::LValueReferenceDecayed`](./cx_idioms_h/l_value_reference_decayed.md) | |
 | [`CX::RValueReferenceDecayed`](./cx_idioms_h/r_value_reference_decayed.md) | |
 | [`CX::ReferenceDecayed`](./cx_idioms_h/reference_decayed.md) | |

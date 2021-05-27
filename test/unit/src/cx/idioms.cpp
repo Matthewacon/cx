@@ -325,6 +325,8 @@ namespace CX::Testing {
   EXPECT_TRUE((Volatile<int volatile>));
   EXPECT_TRUE((Volatile<bool * volatile>));
   EXPECT_TRUE((Volatile<void (Dummy<>::* volatile)()>));
+  EXPECT_TRUE((Volatile<float volatile&>));
+  EXPECT_TRUE((Volatile<char volatile&&>));
  }
 
  TEST(Volatile, non_volatile_tyeps_do_not_satisfy_constraint) {
@@ -337,6 +339,8 @@ namespace CX::Testing {
   EXPECT_TRUE((SameType<VolatileDecayed<char volatile>, char>));
   EXPECT_TRUE((SameType<VolatileDecayed<void * volatile>, void *>));
   EXPECT_TRUE((SameType<VolatileDecayed<int (Dummy<>::* volatile)>, int (Dummy<>::*)>));
+  EXPECT_TRUE((SameType<CX::VolatileDecayed<float volatile&>, float&>));
+  EXPECT_TRUE((SameType<CX::VolatileDecayed<bool volatile(&&)[]>, bool(&&)[]>));
  }
 
  TEST(VolatileDecayed, non_volatile_types_are_unmodified) {

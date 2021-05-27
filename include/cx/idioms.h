@@ -273,6 +273,18 @@ namespace CX {
    using Propagate = T2 volatile;
   };
 
+  template<typename T>
+  struct Volatile<T volatile&> : TrueType {
+   using Type = T volatile&;
+   using VolatileDecayed = T&;
+  };
+
+  template<typename T>
+  struct Volatile<T volatile&&> : TrueType {
+   using Type = T volatile&&;
+   using VolatileDecayed = T&&;
+  };
+
   //Decays both const and volatile qualifiers
   template<typename T>
   using ConstVolatileDecayed = typename Const<

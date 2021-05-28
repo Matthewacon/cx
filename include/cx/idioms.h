@@ -235,21 +235,56 @@ namespace CX {
    using Type = T const;
    using ConstDecayed = T;
 
+  private:
+   template<typename T2>
+   struct Propagator {
+    using Type = T2 const;
+   };
+
+   template<typename T2>
+   struct Propagator<T2(&)[]> {
+    using Type = T2 const(&)[];
+   };
+
+   template<typename T2>
+   struct Propagator<T2(&&)[]> {
+    using Type = T2 const(&&)[];
+   };
+
+   template<typename T2, auto N>
+   struct Propagator<T2(&)[N]> {
+    using Type = T2 const(&)[N];
+   };
+
+   template<typename T2, auto N>
+   struct Propagator<T2(&&)[N]> {
+    using Type = T2 const(&&)[N];
+   };
+
+  public:
    //Propagates const qualifier to `T2`
    template<typename T2>
-   using Propagate = T2 const;
+   using Propagate = typename Propagator<T2>::Type;
   };
 
   template<typename T>
   struct Const<T const&> : Const<T const> {
    using Type = T const&;
    using ConstDecayed = T&;
+
+   template<typename T2>
+   using Propagate = typename Const<int const>
+    ::Propagate<T2>;
   };
 
   template<typename T>
   struct Const<T const&&> : Const<T const> {
    using Type = T const&&;
    using ConstDecayed = T&&;
+
+   template<typename T2>
+   using Propagate = typename Const<int const>
+    ::Propagate<T2>;
   };
 
   //Volatile qualifier identity
@@ -268,21 +303,56 @@ namespace CX {
    using Type = T volatile;
    using VolatileDecayed = T;
 
+  private:
+   template<typename T2>
+   struct Propagator {
+    using Type = T2 volatile;
+   };
+
+   template<typename T2>
+   struct Propagator<T2(&)[]> {
+    using Type = T2 volatile(&)[];
+   };
+
+   template<typename T2>
+   struct Propagator<T2(&&)[]> {
+    using Type = T2 volatile(&&)[];
+   };
+
+   template<typename T2, auto N>
+   struct Propagator<T2(&)[N]> {
+    using Type = T2 volatile(&)[N];
+   };
+
+   template<typename T2, auto N>
+   struct Propagator<T2(&&)[N]> {
+    using Type = T2 volatile(&&)[N];
+   };
+
+  public:
    //Propagates volatile qualifier to `T2`
    template<typename T2>
-   using Propagate = T2 volatile;
+   using Propagate = typename Propagator<T2>::Type;
   };
 
   template<typename T>
   struct Volatile<T volatile&> : TrueType {
    using Type = T volatile&;
    using VolatileDecayed = T&;
+
+   template<typename T2>
+   using Propagate = typename Volatile<int volatile>
+    ::Propagate<T2>;
   };
 
   template<typename T>
   struct Volatile<T volatile&&> : TrueType {
    using Type = T volatile&&;
    using VolatileDecayed = T&&;
+
+   template<typename T2>
+   using Propagate = typename Volatile<int volatile>
+    ::Propagate<T2>;
   };
 
   //Decays both const and volatile qualifiers

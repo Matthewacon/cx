@@ -1,7 +1,31 @@
 # `CX::ConstDecayed`
 ## Description
+```c++
+template<typename T>
+using CX::ConstDecayed = /*...*/;
+```
+Utility alias to remove immediate `const` qualifiers from a given
+type, `T`. If `T` is not `const` qualified, it will be
+unmodified.
+
 ## Ambiguous Const Qualifications
 <table id="member-function-table">
+ <tr><td>
+
+  ```c++
+  //Unmodified
+  int const *           -> int const *
+  float const * const * -> float const * const *
+
+  //Modified
+  char const * const -> char const *
+  short * const      -> short *
+  ```
+  ---
+  `const` qualifiers that are not applied to the right-most
+  non-`const` qualifier, will be unmodified.
+
+ </td></tr>
  <tr><td>
 
   ```c++

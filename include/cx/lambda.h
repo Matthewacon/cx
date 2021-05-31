@@ -277,32 +277,41 @@ namespace CX {
    using FuncType = R (Args..., ...);
    using NoexceptFuncType = R (Args..., ...) noexcept;
 
-   #pragma GCC diagnostic push
-   #pragma GCC diagnostic ignored "-Wgnu-anonymous-struct"
-   #pragma GCC diagnostic ignored "-Wnested-anon-types"
-    struct FptrWrapper final {
-     void * fptrOrInst;
-     struct MemberPtr final {
-      union {
-       void (MemberPtr::* memberPtr)();
-       struct {
-        void
-         * lo,
-         * hi;
-       };
+   struct FptrWrapper final {
+    void * fptrOrInst;
+
+    //Push ignored diagnostic context
+    #ifdef CX_COMPILER_CLANG_LIKE
+     #pragma clang diagnostic push
+     #pragma clang diagnostic ignored "-Wgnu-anonymous-struct"
+     #pragma clang diagnostic ignored "-Wnested-anon-types"
+    #endif
+
+    struct MemberPtr final {
+     union {
+      void (MemberPtr::* memberPtr)();
+      struct {
+       void
+        * lo,
+        * hi;
       };
+     };
 
-      MemberPtr() :
-       lo(nullptr),
-       hi(nullptr)
-      {}
+     MemberPtr() :
+      lo(nullptr),
+      hi(nullptr)
+     {}
 
-      template<CX::MemberFunction F>
-      MemberPtr(F memFptr) :
-       memberPtr((decltype(memberPtr))memFptr)
-      {}
-     } memberPtr;
-    #pragma GCC diagnostic pop
+     template<CX::MemberFunction F>
+     MemberPtr(F memFptr) :
+      memberPtr((decltype(memberPtr))memFptr)
+     {}
+    } memberPtr;
+
+    //Pop ignored diagnostic context
+    #ifdef CX_COMPILER_CLANG_LIKE
+     #pragma clang diagnostic pop
+    #endif
 
     FptrWrapper(CX::StaticFunction auto ptr) :
      fptrOrInst((void *)ptr)
@@ -728,8 +737,13 @@ namespace CX {
       l1Alignment = l1Base.bufferAlignment();
      }
 
-     //Clean up `l1` state
-     destroy(*l1BufPtr);
+     //Clean up `l1` state if there is no fast-copy
+     //Note: Fast copying uses the underlying smart pointer
+     //copying mechanism, which will invoke the appropriate
+     //deleter, so we don't have to do it here.
+     if constexpr (!fastCopy) {
+      destroy(*l1BufPtr);
+     }
 
      //Fetch `l2` size and alignment and copy `l2` buffer to
      //`l1` buffer
@@ -1000,7 +1014,7 @@ namespace CX {
   template<typename Prototype>
   struct NonAllocLambdaWrapperStub : LambdaBase<Prototype> {
   private:
-   using LambdaBase = LambdaBase<Prototype>;
+   using Base = LambdaBase<Prototype>;
 
    //Note: Use `CX::Dummy<...>` as the restriction since it
    //will pass all parameters; at this point, the encapsulated
@@ -1019,7 +1033,7 @@ namespace CX {
     SizeType size,
     AlignType alignment
    ) :
-    LambdaBase{},
+    Base{},
     bufSize(size),
     bufAlignment(alignment)
    {}
@@ -1085,8 +1099,6 @@ namespace CX {
    template<typename Prototype>
    struct AllocLambdaWrapperStub : NonAllocLambdaWrapperStub<Prototype> {
    private:
-    using LambdaBase = LambdaBase<Prototype>;
-
     //Note: Use `CX::Dummy<...>` as the restriction since it
     //will pass all parameters; at this point, the encapsulated
     //type, `F`, has already been checked against the expected
@@ -1135,7 +1147,7 @@ namespace CX {
   struct NonAllocLambdaWrapper<F, R (Args...)> : LambdaBase<R (Args...)> {
   private:
    using Prototype = R (Args...);
-   using LambdaBase = LambdaBase<Prototype>;
+   using Base = LambdaBase<Prototype>;
 
    //Note: Use `CX::Dummy<...>` as the restriction since it
    //will pass all parameters; at this point, the encapsulated
@@ -1154,7 +1166,7 @@ namespace CX {
     SizeType,
     AlignType
    ) :
-    LambdaBase{}
+    Base{}
    {};
 
    //Function copy constructor
@@ -1165,7 +1177,7 @@ namespace CX {
     SizeType,
     AlignType
    ) :
-    LambdaBase{},
+    Base{},
     f((F const&)f)
    {}
 
@@ -1175,7 +1187,7 @@ namespace CX {
     SizeType,
     AlignType
    ) :
-    LambdaBase{},
+    Base{},
     f((F&&)f)
    {}
 
@@ -1238,7 +1250,7 @@ namespace CX {
   struct NonAllocLambdaWrapper<F, R (Args..., ...)> : LambdaBase<R (Args..., ...)> {
   private:
    using Prototype = R (Args..., ...);
-   using LambdaBase = LambdaBase<Prototype>;
+   using Base = LambdaBase<Prototype>;
 
    //Note: Use `CX::Dummy<...>` as the restriction since it
    //will pass all parameters; at this point, the encapsulated
@@ -1257,7 +1269,7 @@ namespace CX {
     SizeType,
     AlignType
    ) :
-    LambdaBase{}
+    Base{}
    {};
 
    //Function copy constructor
@@ -1266,7 +1278,7 @@ namespace CX {
     SizeType,
     AlignType
    ) :
-    LambdaBase{},
+    Base{},
     f((F const&)f)
    {}
 
@@ -1276,12 +1288,12 @@ namespace CX {
     SizeType,
     AlignType
    ) :
-    LambdaBase{},
+    Base{},
     f((F&&)f)
    {}
 
    [[gnu::always_inline]]
-   typename LambdaBase::FptrWrapper get() override {
+   typename Base::FptrWrapper get() override {
     return {(F const&)f};
    }
 
@@ -1336,7 +1348,7 @@ namespace CX {
    struct AllocLambdaWrapper<F, R (Args...)> : LambdaBase<R (Args...)> {
    private:
     using Prototype = R (Args...);
-    using LambdaBase = LambdaBase<Prototype>;
+    using Base = LambdaBase<Prototype>;
 
     //Note: Use `CX::Dummy<...>` as the restriction since it
     //will pass all parameters; at this point, the encapsulated
@@ -1357,7 +1369,7 @@ namespace CX {
      SizeType size,
      AlignType alignment
     ) :
-     LambdaBase{},
+     Base{},
      bufSize(size),
      bufAlignment(alignment)
     {};
@@ -1368,7 +1380,7 @@ namespace CX {
      SizeType size,
      AlignType alignment
     ) :
-     LambdaBase{},
+     Base{},
      f((F const&)f),
      bufSize(size),
      bufAlignment(alignment)
@@ -1380,7 +1392,7 @@ namespace CX {
      SizeType size,
      AlignType alignment
     ) :
-     LambdaBase{},
+     Base{},
      f((F&&)f),
      bufSize(size),
      bufAlignment(alignment)
@@ -1445,7 +1457,7 @@ namespace CX {
    struct AllocLambdaWrapper<F, R (Args..., ...)> : LambdaBase<R (Args..., ...)> {
    private:
     using Prototype = R (Args..., ...);
-    using LambdaBase = LambdaBase<Prototype>;
+    using Base = LambdaBase<Prototype>;
 
     //Note: Use `CX::Dummy<...>` as the restriction since it
     //will pass all parameters; at this point, the encapsulated
@@ -1466,7 +1478,7 @@ namespace CX {
      SizeType size,
      AlignType alignment
     ) :
-     LambdaBase{},
+     Base{},
      bufSize(size),
      bufAlignment(alignment)
     {};
@@ -1477,7 +1489,7 @@ namespace CX {
      SizeType size,
      AlignType alignment
     ) :
-     LambdaBase{},
+     Base{},
      f((F const&)f),
      bufSize(size),
      bufAlignment(alignment)
@@ -1489,14 +1501,14 @@ namespace CX {
      SizeType size,
      AlignType alignment
     ) :
-     LambdaBase{},
+     Base{},
      f((F&&)f),
      bufSize(size),
      bufAlignment(alignment)
     {}
 
     [[gnu::always_inline]]
-    typename LambdaBase::FptrWrapper get() override {
+    typename Base::FptrWrapper get() override {
      return {(F const&)f};
     }
 
@@ -1590,7 +1602,7 @@ namespace CX {
    R (Args...),
    PrototypeRestriction
   >;
-  using LambdaBase = Internal::LambdaBase<R (Args...)>;
+  using Base = Internal::LambdaBase<R (Args...)>;
 
   alignas(Alignment) unsigned char buffer[Size];
 
@@ -1654,12 +1666,12 @@ namespace CX {
 
   //Lambda function operator
   R operator()(Args... args) const {
-   return (*(LambdaBase *)&buffer).op(args...);
+   return (*(Base *)&buffer).op(args...);
   }
 
   //Presence conversion operator
   operator bool() const noexcept {
-   return (*(LambdaBase *)&buffer).present();
+   return (*(Base *)&buffer).present();
   }
 
   //Resets current lambda buffer state to empty
@@ -1770,7 +1782,7 @@ namespace CX {
    R (Args...),
    PrototypeRestriction
   >;
-  using LambdaBase = Internal::LambdaBase<R (Args...)>;
+  using Base = Internal::LambdaBase<R (Args...)>;
 
   alignas(Alignment) unsigned char buffer[Size];
 
@@ -1834,12 +1846,12 @@ namespace CX {
 
   //Lambda function operator
   R operator()(Args... args) noexcept {
-   return (*(LambdaBase *)&buffer).noexceptOp(args...);
+   return (*(Base *)&buffer).noexceptOp(args...);
   }
 
   //Presence conversion operator
   operator bool() const noexcept {
-   return (*(LambdaBase *)&buffer).present();
+   return (*(Base *)&buffer).present();
   }
 
   //Resets current lambda buffer state to empty
@@ -1953,7 +1965,7 @@ namespace CX {
    R (Args..., ...),
    PrototypeRestriction
   >;
-  using LambdaBase = Internal::LambdaBase<R (Args..., ...)>;
+  using Base = Internal::LambdaBase<R (Args..., ...)>;
 
   alignas(Alignment) unsigned char buffer[Size];
 
@@ -2018,12 +2030,12 @@ namespace CX {
   //Lambda function operator
   template<typename... Varargs>
   R operator()(Args... args, Varargs... varargs) {
-   return (*(LambdaBase *)&buffer).template op<false>(args..., varargs...);
+   return (*(Base *)&buffer).template op<false>(args..., varargs...);
   }
 
   //Presence conversion operator
   operator bool() const noexcept {
-   return (*(LambdaBase *)&buffer).present();
+   return (*(Base *)&buffer).present();
   }
 
   //Resets current lambda buffer state to empty
@@ -2134,7 +2146,7 @@ namespace CX {
    R (Args..., ...),
    PrototypeRestriction
   >;
-  using LambdaBase = Internal::LambdaBase<R (Args..., ...)>;
+  using Base = Internal::LambdaBase<R (Args..., ...)>;
 
   alignas(Alignment) unsigned char buffer[Size];
 
@@ -2199,12 +2211,12 @@ namespace CX {
   //Lambda function operator
   template<typename... Varargs>
   R operator()(Args... args, Varargs... varargs) {
-   return (*(LambdaBase *)&buffer).template op<true>(args..., varargs...);
+   return (*(Base *)&buffer).template op<true>(args..., varargs...);
   }
 
   //Presence conversion operator
   operator bool() const noexcept {
-   return (*(LambdaBase *)&buffer).present();
+   return (*(Base *)&buffer).present();
   }
 
   //Resets current lambda buffer state to empty
@@ -2338,7 +2350,7 @@ namespace CX {
     R (Args...),
     PrototypeRestriction
    >;
-   using LambdaBase = Internal::LambdaBase<R (Args...)>;
+   using Base = Internal::LambdaBase<R (Args...)>;
    static constexpr auto const Deleter = &OperationBase::sharedBufferDeleter;
 
    std::shared_ptr<unsigned char> mutable buffer;
@@ -2394,12 +2406,12 @@ namespace CX {
 
    //Lambda function operator
    R operator()(Args... args) const {
-    return (*(LambdaBase *)buffer.get()).op(args...);
+    return (*(Base *)buffer.get()).op(args...);
    }
 
    //Presence conversion operator
    operator bool() const noexcept {
-    return (*(LambdaBase *)buffer.get()).present();
+    return (*(Base *)buffer.get()).present();
    }
 
    //Resets current lambda buffer state to empty
@@ -2499,7 +2511,7 @@ namespace CX {
     R (Args...),
     PrototypeRestriction
    >;
-   using LambdaBase = Internal::LambdaBase<R (Args...)>;
+   using Base = Internal::LambdaBase<R (Args...)>;
    static constexpr auto const Deleter = &OperationBase::sharedBufferDeleter;
 
    std::shared_ptr<unsigned char> mutable buffer;
@@ -2555,12 +2567,12 @@ namespace CX {
 
    //Lambda function operator
    R operator()(Args... args) const noexcept {
-    return (*(LambdaBase *)buffer.get()).noexceptOp(args...);
+    return (*(Base *)buffer.get()).noexceptOp(args...);
    }
 
    //Presence conversion operator
    operator bool() const noexcept {
-    return (*(LambdaBase *)buffer.get()).present();
+    return (*(Base *)buffer.get()).present();
    }
 
    //Resets current lambda buffer state to empty
@@ -2660,7 +2672,7 @@ namespace CX {
     R (Args..., ...),
     PrototypeRestriction
    >;
-   using LambdaBase = Internal::LambdaBase<R (Args..., ...)>;
+   using Base = Internal::LambdaBase<R (Args..., ...)>;
    static constexpr auto const Deleter = &OperationBase::sharedBufferDeleter;
 
    std::shared_ptr<unsigned char> mutable buffer;
@@ -2717,12 +2729,12 @@ namespace CX {
    //Lambda function operator
    template<typename... Varargs>
    R operator()(Args... args, Varargs... varargs) const {
-    return (*(LambdaBase *)buffer.get()).template op<false>(args..., varargs...);
+    return (*(Base *)buffer.get()).template op<false>(args..., varargs...);
    }
 
    //Presence conversion operator
    operator bool() const noexcept {
-    return (*(LambdaBase *)buffer.get()).present();
+    return (*(Base *)buffer.get()).present();
    }
 
    //Resets current lambda buffer state to empty
@@ -2822,7 +2834,7 @@ namespace CX {
     R (Args..., ...),
     PrototypeRestriction
    >;
-   using LambdaBase = Internal::LambdaBase<R (Args..., ...)>;
+   using Base = Internal::LambdaBase<R (Args..., ...)>;
    static constexpr auto const Deleter = &OperationBase::sharedBufferDeleter;
 
    std::shared_ptr<unsigned char> mutable buffer;
@@ -2879,12 +2891,12 @@ namespace CX {
    //Lambda function operator
    template<typename... Varargs>
    R operator()(Args... args, Varargs... varargs) const noexcept {
-    return (*(LambdaBase *)buffer.get()).template op<true>(args..., varargs...);
+    return (*(Base *)buffer.get()).template op<true>(args..., varargs...);
    }
 
    //Presence conversion operator
    operator bool() const noexcept {
-    return (*(LambdaBase *)buffer.get()).present();
+    return (*(Base *)buffer.get()).present();
    }
 
    //Resets current lambda buffer state to empty

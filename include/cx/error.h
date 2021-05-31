@@ -13,9 +13,17 @@
 #endif
 
 #ifdef CX_STL_SUPPORT
-  #define CX_STL_SUPPORT_EXPR(expr) expr
+ #define CX_STL_SUPPORT_EXPR(expr) expr
 #else
  #define CX_STL_SUPPORT_EXPR(...)
+#endif
+
+//Conditional support for `constinit` statements.
+//GCC does not support this yet
+#ifdef CX_COMPILER_CLANG_LIKE
+ #define CX_CONSTINIT constinit
+#else
+ #define CX_CONSTINIT
 #endif
 
 namespace CX {
@@ -89,7 +97,7 @@ namespace CX {
  //Returns the current CX exit handler function
  inline auto& getExitHandler() noexcept {
   //The CX exit handler
-  static constinit thread_local void (*handler)(CXError const&) = defaultExitHandler();
+  static CX_CONSTINIT thread_local void (*handler)(CXError const&) = defaultExitHandler();
   return handler;
  }
 
@@ -170,3 +178,4 @@ namespace CX {
 
 //Clean up internal macros
 #undef CX_STL_SUPPORT_EXPR
+#undef CX_CONSTINIT

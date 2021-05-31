@@ -831,7 +831,7 @@ namespace CX {
  //Note: False for array types
  template<typename T>
  concept Destructible = requires (T t) {
-  { t.~T() } -> SameType<void>;
+  { ((T)t).~T() } -> SameType<void>;
  };
 
  //True for types that contain a constructor definition with
@@ -1309,7 +1309,7 @@ namespace CX {
  template<typename S, typename Prototype>\
  concept name = MetaFunctions\
   ::name<S, Prototype>\
-  ::Value;
+  ::Value
 
  #define CX_DEFINE_OPERATOR_CONCEPT(name, op) \
  CX_DEFINE_FUNCTION_IDENTITY_CONCEPT(name##Operator, operator op)

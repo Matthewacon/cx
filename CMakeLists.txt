@@ -30,6 +30,7 @@ set(_CX_SUPPORTED_COMPILER_DETECTED FALSE)
 foreach(COMPILER ${CX_SUPPORTED_COMPILERS})
  if(CMAKE_C_COMPILER_ID STREQUAL COMPILER AND CMAKE_CXX_COMPILER_ID STREQUAL COMPILER)
   set(_CX_SUPPORTED_COMPILER_DETECTED TRUE)
+  set(CX_DETECTED_COMPILER_ID "${COMPILER}")
  endif()
 endforeach()
 
@@ -87,18 +88,81 @@ if(NOT ${CX_HEADER_ONLY})
  )
 endif()
 
-#Default compile flags
-list(
- APPEND CX_COMPILE_FLAGS
- -Wall
- -Wextra
- -Werror
- -pedantic
- -ftemplate-backtrace-limit=0
- -fno-common
- -Wno-zero-length-array
- "-Wno-#pragma-messages"
+#Set default compile flags
+if(
+ CX_DETECTED_COMPILER_ID STREQUAL "Clang"
+ OR CX_DETECTED_COMPILER_ID STREQUAL "AppleClang"
+ OR CX_DETECTED_COMPILER_ID STREQUAL "IntelLLVM"
 )
+ #Flag for clang-like compilers
+ set(CX_COMPILER_CLANG_LIKE TRUE)
+
+ #Define compiler macro for CX
+ if(CX_DETECTED_COMPILER_ID STREQUAL "AppleClang")
+  #Apple clang
+  list(
+   APPEND CX_COMPILE_FLAGS
+   -DCX_COMPILER_APPLE
+  )
+ elseif(CX_DETECTED_COMPILER_ID STREQUAL "Clang")
+  #Clang
+  list(
+   APPEND CX_COMPILE_FLAGS
+   -DCX_COMPILER_CLANG
+  )
+ else()
+  #IntelLLVM
+  list(
+   APPEND CX_COMPILE_FLAGS
+   -DCX_COMPILER_INTEL_LLVM
+  )
+ endif()
+
+ #Default clang compile flags
+ list(
+  APPEND CX_COMPILE_FLAGS
+  -DCX_COMPILER_CLANG_LIKE
+  -Wall
+  -Wextra
+  -Werror
+  -pedantic
+  -ftemplate-backtrace-limit=0
+  -fno-common
+  -Wno-zero-length-array
+  "-Wno-#pragma-messages"
+ )
+elseif(CX_DETECTED_COMPILER_ID STREQUAL "GNU")
+ #Default gcc compile flags
+ list(
+  APPEND CX_COMPILE_FLAGS
+  -DCX_COMPILER_GCC
+  -Wall
+  -Wextra
+  -Wno-cast-function-type
+  -ftemplate-backtrace-limit=0
+  -fno-common
+ )
+elseif(CX_DETECTED_COMPILER_ID STREQUAL "Intel")
+ #TODO default intel compile flags
+ list(
+  APPEND CX_COMPILE_FLAGS
+  -DCX_COMPILER_INTEL
+ )
+ message(
+  FATAL_ERROR
+  "Default compiler flags for Intel are not yet implemented."
+ )
+elseif(CX_DETECTED_COMPILER_ID STREQUAL "MSVC")
+ #TODO default msvc compile flags
+ list(
+  APPEND CX_COMPILE_FLAGS
+  -DCX_COMPILER_MSVC
+ )
+ message(
+  FATAL_ERROR
+  "Default compiler flags for MSVC have not yet implemented."
+ )
+endif()
 
 #Conditional compile flags
 if(${CX_STL_SUPPORT})
@@ -108,6 +172,7 @@ if(${CX_STL_SUPPORT})
   -DCX_STL_SUPPORT
  )
 else()
+ #TODO specialize flags for all supported compilers
  list(
   APPEND CX_COMPILE_FLAGS
   -nostdlib++
@@ -122,13 +187,7 @@ if(${CX_LIBC_SUPPORT})
   -DCX_LIBC_SUPPORT
  )
 else()
- #Warn user of unavailable headers when building without `-DCX_LIBC_SUPPORT`
- #message(
- # WARNING
- # "'CX_LIBC_SUPPORT' is disabled; the following headers will be unavailable:\
- #  <cx/vararg.h>\
- # "
- #)
+ #TODO specialize flags for all supported compilers
  list(
   APPEND CX_COMPILE_FLAGS
   -nostdlib
@@ -152,24 +211,46 @@ endif()
 if(${CX_DEBUG})
  #Debug build flags
  set(CMAKE_BUILD_TYPE Debug)
- list(
-  APPEND CX_COMPILE_FLAGS
-  -g
-  -O0
-  -fno-inline
-  -fno-inline-functions
-  -fno-omit-frame-pointer
-  -fno-lto
-  -DCX_DEBUG
- )
- #Clang-specific debug flags
- if(${CMAKE_CXX_COMPILER_ID} STREQUAL "Clang" AND ${CMAKE_C_COMPILER_ID} STREQUAL "Clang")
+ if(${CX_COMPILER_CLANG_LIKE})
+  #Clang-like debug flags
   list(
    APPEND CX_COMPILE_FLAGS
+   -g
+   -O0
+   -fno-inline
+   -fno-inline-functions
+   -fno-omit-frame-pointer
+   -fno-lto
    -fstandalone-debug
+   -DCX_DEBUG
+  )
+ elseif(CX_DETECTED_COMPILER_ID STREQUAL "GNU")
+  #GCC debug flags
+  list(
+   APPEND CX_COMPILE_FLAGS
+   -gdwarf-2
+   -O0
+   -fno-inline
+   -fno-inline-functions
+   -fno-omit-frame-pointer
+   -fno-lto
+   -DCX_DEBUG
+  )
+ elseif(CX_DETECTED_COMPILER_ID STREQUAL "Intel")
+  #TODO Intel compiler flags
+  message(
+   FATAL_ERROR
+   "Debug compiler flags for Intel are not yet implemented."
+  )
+ elseif(CX_DETECTED_COMPILER_ID STREQUAL "MSVC")
+  #TODO MSVC compiler flags
+  message(
+   FATAL_ERROR
+   "Debug compiler flags for MSVC are not yet implemented."
   )
  endif()
 else()
+ #TODO specialize flags for all supported compilers
  #Release build flags
  list(
   APPEND CX_COMPILE_FLAGS
@@ -181,6 +262,7 @@ endif()
 
 #Conditional link flags
 if(${CX_QA})
+ #TODO specialize flags for all supported compilers
  list(
   APPEND CX_COMPILE_FLAGS
   -fno-omit-frame-pointer

@@ -2,6 +2,12 @@
 
 #include <cx/templates.h>
 
+//Silence gcc warnings
+#ifdef CX_COMPILER_GCC
+ #pragma GCC diagnostic push
+ #pragma GCC diagnostic ignored "-Wshift-negative-value"
+#endif
+
 namespace CX::Testing {
  TEST(MaxValue, identically_typed_value_pack_yields_expected_value) {
   EXPECT_EQ((MaxValue<1, -2, 3, 100, -23 -100, 1000>), 1000);
@@ -346,3 +352,7 @@ namespace CX::Testing {
   EXPECT_EQ(invoked ^ expected, 0);
  }
 }
+
+#ifdef CX_COMPILER_GCC
+ #pragma GCC diagnostic pop
+#endif

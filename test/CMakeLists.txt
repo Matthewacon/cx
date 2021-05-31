@@ -9,7 +9,7 @@ add_latent_dependency(
  SCOPE_ID test
  NAME gtest
  GIT_REPOSITORY https://github.com/google/googletest.git
- GIT_TAG release-1.10.0
+ GIT_TAG a3460d1aeeaa43fdf137a6adefef10ba0b59fe4b
  TARGET_NAMES gmock gmock_main
 )
 

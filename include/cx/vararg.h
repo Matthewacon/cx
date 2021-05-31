@@ -50,6 +50,14 @@
  #define va_arg(list, type) CX_VA_ARG(list, type)
 #endif
 
+//Push diagnostic conetxt to silence gcc attribute parser bugs
+#if defined(__GNUC__) && !defined(__clang__)
+ #define CX_GCC
+ #pragma GCC diagnostic push
+ #pragma GCC diagnostic ignored "-Wignored-attributes"
+ #pragma GCC diagnostic ignored "-Wattributes"
+#endif
+
 namespace CX {
  struct InvalidPlatformVaListError CX_STL_SUPPORT_EXPR(: std::exception) {
   char const * message;
@@ -125,7 +133,6 @@ namespace CX {
     list(list)
    {}
 
-   [[gnu::always_inline]]
    ~VaListWrapper() {
     CX_VA_END(toPlatform());
    }
@@ -170,7 +177,6 @@ namespace CX {
     }())
    {}
 
-   [[gnu::always_inline]]
    ~VaListWrapper() {
     CX_VA_END(toPlatform());
    }
@@ -233,6 +239,12 @@ namespace CX {
 
  using VaList = Internal::VaListWrapper<0>;
 }
+
+//Pop diagnostic context
+#ifdef CX_GCC
+ #undef CX_GCC
+ #pragma GCC diagnostic pop
+#endif
 
 //Clean up internal macro
 #undef CX_STL_SUPPORT_EXPR

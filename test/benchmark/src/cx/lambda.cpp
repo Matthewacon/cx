@@ -111,7 +111,8 @@ namespace CX::Testing {
 
   void SetUp(benchmark::State&) {
    //Set up lambda
-   lambda.~decltype(lambda)();
+   using LambdaType = decltype(lambda);
+   lambda.~LambdaType();
    new (&lambda) Lambda<Prototype> {emptyLambda};
   }
  };
@@ -126,7 +127,8 @@ namespace CX::Testing {
    LambdaBenchmarkFixture<Prototype, false>::SetUp(state);
 
    //Set up function
-   function.~decltype(function)();
+   using LambdaType = decltype(function);
+   function.~LambdaType();
    new (&function) std::function<Prototype> {emptyLambda};
   }
  };

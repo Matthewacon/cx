@@ -289,7 +289,7 @@ namespace CX {
   template<long Index, auto... Values>
   struct ValueAtIndex;
 
-  template<auto Index, auto V, auto... Values>
+  template<long Index, auto V, auto... Values>
   struct ValueAtIndex<Index, V, Values...> {
    static constexpr auto const Value = ValueAtIndex<
     Index - 1,
@@ -302,20 +302,20 @@ namespace CX {
    static constexpr auto const Value = V;
   };
 
-  template<auto Index, auto... Values>
+  template<long Index, auto... Values>
   requires (Index < 0 || Index >= sizeof...(Values))
   struct ValueAtIndex<Index, Values...> {
    static constexpr auto const Value = 0;
   };
 
   //Yields a reference to the `N`'th argument
-  template<auto N, typename... Args>
+  template<long N, typename... Args>
   requires (0 <= N && N < sizeof...(Args))
   struct ArgumentAtIndex;
 
-  template<auto N, typename T, typename... Args>
+  template<long N, typename T, typename... Args>
   struct ArgumentAtIndex<N, T, Args...> {
-   static auto& value(T &, Args&... args) {
+   static auto& value(T&, Args&... args) {
     return ArgumentAtIndex<N - 1, Args...>::value(args...);
    }
   };

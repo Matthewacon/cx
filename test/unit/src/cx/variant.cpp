@@ -347,7 +347,7 @@ namespace CX::Testing {
   static int copyConstructorInvoked;
   //Reset counter in case test is re-run
   copyConstructorInvoked = 0;
-  using ExpectedTypeA = struct A {
+  struct A {
    double d;
 
    A(double d) :
@@ -364,7 +364,8 @@ namespace CX::Testing {
    A(A&&) = delete;
    A& operator=(A const&) = delete;
    A& operator=(A&&) = delete;
-  }[2];
+  };
+  using ExpectedTypeA = A[2];
   ExpectedTypeA const expectedValueA{
    {3.21},
    {1.23}
@@ -391,7 +392,7 @@ namespace CX::Testing {
   //Reset counters in case test is re-run
   defaultConstructorInvoked = 0;
   copyAssignmentOperatorInvoked = 0;
-  using ExpectedTypeA = struct A {
+  struct A {
    int i;
 
    A(int i) :
@@ -414,7 +415,8 @@ namespace CX::Testing {
    A(A const&) = delete;
    A(A&&) = delete;
    A& operator=(A&&) = delete;
-  }[3];
+  };
+  using ExpectedTypeA = A[3];
   ExpectedTypeA const expectedValueA{
    {7},
    {8},
@@ -441,7 +443,7 @@ namespace CX::Testing {
   static int moveConstructorsInvoked;
   //Reset counter in case test is re-run
   moveConstructorsInvoked = 0;
-  using ExpectedTypeA = struct A {
+  struct A {
    int i;
 
    A(int i) :
@@ -459,7 +461,8 @@ namespace CX::Testing {
    A(A const&) = delete;
    A& operator=(A const&) = delete;
    A& operator=(A&&) = delete;
-  }[5];
+  };
+  using ExpectedTypeA = A[5];
   ExpectedTypeA const expectedValueA{
    {1}, {2}, {3}, {4}, {5}
   };
@@ -493,7 +496,7 @@ namespace CX::Testing {
   //Reset counters in case test is re-run
   defaultConstructorsInvoked = 0;
   moveAssignmentOperatorsInvoked = 0;
-  using ExpectedTypeA = struct A {
+  struct A {
    char c;
 
    A(char c) :
@@ -517,7 +520,8 @@ namespace CX::Testing {
    A(A const&) = delete;
    A(A&&) = delete;
    A& operator=(A const &) = delete;
-  }[2];
+  };
+  using ExpectedTypeA = A[2];
   ExpectedTypeA const expectedValueA{
    {'a'}, {'b'}
   };
@@ -871,7 +875,7 @@ namespace CX::Testing {
   static int copyConstructorInvoked;
   //Reset counter in case test is re-run
   copyConstructorInvoked = 0;
-  using ExpectedTypeA = struct A {
+  struct A {
    bool b;
 
    A(bool b) :
@@ -888,7 +892,8 @@ namespace CX::Testing {
    A(A&&) = delete;
    A& operator=(A const&) = delete;
    A& operator=(A&&) = delete;
-  }[2];
+  };
+  using ExpectedTypeA = A[2];
   ExpectedTypeA const expectedValueA{
    {true},
    {false}
@@ -916,7 +921,7 @@ namespace CX::Testing {
   //Reset counters in case test is re-run
   defaultConstructorInvoked = 0;
   copyAssignmentOperatorInvoked = 0;
-  using ExpectedTypeA = struct A {
+  struct A {
    int i;
 
    A(int i) :
@@ -939,7 +944,8 @@ namespace CX::Testing {
    A(A const&) = delete;
    A(A&&) = delete;
    A& operator=(A&&) = delete;
-  }[3];
+  };
+  using ExpectedTypeA = A[3];
   ExpectedTypeA const expectedValueA{
    {324987},
    {38},
@@ -967,7 +973,7 @@ namespace CX::Testing {
   static int moveConstructorsInvoked;
   //Reset counter in case test is re-run
   moveConstructorsInvoked = 0;
-  using ExpectedTypeA = struct A {
+  struct A {
    int i;
 
    A(int i) :
@@ -985,7 +991,8 @@ namespace CX::Testing {
    A(A const&) = delete;
    A& operator=(A const&) = delete;
    A& operator=(A&&) = delete;
-  }[5];
+  };
+  using ExpectedTypeA = A[5];
   ExpectedTypeA const expectedValueA{
    {1349875}, {2342}, {3}, {458}, {25}
   };
@@ -1020,7 +1027,7 @@ namespace CX::Testing {
   //Reset counters in case test is re-run
   defaultConstructorsInvoked = 0;
   moveAssignmentOperatorsInvoked = 0;
-  using ExpectedTypeA = struct A {
+  struct A {
    wchar_t c;
 
    A(wchar_t c) :
@@ -1044,7 +1051,8 @@ namespace CX::Testing {
    A(A const&) = delete;
    A(A&&) = delete;
    A& operator=(A const &) = delete;
-  }[2];
+  };
+  using ExpectedTypeA = A[2];
   ExpectedTypeA const expectedValueA{
    {'H'}, {'Q'}
   };
@@ -1129,11 +1137,12 @@ namespace CX::Testing {
   static int destructorsInvoked;
   //Reset counter in case test is re-run
   destructorsInvoked = 0;
-  using ExpectedTypeA = struct A {
+  struct A {
    ~A() {
     destructorsInvoked++;
    }
-  }[4];
+  };
+  using ExpectedTypeA = A[4];
   ExpectedTypeA const expectedValueA{
    {}, {}, {}, {}
   };

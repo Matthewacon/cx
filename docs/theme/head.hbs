@@ -102,66 +102,118 @@
  });
 </script>
 
-<!--Styling for nested member function definition tables-->
+<!--Styling for nested member function definition and numbered
+description tables-->
 <style>
- table[id^="member-function-definition-"] {
+ table[id^="description-table-"] {
   border-collapse: collapse;
   border: hidden;
  }
- td[id^="member-function-"] {
+ td[id^="description-"] {
   position: relative;
   width: 1px;
   border: hidden;
  }
- td[id^="member-function-"]:target > a::before {
+ td[id^="description-"]:target > a::before {
   content: "» ";
   margin-left: -1.325ch;
  }
 </style>
 
-<!--Transformer for member function definition tables-->
+<!--Transformer for member function definition and numbered
+description tables
+-->
 <script type="text/javascript">
  $(function() {
-  //Add element to disable running first code example and
-  //put the code example in a table
+  //Adds a nested table with an indexed number and moves
+  //either a code or paragraph element into the same table
+  //as the number
+  const transformer = function(element, isCodeTable) {
+   const table_index = element.index();
+   element
+    .find(`tbody > tr`)
+    .each(function(member_function_index) {
+     const description_index = member_function_index + 1;
+     $(this)
+      .find(`td`)
+      .each(function(unused) {
+       //Get the original paragraph or code example
+       const elementsToRelocate = ((sub_element) => {
+        if (isCodeTable) {
+         return $(sub_element)
+          .find(`pre > code`)
+          .first()
+          .parent();
+        } else {
+         const container = $(`<a id="this-parent-will-be-discarded"></a>`);
+         $(sub_element)
+          .parent()
+          .find(`td > hr`)
+          .prevAll()
+          .each(function() {
+           container.prepend($(this));
+          });
+         return container;
+        }
+        return $(``);
+       })($(this));
+
+       const elementsToInject = (() => {
+        if (isCodeTable) {
+         //Inject elements to disable code interactivity
+         return $(`
+          <a id="this-parent-will-be-discarded">
+           <p><area id="no-interactive-code"></area></p>
+           <pre>${elementsToRelocate.html()}</pre>
+          </a>
+         `);
+        } else {
+         //Inject `elementsToRelocate` as-is
+         return elementsToRelocate;
+        }
+       })();
+
+       //Create new paragraph or code element
+       const numberedTableEntry = $(`
+        <table id="description-table-${table_index}">
+         <td id="description-${table_index}-${description_index}">
+          <a id="custom-link" href="#description-${table_index}-${description_index}">
+           (${description_index})
+          </a>
+         </td>
+         <td>
+          ${elementsToInject.html()}
+         </td>
+        </table>
+       `);
+
+       //Add new table element to parent table
+       $(this)
+        .prepend(numberedTableEntry);
+
+       //Remove old paragraphs or code example
+       elementsToRelocate.remove();
+      });
+    });
+  };
+
+  //Member function definition table
+  //Adds a nested table with an indexed number, adds element
+  //to diable running code example and moves the code example
+  //to the same table as the number
   $(`table#member-function-table`)
    .each(function(table_index) {
-    $(this)
-     .find(`tbody > tr`)
-     .each(function(member_function_index) {
-      const function_index = member_function_index + 1;
-      $(this)
-       .find(`td`)
-       .each(function(unused) {
-        //Get the original code example
-        const codeElement = $(this)
-         .find(`pre > code`)
-         .first()
-         .parent();
+    console.log(`member function table: ${table_index}`);
+    transformer($(this), true);
+   });
 
-        //Create new code element
-        const newCodeElement = $(`
-         <table id="member-function-definition-${table_index}">
-          <td id="member-function-${table_index}-${function_index}">
-           <a id="custom-link" href="#member-function-${table_index}-${function_index}">
-            (${function_index})
-           </a>
-          </td>
-          <td>
-           <p><area id="no-interactive-code"></area></p>
-           <pre>${codeElement.html()}</pre>
-          </td>
-         </table>
-        `);
-
-        //Add new code element to parent
-        $(this)
-         .prepend(newCodeElement);
-
-        //Remove old code example
-        codeElement.remove();
-       });
-     });
+  //Numbered description table
+  //Adds a nested table with an indexed number and moves first
+  //description paragraph to the same table as the number
+  $(`table#numbered-description-table`)
+   .each(function(table_index) {
+    console.log(`description table: ${table_index}`);
+    transformer($(this), false);
    });
  });
 </script>

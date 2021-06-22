@@ -5,6 +5,12 @@ multilingual = false
 src = "src"
 title = "CX Documentation"
 
+[output.katex]
+
+[preprocessor.katex]
+static-css = true
+trust = true
+
 [output.html]
 preferred-dark-theme = "ayu"
 default-theme = "ayu"

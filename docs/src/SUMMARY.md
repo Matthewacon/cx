@@ -5,6 +5,7 @@
 - [Getting Started](./getting_started/index.md)
   - [Supported Platforms](./getting_started/supported_platforms.md)
     - [Porting CX to Other Platforms](./getting_started/porting.md)
+  - [Supported Compilers](./getting_started/supported_compilers.md)
   - [ABI and API Guarantees](./getting_started/abi_and_api_guarantees.md)
   - [Core Concepts](./getting_started/core_concepts.md)
   - [Limitations](./getting_started/limitations.md)

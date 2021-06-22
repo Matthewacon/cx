@@ -91,9 +91,59 @@ is for!
 
 ### Clang-like Compilers
 #### Clang
-🔵 **11.x.x**:
-1.
-2.
+🔵 **10.x.x - 12.x.x**:
+<table id="numbered-description-table">
+ <tr><td>
+
+  There is a known issue with the selection of partially specialized
+  templates for zero-length-array types,
+  [see here](https://bugs.llvm.org/show_bug.cgi?id=49808).
+
+  ---
+  **Affected Constructs:**
+
+  $$
+   \begin{CD}
+    \overbrace{
+     \begin{gather}
+      \text{CX::Array}\\
+      \text{CX::SizedArray}\\
+      \text{CX::ArrayDecayed}\\
+      \text{CX::ArraySize}\\
+     \end{gather}
+    }^{
+     \text{<cx/idioms.h>}
+    }
+    @<<depends<
+    \begin{cases}
+     \overbrace{
+      \text{CX::Variant}
+     }^{
+      \text{<cx/variant.h>}
+     }
+    \end{cases}
+   \end{CD}
+  $$
+
+  This compiler bug causes two behavioural changes:
+  1. All non-concept constructs will yield a compiler error when invoked
+  with a zero-length-array type; `CX::ArrayDecayed`, `CX::ArraySize` and
+  `CX::Variant`.
+  2. All concept constructs will be unsatisfied for zero-length-array
+  types; `CX::Array` and `CX::SizedArray`.
+ </td></tr>
+ <tr><td>
+
+  There is a known issue with nested auto lambda incovations that causes
+  a compiler crash, [see here](https://bugs.llvm.org/show_bug.cgi?id=49743).
+
+  ---
+  This does not immediately impact any CX facilities, however, you may
+  experience compiler crashes if you invoke nested auto lambdas inside
+  of a lambda passed to constructs within CX.
+
+ </td></tr>
+</table>
 
 #### AppleClang
 TODO

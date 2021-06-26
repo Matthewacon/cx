@@ -23,16 +23,18 @@ is for!
 
 | Status | Compiler | Versions |
 | :- | :- | :- |
-| 🔵 | `Clang` | **10.x.x+**+ |
-| 🔵 | `AppleClang` | **???** |
-| 🔵 | `Intel LLVM` | **???** |
-| 🟠 | `GCC` | **10.x.x** - **12.x.x** |
-| 🔴 | `MSVC` | **???** |
-| 🔴 | `Intel` | **???** |
+| 🔵 | `Clang` | **10.x.x**+ |
+| 🔵 | `AppleClang` | **12.0.5**+ |
+| 🔵 | `Intel LLVM (dpc++)` | **10.x.x**+ |
+| 🟠 | `GCC (unpatched)` | **10.x.x** - **12.x.x** |
+| 🔵 | `GCC (patched)` | <= **10.2.x** |
+| 🟢 | `GCC (patched)` | **10.3.x** - **12.x.x** |
+| 🔴 | `MSVC` | Not supported yet |
+| 🔴 | `Intel (icc)` | Note supported yet |
 
 ## Known Issues
-### GCC
-🟠 **10.2.x**
+### GCC (unpatched)
+🟠 **<= 10.2.x**:
 <table id="numbered-description-table">
  <tr><td>
 
@@ -50,7 +52,7 @@ is for!
  </td></tr>
 </table>
 
-🟠 **10.x.x** - **12.x.x**
+🟠 **10.x.x** - **12.x.x**:
 <table id="numbered-description-table">
  <tr><td>
 
@@ -88,6 +90,11 @@ is for!
 
   </td></tr>
 </table>
+
+### GCC (patched)
+🟠 **<= 10.2.x**:
+
+GCC versions <= 10.2.x, with the patch to fix [the constraint complexity limit bug](#description-13-2) applied, only suffer from the [variadic concept bug](#description-13-1).
 
 ### Clang-like Compilers
 #### Clang
@@ -146,7 +153,21 @@ is for!
 </table>
 
 #### AppleClang
+🔵 **12.0.5**+:
+
+AppleClang suffers from the same bugs as Clang:
+ 1. [Template specialization and deduction with zero-length-arrays](#description-17-1)
+ 2. [Nested auto lambda invocation limit](#description-17-2)
+
+#### IntelLLVM (dpc++)
+🔵 **10.x.x**+:
+
+The Intel LLVM compiler collection suffers from the same bugs as Clang:
+ 1. [Template specialization and deduction with zero-length-arrays](#description-17-1)
+ 2. [Nested auto lambda invocation limit](#description-17-2)
+
+### MSVC
 TODO
 
-#### IntelLLVM
+### Intel (icc)
 TODO

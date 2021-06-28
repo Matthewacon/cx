@@ -153,59 +153,164 @@ elseif(CX_DETECTED_COMPILER_ID STREQUAL "Intel")
   "Default compiler flags for Intel are not yet implemented."
  )
 elseif(CX_DETECTED_COMPILER_ID STREQUAL "MSVC")
- #TODO default msvc compile flags
+ #Default msvc compile flags
  list(
   APPEND CX_COMPILE_FLAGS
-  -DCX_COMPILER_MSVC
- )
- message(
-  FATAL_ERROR
-  "Default compiler flags for MSVC have not yet implemented."
+  /DCX_COMPILER_MSVC
+  /std:c++20
+  /Wall
+  /WX
  )
 endif()
 
 #Conditional compile flags
 if(${CX_STL_SUPPORT})
  #Add source flag for stl integration
- list(
-  APPEND CX_COMPILE_FLAGS
-  -DCX_STL_SUPPORT
- )
+ if(CX_COMPILER_CLANG_LIKE OR CX_DETECTED_COMPILER_ID STREQUAL "GNU")
+  list(
+   APPEND CX_COMPILE_FLAGS
+   -DCX_STL_SUPPORT
+  )
+ elseif(CX_DETECTED_COMPILER_ID STREQUAL "Intel")
+  message(
+   FATAL_ERROR
+   "Setting 'CX_STL_SUPPORT' on Intel is not yet supported."
+  )
+ elseif(CX_DETECTED_COMPILER_ID STREQUAL "MSVC")
+  list(
+   APPEND CX_COMPILE_FLAGS
+   /DCX_STL_SUPPORT
+  )
+ endif()
 else()
- #TODO specialize flags for all supported compilers
- list(
-  APPEND CX_COMPILE_FLAGS
-  -nostdlib++
-  -fno-exceptions
- )
+ #Disable linking against stl lib
+ if(CX_COMPILER_CLANG_LIKE OR CX_DETECTED_COMPILER_ID STREQUAL "GNU")
+  list(
+   APPEND CX_COMPILE_FLAGS
+   -nostdlib++
+   -fno-exceptions
+  )
+ elseif(CX_DETECTED_COMPILER_ID STREQUAL "Intel")
+  message(
+   FATAL_ERROR
+   "Setting 'CX_STL_SUPPORT' on Intel is not yet supported."
+  )
+ elseif(CX_DETECTED_COMPILER_ID STREQUAL "MSVC")
+  #Compile flags
+  list(
+   APPEND CX_COMPILE_FLAGS
+   /EHsc
+  )
+  #Link flags
+  list(
+   APPEND CX_LINK_FLAGS
+   /NODEFAULTLIB:libcpmt.lib
+   /NODEFAULTLIB:msvcprt.lib
+   /NODEFAULTLIB:libcpmtd.lib
+   /NODEFAULTLIB:msvcprtd.lib
+  )
+ endif()
 endif()
 
 if(${CX_LIBC_SUPPORT})
  #Add source flag for libc integration
- list(
-  APPEND CX_COMPILE_FLAGS
-  -DCX_LIBC_SUPPORT
- )
+ if(CX_COMPILER_CLANG_LIKE OR CX_DETECTED_COMPILER_ID STREQUAL "GNU")
+  list(
+   APPEND CX_COMPILE_FLAGS
+   -DCX_LIBC_SUPPORT
+  )
+ elseif(CX_DETECTED_COMPILER_ID STREQUAL "Intel")
+  message(
+   FATAL_ERROR
+   "Setting 'CX_LIBC_SUPPORT' on Intel is not yet supported."
+  )
+ elseif(CX_DETECTED_COMPILER_ID STREQUAL "MSVC")
+  list(
+   APPEND CX_COMPILE_FLAGS
+   /DCX_LIBC_SUPPORT
+  )
+ endif()
 else()
- #TODO specialize flags for all supported compilers
- list(
-  APPEND CX_COMPILE_FLAGS
-  -nostdlib
- )
+ #Disable linking against platform libc equivalent (uCRT on Windows)
+ if(CX_COMPILER_CLANG_LIKE OR CX_DETECTED_COMPILER_ID STREQUAL "GNU")
+  list(
+   APPEND CX_COMPILE_FLAGS
+   -nostdlib
+  )
+ elseif(CX_DETECTED_COMPILER_ID STREQUAL "Intel")
+  message(
+   FATAL_ERROR
+   "Setting 'CX_LIBC_SUPPORT' on Intel is not yet supported."
+  )
+ elseif(CX_DETECTED_COMPILER_ID STREQUAL "MSVC")
+  #Compile flags
+  list(
+   APPEND CX_COMPILE_FLAGS
+   /NODEFAULTLIB
+   /GS-
+   #/MT
+   /clr:nostdlib
+   /Zl
+  )
+  #Link flags
+  list(
+   APPEND CX_LINK_FLAGS
+   /NODEFAULTLIB:libucrt.lib
+   /NODEFAULTLIB:libucrtd.lib
+   /NODEFAULTLIB:ucrt.lib
+   /NODEFAULTLIB:ucrtd.lib
+   /NODEFAULTLIB:libvcruntime.lib
+   /NODEFAULTLIB:libvcruntimed.lib
+   /NODEFAULTLIB:vcruntime.lib
+   /NODEFAULTLIB:vcruntimed.lib
+   /NODEFAULTLIB:libcmt.lib
+   /NODEFAULTLIB:libcmtd.lib
+   /NODEFAULTLIB:msvcrt.lib
+   /NODEFAULTLIB:msvcrtd.lib
+   /NODEFAULTLIB:msvcmrt.lib
+   /NODEFAULTLIB:msvcmrtd.lib
+   /NODEFAULTLIB:msvcurt.lib
+   /NODEFAULTLIB:msvcurtd.lib
+  )
+ endif()
 endif()
 
 if(${CX_VARIANT_HARD_CLEAR})
- list(
-  APPEND CX_COMPILE_FLAGS
-  -DCX_VARIANT_HARD_CLEAR
- )
+ if(CX_COMPILER_CLANG_LIKE OR CX_DETECTED_COMPILER_ID STREQUAL "GNU")
+  list(
+   APPEND CX_COMPILE_FLAGS
+   -DCX_VARIANT_HARD_CLEAR
+  )
+ elseif(CX_DETECTED_COMPILER_ID STREQUAL "Intel")
+  message(
+   FATAL_ERROR
+   "Setting 'CX_VARIANT_HARD_CLEAR' on Intel is not yet supported."
+  )
+ elseif(CX_DETECTED_COMPILER_ID STREQUAL "MSVC")
+  list(
+   APPEND CX_COMPILE_FLAGS
+   /DCX_VARIANT_HARD_CLEAR
+  )
+ endif()
 endif()
 
 if(${CX_VARARG_INTRENSICS})
- list(
-  APPEND CX_VARARG_INTRENSICS
-  -DCX_VARARG_INTRENSICS
- )
+ if(CX_COMPILER_CLANG_LIKE OR CX_DETECTED_COMPILER_ID STREQUAL "GNU")
+  list(
+   APPEND CX_COMPILE_FLAGS
+   -DCX_VARARG_INTRENSICS
+  )
+ elseif(CX_DETECTED_COMPILER_ID STREQUAL "Intel")
+  message(
+   FATAL_ERROR
+   "Setting 'CX_VARARG_INTRENSICS' on Intel is not yet supported."
+  )
+ elseif(CX_DETECTED_COMPILER_ID STREQUAL "MSVC")
+  list(
+   APPEND CX_COMPILE_FLAGS
+   /DCX_VARARG_HARD_CLEAR
+  )
+ endif()
 endif()
 
 if(${CX_DEBUG})
@@ -243,51 +348,107 @@ if(${CX_DEBUG})
    "Debug compiler flags for Intel are not yet implemented."
   )
  elseif(CX_DETECTED_COMPILER_ID STREQUAL "MSVC")
-  #TODO MSVC compiler flags
-  message(
-   FATAL_ERROR
-   "Debug compiler flags for MSVC are not yet implemented."
+  #MSVC compiler flags
+  list(
+   APPEND CX_COMPILE_FLAGS
+   /Z7
+   /DEBUG:FULL
+   /Od
+   /DCX_DEBUG
   )
  endif()
 else()
- #TODO specialize flags for all supported compilers
- #Release build flags
- list(
-  APPEND CX_COMPILE_FLAGS
-  -O3
-  #TODO LTO enabled builds
-  #-flto
- )
+ if(${CX_COMPILER_CLANG_LIKE})
+  #Clang-like release flags
+  list(
+   APPEND CX_COMPILE_FLAGS
+   -O3
+  )
+ elseif(CX_DETECTED_COMPILER_ID STREQUAL "GNU")
+  #GNU release flags
+  list(
+   APPEND CX_COMPILE_FLAGS
+   -O3
+  )
+ elseif(CX_DETECTED_COMPILER_ID STREQUAL "Intel")
+  #Intel release flags
+  message(
+   FATAL_ERROR
+   "Build flags for Intel are not yet implemented."
+  )
+ elseif(CX_DTECTED_COMPILER_ID STREQUAL "MSVC")
+  #MSVC release flags
+  list(
+   APPEND CX_COMPILE_FLAGS
+   /Ox
+   /Oy
+   /Oi
+   /Ob2
+  )
+ endif()
 endif()
 
-#Conditional link flags
+#Conditional compile/link flags
 if(${CX_QA})
- #TODO specialize flags for all supported compilers
- list(
-  APPEND CX_COMPILE_FLAGS
-  -fno-omit-frame-pointer
-  -fno-sanitize-recover=null
-  -fsanitize=address
-  -fsanitize=undefined
-  -fsanitize-address-use-after-scope
-  -fsanitize=bounds
-  -fsanitize=null
- )
- list(
-  APPEND CX_LINK_FLAGS
-  -fsanitize=address
-  -fsanitize=undefined
- )
+ if(CX_COMPILER_CLANG_LIKE OR CX_DETECTED_COMPILER_ID STREQUAL "GNU")
+  #Clang-like and GNU QA flags
+  list(
+   APPEND CX_COMPILE_FLAGS
+   -fno-omit-frame-pointer
+   -fno-sanitize-recover=null
+   -fsanitize=address
+   -fsanitize=undefined
+   -fsanitize-address-use-after-scope
+   -fsanitize=bounds
+   -fsanitize=null
+  )
+  list(
+   APPEND CX_LINK_FLAGS
+   -fsanitize=address
+   -fsanitize=undefined
+  )
+ elseif(CX_DETECTED_COMPILER_ID STREQUAL "Intel")
+  #TODO Intel QA flags
+  message(
+   FATAL_ERROR
+   "Setting 'CX_QA' on Intel is not yet supported."
+  )
+ elseif(CX_DETECTED_COMPILER_ID STREQUAL "MSVC")
+  #MSVC QA flags
+  message(
+   WARNING
+   "(CX_QA): MSVC only currently supports ASAN."
+  )
+  list(
+   APPEND CX_COMPILE_FLAGS
+   /fsanitize=address
+  )
+ endif()
+endif()
+
+#Conditional src flags for CX
+if(${CX_HEADER_ONLY})
+ #Add source flag for header-only builds
+ if(CX_COMPILER_CLANG_LIKE OR CX_DETECTED_COMPILER_ID STREQUAL "GNU")
+  list(
+   APPEND CX_COMPILE_FLAGS
+   -DCX_HEADER_ONLY
+  )
+ elseif(CX_DETECTED_COMPILER_ID STREQUAL "Intel")
+  message(
+   FATAL_ERROR
+   "Setting 'CX_HEADER_ONLY' on Intel is not yet supported."
+  )
+ elseif(CX_DETECTED_COMPILER_ID STREQUAL "MSVC")
+  list(
+   APPEND CX_COMPILE_FLAGS
+   -DCX_HEADER_ONLY
+  )
+ endif()
 endif()
 
 #Conditional library build type
 if(${CX_HEADER_ONLY})
- #Add source flag for header-only builds
- list(
-  APPEND CX_COMPILE_FLAGS
-  -DCX_HEADER_ONLY
- )
-
  #Set up header-only build
  if(${CX_TOP_LEVEL})
   set(CX_OPTION_SCOPE INTERFACE)

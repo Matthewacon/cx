@@ -590,6 +590,3 @@ namespace CX {
  template<typename E>
  Variant(E) -> Variant<E>;
 }
-
-//Clean up internal macros
-#undef CX_STL_SUPPORT_EXPR

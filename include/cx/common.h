@@ -1,5 +1,63 @@
 #pragma once
 
+//Define portable macro to emit pragma messages
+#if defined(CX_COMPILER_CLANG_LIKE) || defined(CX_COMPILER_GCC)
+ //Clang-like and GCC impl
+ #define CX_PRAGMA_IMPL(prgma) \
+ _Pragma(#prgma)
+ //Equivalent to `#pragma message(#msg)`
+ #define CX_PRAGMA_MSG(msg) \
+ CX_PRAGMA_IMPL(message #msg)
+#elif defined(CX_COMPILER_INTEL)
+ //Intel impl
+ #define CX_PRAGMA_IMPL(...) \
+ #error "CX_PRAGMA_IMPL" on Intel is not yet implemented.
+ #define CX_PRAGMA_MSG(...) \
+ #error "CX_PRAGMA_MSG" on Intel is not yet implemented.
+#elif defined(CX_COMPILER_MSVC)
+ //MSVC impl
+ #define CX_PRAGMA_IMPL(prgma) \
+ _Pragma(#prgma)
+ //Equivalent to `#pragma message(#msg)`
+ #define CX_PRAGMA_MSG(msg) \
+ CX_PRAGMA_IMPL(message (#msg))
+#else
+ //Unknown compiler, emit error
+ #error \
+  "CX_PRAGMA_IMPL" and "CX_PRAGMA_MSG" are not implemented for \
+  this compiler.
+#endif
+
+//Define a macro to emit debug messages during compile time
+#ifdef CX_DEBUG
+ #if defined(CX_COMPILER_CLANG_LIKE) || defined(CX_COMPILER_GCC)
+  //Clang-like and GCC impl
+  #define CX_DEBUG_MSG(msg) \
+  CX_PRAGMA_MSG(msg)
+ #elif defined(CX_COMPILER_INTEL)
+  //Intel impl
+  #define CX_DEBUG_MSG(...) \
+  #error "CX_DEBUG_MSG(...)" on Intel is not yet implemented.
+ #elif defined(CX_COMPILER_MSVC)
+  //MSVC impl
+  #define CX_DEBUG_MSG(msg) \
+  CX_PRAGMA_MSG(msg)
+ #else
+  //Unknown compiler, emit error
+  #error "CX_DEBUG_MSG" is not implemented for this compiler.
+ #endif
+#else
+ //Stub definition when not building in debug mode
+ #define CX_DEBUG_MSG(...)
+#endif
+
+//Conditional identity macro that depends on STL support
+#ifdef CX_STL_SUPPORT
+ #define CX_STL_SUPPORT_EXPR(expr) expr
+#else
+ #define CX_STL_SUPPORT_EXPR(...)
+#endif
+
 //Substitutes for stl equivalents and additions for missing
 //constructs
 namespace CX {

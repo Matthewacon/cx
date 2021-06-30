@@ -34,7 +34,7 @@ namespace CX {
 
    static_assert(
     sizeof(Components) == sizeof(memberPtr),
-    "`CX::MemberPtr` cannot be used with this platform as it is using a"
+    "\"CX::MemberPtr\" cannot be used with this platform as it is using a"
     "different ABI. Please file a bug report to "
     "https://github.com/Matthewacon/CX so support for your platform can "
     "be added."

@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cx/common.h>
 #include <cx/idioms.h>
 
 #ifdef CX_STL_SUPPORT
@@ -12,14 +13,9 @@
  #include <cstdio>
 #endif
 
-#ifdef CX_STL_SUPPORT
- #define CX_STL_SUPPORT_EXPR(expr) expr
-#else
- #define CX_STL_SUPPORT_EXPR(...)
-#endif
-
 //Conditional support for `constinit` statements.
 //GCC does not support this yet
+//TODO test with MSVC and Intel
 #ifdef CX_COMPILER_CLANG_LIKE
  #define CX_CONSTINIT constinit
 #else
@@ -50,9 +46,9 @@ namespace CX {
      * msg = err.what(),
      * fmt;
     if (!msg) {
-     fmt = "`CX::%s(...)` invoked without an error\n";
+     fmt = "\"CX::%s(...)\" invoked without an error\n";
     } else {
-     fmt = "`CX::%s(...)` invoked with error:\n%s\n";
+     fmt = "\"CX::%s(...)\" invoked with error:\n%s\n";
     }
     fprintf(stderr, fmt, funcName, msg);
    }
@@ -68,28 +64,26 @@ namespace CX {
  inline constexpr auto defaultExitHandler() noexcept {
   #ifdef CX_STL_SUPPORT
    //STL exit handler
-   #pragma message \
-    "`CX_STL_SUPPORT` enabled; using STL exit handler"
+   CX_DEBUG_MSG("CX_STL_SUPPORT" enabled; using STL exit handler)
    return +[](CXError const &err) {
     Internal::printError("exit", err);
     std::terminate();
    };
   #elif defined(CX_LIBC_SUPPORT)
    //libc exit handler
-   #pragma message \
-    "`CX_LIBC_SUPPORT` enabled; using libc exit handler"
+   CX_DEBUG_MSG("CX_LIBC_SUPPORT" enabled; using libc exit handler)
    return +[](CXError const &err) {
     Internal::printError("exit", err);
     abort();
    };
   #else
    //User-defined exit handler
-   #pragma message \
-    "Neither `CX_STL_SUPPORT` nor `CX_LIBC_SUPPORT` are enabled; "\
-    "using user-defined exit handler. Note: If you have not defined "\
-    "an implementation of "\
-    "`void CX::userDefinedExit(CXError const&)`, you "\
-    "will encounter linker errors."
+   CX_DEBUG_MSG((
+    Neither "CX_STL_SUPPORT" nor "CX_LIBC_SUPPORT" are enabled; \
+    using user-defined exit handler. Note: If you have not defined \
+    an implementation of `void CX::userDefinedExit(CXError const&)`, \
+    you will encounter linker errors.
+   ))
    return userDefinedExit;
   #endif
  }
@@ -127,16 +121,16 @@ namespace CX {
  inline auto defaultErrorHandler() noexcept {
   #if defined(CX_STL_SUPPORT) && defined(__cpp_exceptions)
    //STL error handler
-   #pragma message \
-    "`CX_STL_SUPPORT` enabled; using STL error handler"
+   CX_DEBUG_MSG("CX_STL_SUPPORT" enabled; using STL error handler)
    return +[](CXError const &err) {
     throw err;
    };
   #elif defined(CX_LIBC_SUPPORT)
    //libc error handler
-   #pragma message \
-    "`CX_LIBC_SUPPORT` enabled or `__cpp_exceptions` diabled; using "\
-    "LIBC error handler"
+   CX_DEBUG_MSG(
+    "CX_LIBC_SUPPORT" enabled or "__cpp_exceptions" diabled; using \
+    LIBC error handler
+   )
    return +[](CXError const &err) noexcept {
     Internal::printError("error", err);
     abort();
@@ -144,11 +138,12 @@ namespace CX {
   #else
    //If neither `CX_STL_SUPPORT` nor `CX_LIBC_SUPPORT` are
    //enabled, use exit
-   #pragma message \
-    "Neither `CX_STL_SUPPORT` nor `CX_LIBC_SUPPORT` are enabled; "\
-    "using exit handler instead. Note: You can change this behaviour "\
-    "by setting the error handler for the current thread with "\
-    "`CX::setErrorHandler(...)`"
+   CX_DEBUG_MSG(
+    Neither "CX_STL_SUPPORT" nor "CX_LIBC_SUPPORT" are enabled; \
+    using exit handler instead. Note: You can change this behaviour \
+    by setting the error handler for the current thread with \
+    `CX::setErrorHandler(...)`
+   )
    return getExitHandler();
   #endif
  }
@@ -177,5 +172,4 @@ namespace CX {
 }
 
 //Clean up internal macros
-#undef CX_STL_SUPPORT_EXPR
 #undef CX_CONSTINIT

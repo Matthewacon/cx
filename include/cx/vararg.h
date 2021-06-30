@@ -7,12 +7,9 @@
 //Conditional stl dependencies if built with stl support
 #ifdef CX_STL_SUPPORT
  #include <exception>
-
- #define CX_STL_SUPPORT_EXPR(expr) expr
-#else
- #define CX_STL_SUPPORT_EXPR(...)
 #endif
 
+//TODO change conditions to use toolchain compiler defines
 //Conditional libc dependencies if built with libc support
 #ifdef CX_LIBC_SUPPORT
  #include <cstdarg>
@@ -41,8 +38,8 @@
  //Warn if libc macros are defined
  #if defined(va_start) || defined(va_end) || defined(va_arg)
   #error \
-   "'CX_VARARG_INTRENSICS' is enabled but one of [va_start va_end va_arg] "\
-   "is already defined; are you sure you meant to enable this flag?"
+   'CX_VARARG_INTRENSICS' is enabled but one of [va_start va_end va_arg] \
+   is already defined; are you sure you meant to enable this flag?
  #endif
  //Define libc va_list macros
  #define va_start(list, arg) CX_VA_START(list, arg)
@@ -245,6 +242,3 @@ namespace CX {
  #undef CX_GCC
  #pragma GCC diagnostic pop
 #endif
-
-//Clean up internal macro
-#undef CX_STL_SUPPORT_EXPR

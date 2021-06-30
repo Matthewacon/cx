@@ -29,3 +29,11 @@ This header provides the base definitions for all other headers in CX.
 | :- | :- |
 | [`CX::declval<T>`](./cx_common_h/declval.md) | A compile-time meta-function that produces the value resulting from the type expression `T&&`. |
 | [`CX::expect<T>`](./cx_common_h/expect.md) | A compile-time meta-function that consumes a value of the type `T`. |
+
+## Function-Like Macros
+| Name | Description |
+| :- | :- |
+| [`CX_PRAGMA_IMPL`](./cx_common_h/cx_pragma_impl.md) | A portable shim to the compiler/platform equivalent of `_Pragma(...)`. |
+| [`CX_PRAGMA_MSG`](./cx_common_h/cx_pragma_msg.md) | A portable macro to emit messages during compile time. |
+| [`CX_DEBUG_MSG`](./cx_common_h/cx_debug_msg.md) | A portable macro to emit debug messages during compile time. |
+| [`CX_STL_SUPPORT_EXPR`](./cx_common_h/cx_stl_support_expr.md) | An macro that only yields the supplied expression if CX is built with STL support enabled. |

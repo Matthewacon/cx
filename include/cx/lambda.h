@@ -9,34 +9,36 @@
 #ifdef CX_STL_SUPPORT
  #include <memory>
 #else
- #pragma message \
-  "Building without STL support; 'CX::AllocLambda<...>' will be unavailable."
+ CX_DEBUG_MSG(
+  Building without STL support; "CX::AllocLambda<...>" will be unavailable.
+ )
 #endif
 
 #if defined(CX_LAMBDA_BUF_ALIGN) || defined(CX_LAMBDA_BUF_SIZE)
- #pragma message \
-  "Using user-specified buffer size and alignment for non-allocating "\
-  "polymorphic function wrapper implementation."
+ CX_DEBUG_MSG(
+  Using user-specified buffer size and alignment for non-allocating \
+  polymorphic function wrapper implementation.
+ )
 
  //Check that both 'CX_LAMBDA_BUF_ALIGN' and 'CX_LAMBDA_BUF_SIZE'
  //were specified together
  #ifndef CX_LAMBDA_BUF_ALIGN
   #error \
-   "You must specify 'CX_LAMBDA_BUF_ALIGN' when overriding "\
-   "'CX_LAMBDA_BUF_SIZE'"
+   You must specify 'CX_LAMBDA_BUF_ALIGN' when overriding \
+   'CX_LAMBDA_BUF_SIZE'
  #endif
 
  #ifdef CX_LAMBDA_BUF_SIZE
   #error \
-   "You must specify 'CX_LAMBDA_BUF_SIZE' when overriding "\
-   "'CX_LAMBDA_BUF_ALIGN'"
+   You must specify 'CX_LAMBDA_BUF_SIZE' when overriding \
+   'CX_LAMBDA_BUF_ALIGN'
  #endif
 
  //Check that the user-specified values are valid
  #if CX_LAMBDA_BUF_ALIGN < CX_LAMBDA_BUF_SIZE
   #error \
-   "'CX_LAMBDA_BUF_ALIGN' must be greater than or equal to "\
-   "'CX_LAMBDA_BUF_SIZE'"
+   'CX_LAMBDA_BUF_ALIGN' must be greater than or equal to \
+   'CX_LAMBDA_BUF_SIZE'
  #endif
 #else
  #define CX_LAMBDA_BUF_ALIGN (sizeof(void *) * 8)
@@ -2991,6 +2993,3 @@ namespace CX {
  //TODO conversion from c-variadic lambda to function pointer
  //Note: Use `CX::VaList` as the prototype requirement instead
 }
-
-//Clean up internal macros
-#undef CX_STL_SUPPORT_EXPR

@@ -129,7 +129,6 @@ if(
   -ftemplate-backtrace-limit=0
   -fno-common
   -Wno-zero-length-array
-  "-Wno-#pragma-messages"
  )
 elseif(CX_DETECTED_COMPILER_ID STREQUAL "GNU")
  #Default gcc compile flags
@@ -442,7 +441,7 @@ if(${CX_HEADER_ONLY})
  elseif(CX_DETECTED_COMPILER_ID STREQUAL "MSVC")
   list(
    APPEND CX_COMPILE_FLAGS
-   -DCX_HEADER_ONLY
+   /DCX_HEADER_ONLY
   )
  endif()
 endif()

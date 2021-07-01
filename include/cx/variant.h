@@ -478,8 +478,6 @@ namespace CX {
  template<>
  struct Variant<> final {
   static constexpr SizeType const Size = 0;
-  //Note: `alignof(expression)` is a GNU-extension; using
-  //`alignof(char)` as a portable substitute
   static constexpr AlignType const Alignment = 1;
 
  private:

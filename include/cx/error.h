@@ -45,12 +45,19 @@ namespace CX {
     char const
      * msg = err.what(),
      * fmt;
+    #ifdef CX_COMPILER_MSVC
+     #pragma warning(push)
+     #pragma warning(disable : 4774)
+    #endif
     if (!msg) {
      fmt = "\"CX::%s(...)\" invoked without an error\n";
     } else {
      fmt = "\"CX::%s(...)\" invoked with error:\n%s\n";
     }
     fprintf(stderr, fmt, funcName, msg);
+    #ifdef CX_COMPILER_MSVC
+     #pragma warning(pop)
+    #endif
    }
   #endif
  }
@@ -128,7 +135,7 @@ namespace CX {
   #elif defined(CX_LIBC_SUPPORT)
    //libc error handler
    CX_DEBUG_MSG(
-    "CX_LIBC_SUPPORT" enabled or "__cpp_exceptions" diabled; using \
+    "CX_LIBC_SUPPORT" enabled or "__cpp_exceptions" disabled; using \
     LIBC error handler
    )
    return +[](CXError const &err) noexcept {
@@ -162,13 +169,17 @@ namespace CX {
  //Universal error function
  //Note: Return type present to prevent compiler errors for
  //`error` invocations in non-returning contexts
- #pragma GCC diagnostic push
- #pragma GCC diagnostic ignored "-Wreturn-type"
-  template<typename R = void>
-  R error(auto err) {
-   getErrorHandler()(err);
-  }
- #pragma GCC diagnostic pop
+ #if defined(CX_COMPILER_CLANG_LIKE) || defined(CX_COMPILER_GCC)
+  #pragma GCC diagnostic push
+  #pragma GCC diagnostic ignored "-Wreturn-type"
+ #endif
+ template<typename R = void>
+ R error(auto err) {
+  getErrorHandler()(err);
+ }
+ #if defined(CX_COMPILER_CLANG_LIKE) || defined(CX_COMPILER_GCC)
+  #pragma GCC diagnostic pop
+ #endif
 }
 
 //Clean up internal macros

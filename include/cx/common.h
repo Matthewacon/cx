@@ -1,5 +1,25 @@
 #pragma once
 
+//Globally disable useless MSVC warnings
+#ifdef CX_COMPILER_MSVC
+ //unreferenced inline function has been removed
+ #pragma warning(disable : 4514)
+ //nonstandard extension used: nameless struct/union
+ #pragma warning(disable : 4201)
+
+ //TODO remove this once all of the compiler-specific
+ //attributes have been been normalized
+ //attribute '...' is not recognized
+ #pragma warning(disable : 5030)
+
+ //nonstandard extension used: zero-sized arrahy in struct/union
+ #pragma warning(disable : 4200)
+ //assignment operator was implicitly defined as deleted
+ #pragma warning(disable : 4626)
+ //move assignment operator was implicitly defined as deleted
+ #pragma warning(disable : 5027)
+#endif
+
 //Define portable macro to emit pragma messages
 #if defined(CX_COMPILER_CLANG_LIKE) || defined(CX_COMPILER_GCC)
  //Clang-like and GCC impl

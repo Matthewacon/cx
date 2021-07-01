@@ -172,6 +172,9 @@ namespace CX {
  #if defined(CX_COMPILER_CLANG_LIKE) || defined(CX_COMPILER_GCC)
   #pragma GCC diagnostic push
   #pragma GCC diagnostic ignored "-Wreturn-type"
+ #elif defined(CX_COMPILER_MSVC)
+  #pragma warning(push)
+  #pragma warning(disable : 4716)
  #endif
  template<typename R = void>
  R error(auto err) {
@@ -179,6 +182,8 @@ namespace CX {
  }
  #if defined(CX_COMPILER_CLANG_LIKE) || defined(CX_COMPILER_GCC)
   #pragma GCC diagnostic pop
+ #elif defined(CX_COMPILER_MSVC)
+  #pragma warning(pop)
  #endif
 }
 

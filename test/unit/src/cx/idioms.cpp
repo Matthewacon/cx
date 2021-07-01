@@ -804,7 +804,8 @@ namespace CX::Testing {
  TEST(Trivial, non_trivial_types_do_not_satisfy_constraint) {
   EXPECT_FALSE((TriviallyCopyable<int const&&>));
   struct A {
-   virtual void doNothing();
+   virtual void doNothing() {}
+   virtual ~A() = default;
   };
   EXPECT_FALSE((TriviallyCopyable<A>));
  }
@@ -826,6 +827,8 @@ namespace CX::Testing {
 
   int f9() const & { return 0; }
   void f10() && noexcept {}
+
+  virtual ~S() = default;
  };
 
  TEST(MemberFunction, member_functions_satisfy_constraint) {

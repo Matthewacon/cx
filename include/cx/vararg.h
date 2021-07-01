@@ -225,6 +225,14 @@ namespace CX {
     return toPlatform();
    }
 
+   //`__crt_va_start(list, arg)` takes a reference to the `list` parameter
+   //so the default implicit conversion operators do not work
+   #ifdef CX_COMPILER_MSVC
+    auto operator&() {
+     return &toPlatform();
+    }
+   #endif
+
    template<typename T>
    [[gnu::always_inline]]
    T arg() {

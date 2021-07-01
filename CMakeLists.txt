@@ -157,8 +157,11 @@ elseif(CX_DETECTED_COMPILER_ID STREQUAL "MSVC")
   APPEND CX_COMPILE_FLAGS
   /DCX_COMPILER_MSVC
   /std:c++20
-  /Wall
-  /WX
+  #TODO These flags are leaked to gtest when compiling against it
+  #and cause issues
+  #/Wall
+  #/WX
+  /D_CRT_NO_VA_START_VALIDATION
  )
 endif()
 

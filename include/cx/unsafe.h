@@ -15,35 +15,39 @@ namespace CX {
   return u.r;
  }
 
- #pragma GCC diagnostic push
- #pragma GCC diagnostic ignored "-Wgnu-anonymous-struct"
- #pragma GCC diagnostic ignored "-Wnested-anon-types"
-  //Componentized member pointer utility type
-  //Note: Assumes Intel Itanium C++ ABI
-  struct MemberPtr {
-   struct [[gnu::packed]] Components {
-    void
-     * ptr,
-     * adj;
-   };
-
-   union {
-    Components components;
-    void (MemberPtr::*memberPtr)();
-   };
-
-   static_assert(
-    sizeof(Components) == sizeof(memberPtr),
-    "\"CX::MemberPtr\" cannot be used with this platform as it is using a"
-    "different ABI. Please file a bug report to "
-    "https://github.com/Matthewacon/CX so support for your platform can "
-    "be added."
-   );
-
-   template<MemberFunction F>
-   MemberPtr(F f) :
-    memberPtr((decltype(memberPtr))f)
-   {}
+ #if defined(CX_COMPILER_CLANG_LIKE) || defined(CX_COMPILER_GCC)
+  #pragma GCC diagnostic push
+  #pragma GCC diagnostic ignored "-Wgnu-anonymous-struct"
+  #pragma GCC diagnostic ignored "-Wnested-anon-types"
+ #endif
+ //Componentized member pointer utility type
+ //Note: Assumes Intel Itanium C++ ABI
+ struct MemberPtr {
+  struct [[gnu::packed]] Components {
+   void
+    * ptr,
+    * adj;
   };
- #pragma GCC diagnostic pop
+
+  union {
+   Components components;
+   void (MemberPtr::*memberPtr)();
+  };
+
+  static_assert(
+   sizeof(Components) == sizeof(memberPtr),
+   "\"CX::MemberPtr\" cannot be used with this platform as it is using a"
+   "different ABI. Please file a bug report to "
+   "https://github.com/Matthewacon/CX so support for your platform can "
+   "be added."
+  );
+
+  template<MemberFunction F>
+  MemberPtr(F f) :
+   memberPtr((decltype(memberPtr))f)
+  {}
+ };
+ #if defined(CX_COMPILER_CLANG_LIKE) || defined(CX_COMPILER_GCC)
+  #pragma GCC diagnostic pop
+ #endif
 }

@@ -137,8 +137,10 @@ namespace CX::Testing {
   }()));
  }
 
- #pragma GCC diagnostic push
- #pragma GCC diagnostic ignored "-Wvarargs"
+ #if defined(CX_COMPILER_CLANG_LIKE) || defined(CX_COMPILER_GCC)
+  #pragma GCC diagnostic push
+  #pragma GCC diagnostic ignored "-Wvarargs"
+ #endif
 
  template<typename L>
  struct VariadicLambdaWrapper;
@@ -165,7 +167,9 @@ namespace CX::Testing {
   }
  };
 
- #pragma GCC diagnostic pop
+ #if defined(CX_COMPILER_CLANG_LIKE) || defined(CX_COMPILER_GCC)
+  #pragma GCC diagnostic pop
+ #endif
 
  TEST(LambdaConstructor, c_variadic_lambda_function_pointer_constructor_correctly_initializes_lambda) {
   static constexpr uintptr_t const vExpected = (uintptr_t)0x571046;

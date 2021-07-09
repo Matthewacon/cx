@@ -159,6 +159,14 @@ namespace CX::Testing {
   EXPECT_FALSE((Destructible<ImpossibleType<>>));
  }
 
+ TEST(TriviallyDestructible, trivially_destructible_types_satisfy_constraint) {
+  FAIL();
+ }
+
+ TEST(TriviallyDestructible, non_trivally_destructible_types_do_not_satisfy_constraint) {
+  FAIL();
+ }
+
  TEST(CopyConstructible, copy_constructible_types_satisfy_constraint) {
   EXPECT_TRUE((CopyConstructible<int>));
   EXPECT_TRUE((CopyConstructible<void *>));

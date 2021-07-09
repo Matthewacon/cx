@@ -1,3 +1,7 @@
+//Pedantic disabling of exceptions does not work with gtest
+#define CX_NO_BELLIGERENT_ERRORS
+#define CX_NO_BELLIGERENT_REMINDERS
+
 #include <gtest/gtest.h>
 #include <gmock/gmock.h>
 #include <gmock/gmock-matchers.h>

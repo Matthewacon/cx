@@ -5,13 +5,42 @@
 #include <cx/templates.h>
 #include <cx/error.h>
 
-//Conditional stl dependencies if CX was built with stl support enabled
+//Temporarily disable exception keyword shadowing to avoid breaking STL/libc
+//headers
+#ifndef CX_NO_BELLIGERENT_ERRORS
+ #undef throw
+ #undef try
+ #undef catch
+ #undef finally
+#endif
+
+//Conditional dependencies if CX was built with STL support enabled
 #ifdef CX_STL_SUPPORT
  #include <memory>
 #else
  CX_DEBUG_MSG(
   Building without STL support; "CX::AllocLambda<...>" will be unavailable.
  )
+#endif
+
+//Re-enable exception keyword shadowing
+#ifndef CX_NO_BELLIGERENT_ERRORS
+ //Disable clang warnings about macros shadowing keywords
+ #ifdef CX_COMPILER_CLANG_LIKE
+  #pragma GCC diagnostic push
+  #pragma GCC diagnostic ignored "-Wkeyword-macro"
+ #endif
+
+ //Re-define macros to shadow keywords related to exception handling
+ #define throw CX_ERROR_EXCEPTIONS_ARE_BAD
+ #define try CX_ERROR_EXCEPTIONS_ARE_BAD
+ #define catch CX_ERROR_EXCEPTIONS_ARE_BAD
+ #define finally CX_ERROR_EXCEPTIONS_ARE_BAD
+
+ //Pop diagnostic context
+ #ifdef CX_COMPILER_CLANG_LIKE
+  #pragma GCC diagnostic pop
+ #endif
 #endif
 
 #if defined(CX_LAMBDA_BUF_ALIGN) || defined(CX_LAMBDA_BUF_SIZE)

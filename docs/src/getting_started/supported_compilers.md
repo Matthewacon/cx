@@ -30,7 +30,8 @@ is for!
 | 🔵 | `GCC (patched)` | <= **10.2.x** |
 | 🟢 | `GCC (patched)` | **10.3.x** - **12.x.x** |
 | 🔴 | `MSVC` | Not supported yet |
-| 🔴 | `Intel (icc)` | Note supported yet |
+| 🔴 | `Intel (icc)` | Not supported yet |
+| 🔴 | `QNX (q++)` | Not supported yet |
 
 ## Known Issues
 ### GCC (unpatched)
@@ -170,4 +171,7 @@ The Intel LLVM compiler collection suffers from the same bugs as Clang:
 TODO
 
 ### Intel (icc)
+TODO
+
+### QNX (q++)
 TODO

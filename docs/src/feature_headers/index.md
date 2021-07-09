@@ -12,3 +12,5 @@ CX's features are broken up into individual feature headers:
 | [`<cx/variant.h>`](./cx_variant_h.md) | |
 | [`<cx/lambda.h>`](./cx_lambda_h.md) | |
 | [`<cx/unsafe.h>`](./cx_unsafe_h.md) | |
+| [`<cx/tuple.h>`](./cx_tuple_h.md) | |
+| [`<cx/option.h>`](./cx_option_h.md) | |

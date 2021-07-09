@@ -71,6 +71,45 @@
  #define CX_DEBUG_MSG(...)
 #endif
 
+//Be as irritating as possible to strongly discourage the use of exceptions
+#ifndef CX_NO_BELLIGERENT_ERRORS
+ #define CX_ERROR_EXCEPTIONS_ARE_BAD \
+ /*Print relevant message*/\
+ CX_PRAGMA_MSG((\
+  Uh oh, it looks like you are trying to use exceptions! Consider using the\
+  error-as-a-value pattern instead; it is faster, safer and, most importatly,\
+  portable! Learn more at: [TODO ADD CX DOCS URL HERE].\
+ ))\
+ /*Cause compiler error*/\
+ static_assert(!"Exceptions are prohibited.");
+
+ //Disable clang warnings about macros shadowing keywords
+ #ifdef CX_COMPILER_CLANG_LIKE
+  #pragma GCC diagnostic push
+  #pragma GCC diagnostic ignored "-Wkeyword-macro"
+ #endif
+
+ //Shadow keywords related to exceptions with macros that expand to compiler
+ //errors
+ #define throw CX_ERROR_EXCEPTIONS_ARE_BAD
+ #define try CX_ERROR_EXCEPTIONS_ARE_BAD
+ #define catch CX_ERROR_EXCEPTIONS_ARE_BAD
+ #define finally CX_ERROR_EXCEPTIONS_ARE_BAD
+
+ //Re-enable clang warnings
+ #ifdef CX_COMPILER_CLANG_LIKE
+  #pragma GCC diagnostic pop
+ #endif
+#else
+ #ifndef CX_NO_BELLIGERENT_REMINDERS
+  //Repeatedly remind the developers that CX is incompatible with exceptions
+  CX_PRAGMA_MSG((
+   CX is incompatible with exceptions and will ignore any and all exceptions
+   thrown during the lifetime of your application!
+  ))
+ #endif
+#endif
+
 //Conditional identity macro that depends on STL support
 #ifdef CX_STL_SUPPORT
  #define CX_STL_SUPPORT_EXPR(expr) expr

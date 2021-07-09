@@ -2,13 +2,42 @@
 
 #include <cx/common.h>
 
-//Optional STL dependencies for construction constraints
-//Adds placement new operator
+//Temporarily disable exception keyword shadowing to avoid breaking STL/libc
+//headers
+#ifndef CX_NO_BELLIGERENT_ERRORS
+ #undef throw
+ #undef try
+ #undef catch
+ #undef finally
+#endif
+
+//Optional STL dependencies for construction constraints; adds placement new
+//operator
 #ifdef CX_STL_SUPPORT
  #include <new>
 #else
  [[nodiscard]]
  void * operator new(CX::SizeType, void *) noexcept;
+#endif
+
+//Re-enable exception keyword shadowing
+#ifndef CX_NO_BELLIGERENT_ERRORS
+ //Disable clang warnings about macros shadowing keywords
+ #ifdef CX_COMPILER_CLANG_LIKE
+  #pragma GCC diagnostic push
+  #pragma GCC diagnostic ignored "-Wkeyword-macro"
+ #endif
+
+ //Re-define macros to shadow keywords related to exception handling
+ #define throw CX_ERROR_EXCEPTIONS_ARE_BAD
+ #define try CX_ERROR_EXCEPTIONS_ARE_BAD
+ #define catch CX_ERROR_EXCEPTIONS_ARE_BAD
+ #define finally CX_ERROR_EXCEPTIONS_ARE_BAD
+
+ //Pop diagnostic context
+ #ifdef CX_COMPILER_CLANG_LIKE
+  #pragma GCC diagnostic pop
+ #endif
 #endif
 
 namespace CX {
@@ -833,6 +862,18 @@ namespace CX {
  concept Destructible = requires (T t) {
   { ((T)t).~T() } -> SameType<void>;
  };
+
+ //Same as `std::is_trivially_destructible`. See here:
+ //https://en.cppreference.com/w/cpp/types/is_destructible
+ template<typename T>
+ concept TriviallyDestructible = Destructible<T> &&
+  #if defined(CX_COMPILER_CLANG_LIKE)
+   __has_trivial_destructor(T);
+  #elif defined(CX_COMPILER_GCC)
+   __is_trivially_destructible(T);
+  #elif defined(CX_COMPILER_MSVC)
+   __is_trivially_destructible(T);
+  #endif
 
  //True for types that contain a constructor definition with
  //the signature: `T::T(T const&)`

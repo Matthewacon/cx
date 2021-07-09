@@ -3,6 +3,16 @@
 #include <cx/common.h>
 #include <cx/idioms.h>
 
+//Temporarily disable exception keyword shadowing to avoid breaking STL/libc
+//headers
+#ifndef CX_NO_BELLIGERENT_ERRORS
+ #undef throw
+ #undef try
+ #undef catch
+ #undef finally
+#endif
+
+//Conditional STL/libc dependencies
 #ifdef CX_STL_SUPPORT
  //Conditional STL dependencies
  #include <exception>
@@ -11,6 +21,26 @@
  //Conditional libc dependencies
  #include <cstdlib>
  #include <cstdio>
+#endif
+
+//Re-enable exception keyword shadowing
+#ifndef CX_NO_BELLIGERENT_ERRORS
+ //Disable clang warnings about macros shadowing keywords
+ #ifdef CX_COMPILER_CLANG_LIKE
+  #pragma GCC diagnostic push
+  #pragma GCC diagnostic ignored "-Wkeyword-macro"
+ #endif
+
+ //Re-define macros to shadow keywords related to exception handling
+ #define throw CX_ERROR_EXCEPTIONS_ARE_BAD
+ #define try CX_ERROR_EXCEPTIONS_ARE_BAD
+ #define catch CX_ERROR_EXCEPTIONS_ARE_BAD
+ #define finally CX_ERROR_EXCEPTIONS_ARE_BAD
+
+ //Pop diagnostic context
+ #ifdef CX_COMPILER_CLANG_LIKE
+  #pragma GCC diagnostic pop
+ #endif
 #endif
 
 //Conditional support for `constinit` statements.
@@ -124,14 +154,28 @@ namespace CX {
   }
  }
 
+ //TODO switch to error-as-a-value model
  //Returns the default error handler
  inline auto defaultErrorHandler() noexcept {
   #if defined(CX_STL_SUPPORT) && defined(__cpp_exceptions)
    //STL error handler
    CX_DEBUG_MSG("CX_STL_SUPPORT" enabled; using STL error handler)
+   //Temporarily disable exception keyword shadowing
+   #undef throw
    return +[](CXError const &err) {
     throw err;
    };
+   //Silence compiler errors from shadowing keywords
+   #ifdef CX_COMPILER_CLANG_LIKE
+    #pragma GCC diagnostic push
+    #pragma GCC diagnostic ignored "-Wkeyword-macro"
+   #endif
+   //Re-define throw keyword shadow
+   #define throw CX_ERROR_EXCEPTIONS_ARE_BAD
+   //Pop diagnostic context
+   #ifdef CX_COMPILER_CLANG_LIKE
+    #pragma GCC diagnostic pop
+   #endif
   #elif defined(CX_LIBC_SUPPORT)
    //libc error handler
    CX_DEBUG_MSG(

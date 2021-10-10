@@ -2,105 +2,347 @@
 
 #include <cx/error.h>
 
+//TODO constexpr tests
 namespace CX {
- TEST(Exit, exit_without_error_terminates_with_default_message) {
-  EXPECT_EXIT_BEHAVIOUR(
-   exit(),
-   "`CX::exit\\(\\.\\.\\.\\)` invoked without an error\n"
-  );
+ TEST(IsError, custom_error_type_with_describe_member_satisfies_constraint) {
+  struct CustomError final {
+   constexpr char const * describe() const noexcept {
+    return "";
+   }
+  };
+  EXPECT_TRUE((IsError<CustomError>));
  }
 
- TEST(Exit, exit_with_error_terminates_with_error_message) {
-  EXPECT_EXIT_BEHAVIOUR(
-   exit(CX::CXError{"Custom message"}),
-   ".*`CX::exit\\(\\.\\.\\.\\)` invoked with error:\nCustom message\n.*"
-  );
+ TEST(IsError, invalid_error_types_do_not_satisfy_constraint) {
+  struct InvalidError {};
+  EXPECT_FALSE((IsError<InvalidError>));
+  EXPECT_FALSE((IsError<void *>));
+  EXPECT_FALSE((IsError<float>));
  }
 
- TEST(Exit, exit_with_custom_handler_invokes_custom_handler) {
-  static char const * expectedMsg = "expected message";
+ #if !(defined(CX_ERROR_MSG) || defined(CX_ERROR_TRACE))
+  TEST(Error, error_without_debug_features_is_zero_size) {
+   EXPECT_EQ(sizeof(Error), 0);
+  }
+ #endif //!(defined(CX_ERROR_MSG) || defined(CX_ERROR_TRACE))
 
-  EXPECT_NO_FATAL_FAILURE([] {
-   setExitHandler(+[](CXError const &err) {
-    fprintf(stderr, "%s\n", expectedMsg);
-    defaultExitHandler()(err);
-   });
-
-   EXPECT_EXIT_BEHAVIOUR(
-    exit(CXError{nullptr}),
-    ".*expected message\n.*"
-   );
-  }());
- }
-
- TEST(DefaultExitHandler, default_exit_handler_terminates) {
-  EXPECT_EXIT_BEHAVIOUR(
-   defaultExitHandler()(CXError{nullptr}),
-   "`CX::exit\\(\\.\\.\\.\\)` invoked without an error\n"
-  );
- }
-
- TEST(SetExitHandler, custom_exit_handler_persists) {
-  EXPECT_NO_FATAL_FAILURE([] {
-   auto origHandler = getExitHandler();
-   setExitHandler(+[](CXError const&) {});
-   EXPECT_TRUE((getExitHandler() != origHandler));
-  }());
- }
-
- #ifdef CX_STL_SUPPORT
-  TEST(Error, error_rethrows_given_error) {
-   EXPECT_ERROR_BEHAVIOUR(
-    error(CXError{""}),
-    CXError
-   );
+ //Error message behaviour testing
+ #ifdef CX_ERROR_MSG
+  //Tests when `CX_ERROR_MSG` is enabled
+  TEST(Error, error_message_constructor_retains_message) {
+   static constexpr char expectedMessage[] = "expected message";
+   Error e{expectedMessage};
+   EXPECT_STREQ(e.describe(), expectedMessage);
   }
 
-  TEST(DefaultErrorHandler, default_error_handler_rethrows_error) {
-   EXPECT_ERROR_BEHAVIOUR(
-    defaultErrorHandler()(CXError{""}),
-    CXError
-   );
-  }
- #elif defined(CX_LIBC_SUPPORT)
-  TEST(Error, error_terminates) {
-   EXPECT_ERROR_BEHAVIOUR(
-    error(CXError{"Some error"}),
-    ".*`CX::error\\(\\.\\.\\.\\)` invoked with error:\nSome error\n.*"
-   );
+  TEST(Error, error_message_and_cause_constructor_retains_message) {
+   static constexpr char expectedMessage[] = "woah something happened!";
+   Error cause{expectedMessage};
+   Error e{expectedMessage, (Error const&)cause};
+   EXPECT_STREQ(e.describe(), expectedMessage);
   }
 
-  TEST(DefaultErrorHandler, default_error_handler_terminates) {
-   EXPECT_ERROR_BEHAVIOUR(
-    defaultErrorHandler()(CXError{"Some error"}),
-    ".*`CX::error\\(\\.\\.\\.\\)` invoked with error:\nSome error\n.*"
-   );
+  TEST(Error, error_copy_constructor_copies_message) {
+   static constexpr char expectedMessage[] = "badda bing badda boom";
+   Error toCopy{expectedMessage};
+   EXPECT_STREQ(toCopy.describe(), expectedMessage);
+   Error copied{(Error const&)toCopy};
+   EXPECT_STREQ(copied.describe(), expectedMessage);
+  }
+
+  TEST(Error, error_move_constructor_moves_message) {
+   static constexpr char expectedMessage[] = "beam me up scotty";
+   Error toMove{expectedMessage};
+   EXPECT_STREQ(toMove.describe(), expectedMessage);
+   Error moved{(Error&&)toMove};
+   EXPECT_EQ(toMove.describe(), nullptr);
+   EXPECT_STREQ(moved.describe(), expectedMessage);
+  }
+
+  TEST(Error, error_copy_assignment_operator_copies_message) {
+   static constexpr char expectedMessage[]
+    = "relentless in the pursuit of affordable quality";
+   Error toCopy{expectedMessage};
+   EXPECT_STREQ(toCopy.describe(), expectedMessage);
+   Error copied{};
+   copied = (Error const&)toCopy;
+   EXPECT_STREQ(copied.describe(), expectedMessage);
+  }
+
+  TEST(Error, error_move_assignment_operator_moves_message) {
+   static constexpr char expectedMessage[]
+    = "this is your brain on drugs";
+   Error toMove{expectedMessage};
+   EXPECT_STREQ(toMove.describe(), expectedMessage);
+   Error moved{};
+   moved = (Error&&)toMove;
+   EXPECT_EQ(toMove.describe(), nullptr);
+   EXPECT_STREQ(moved.describe(), expectedMessage);
+  }
+
+  TEST(Error, error_like_copy_assignment_operator_copies_message) {
+   static constexpr char expectedMessage[] = "lets say hypothetically";
+   struct ErrorLike {
+    constexpr char const * describe() const noexcept {
+     return expectedMessage;
+    }
+   };
+   EXPECT_TRUE((IsError<ErrorLike>));
+   ErrorLike toCopy;
+   Error copied{(ErrorLike const&)toCopy};
+   EXPECT_STREQ(copied.describe(), expectedMessage);
   }
  #else
-  #pragma message \
-   "Neither `CX_STL_SUPPORT` nor `CX_LIBC_SUPPORT` have are enabled; "\
-   "`CX::error(...)` tests will be disabled"
- #endif
+  //Tests when `CX_ERROR_MSG` is disabled
+  TEST(Error, error_message_constructor_has_no_effect_on_message) {
+   static constexpr char const * expected = nullptr;
+   Error e{"This should not be propagated"};
+   EXPECT_EQ(e.describe(), expected);
+  }
 
- TEST(Error, error_with_custom_handler_invokes_custom_handler) {
-  static char const * errMsg = "";
+  TEST(Error, error_message_and_cause_constructor_has_no_effect_on_message) {
+   static constexpr char const * expected = nullptr;
+   Error cause;
+   Error e{"whoops, something went wrong!", cause};
+   EXPECT_EQ(e.describe(), expected);
+  }
 
-  EXPECT_NO_FATAL_FAILURE([] {
-   char const * const expectedMsg = "expected message";
+  TEST(Error, error_copy_constructor_has_no_effect_on_message) {
+   static constexpr char const * expected = nullptr;
+   Error toCopy;
+   Error e{(Error const&)toCopy};
+   EXPECT_EQ(e.describe(), expected);
+  }
 
-   setErrorHandler(+[](CXError const &err) {
-    errMsg = err.what();
-   });
+  TEST(Error, error_move_constructor_has_no_effect_on_message) {
+   static constexpr char const * expected = nullptr;
+   Error toMove;
+   Error e{(Error&&)toMove};
+   EXPECT_EQ(e.describe(), expected);
+  }
 
-   EXPECT_NO_ERROR_BEHAVIOUR(error(CXError{expectedMsg}));
-  }());
- }
+  TEST(Error, error_copy_assignment_operator_has_no_effect_on_message) {
+   static constexpr char const * expected = nullptr;
+   Error toCopy;
+   Error e;
+   e = (Error const&)toCopy;
+   EXPECT_EQ(e.describe(), expected);
+  }
 
- TEST(SetErrorHandler, custom_error_handler_persists) {
-  EXPECT_NO_FATAL_FAILURE([] {
-   auto origHandler = getErrorHandler();
-   setErrorHandler(+[](CXError const&) {});
-   EXPECT_TRUE((getExitHandler() != origHandler));
-  }());
- }
+  TEST(Error, error_move_assignment_operator_has_no_effect_on_message) {
+   static constexpr char const * expected = nullptr;
+   Error toMove;
+   Error e;
+   e = (Error&&)toMove;
+   EXPECT_EQ(e.describe(), expected);
+  }
+
+  TEST(Error, error_like_copy_assignment_operator_has_no_effect_on_message) {
+   struct ErrorLike {
+    constexpr char const * describe() const noexcept {
+     return "";
+    }
+   };
+   static constexpr char const * expected = nullptr;
+   ErrorLike toCopy;
+   Error e{(ErrorLike const&)toCopy};
+   EXPECT_EQ(e.describe(), expected);
+  }
+ #endif //CX_ERROR_MSG
+
+ //Error tracing behaviour testing
+ #ifdef CX_ERROR_TRACE
+  //Tests when `CX_ERROR_TRACE` is enabled
+  TEST(Error, error_message_and_cause_constructor_initializes_cause) {
+   Error cause;
+   Error e{"", cause};
+   EXPECT_TRUE(e.cause());
+  }
+
+  TEST(Error, error_copy_constructor_copies_cause) {
+   //Copy error with populated cause
+   {
+    Error cause;
+    Error toCopy{"", (Error const&)cause};
+    EXPECT_TRUE(toCopy.cause());
+    Error e{(Error const&)toCopy};
+    EXPECT_TRUE(toCopy.cause());
+    EXPECT_TRUE(e.cause());
+   }
+
+   //Copy error without populated cause
+   {
+    Error toCopy;
+    EXPECT_FALSE(toCopy.cause());
+    Error e{(Error const&)toCopy};
+    EXPECT_FALSE(toCopy.cause());
+    EXPECT_FALSE(e.cause());
+   }
+  }
+
+  TEST(Error, error_move_constructor_moves_cause) {
+   //Move error with populated cause
+   {
+    Error cause;
+    Error toMove{"", (Error const&)cause};
+    EXPECT_TRUE(toMove.cause());
+    Error e{(Error&&)toMove};
+    EXPECT_FALSE(toMove.cause());
+    EXPECT_TRUE(e.cause());
+   }
+
+   //Move error without populated cause
+   {
+    Error toMove;
+    EXPECT_FALSE(toMove.cause());
+    Error e{(Error&&)toMove};
+    EXPECT_FALSE(toMove.cause());
+    EXPECT_FALSE(e.cause());
+   }
+  }
+
+  TEST(Error, error_like_copy_constructor_default_initializes_cause) {
+   struct ErrorLike final {
+    constexpr char const * describe() const noexcept {
+     return "";
+    }
+   };
+   EXPECT_TRUE((IsError<ErrorLike>));
+   ErrorLike toCopy;
+   Error e{(ErrorLike const&)toCopy};
+   EXPECT_FALSE(e.cause());
+  }
+
+  TEST(Error, error_copy_assignment_operator_copies_cause) {
+   //Copy error with populated cause
+   {
+    Error cause;
+    Error toCopy{"", (Error const&)cause};
+    EXPECT_TRUE(toCopy.cause());
+    Error e;
+    e = (Error const&)toCopy;
+    EXPECT_TRUE(toCopy.cause());
+    EXPECT_TRUE(e.cause());
+   }
+
+   //Copy error without populated cause
+   {
+    Error toCopy;
+    EXPECT_FALSE(toCopy.cause());
+    Error e;
+    e = (Error const&)toCopy;
+    EXPECT_FALSE(toCopy.cause());
+    EXPECT_FALSE(e.cause());
+   }
+  }
+
+  TEST(Error, error_move_assignment_operator_moves_cause) {
+   //Move error with populated cause
+   {
+    Error cause;
+    Error toMove{"", (Error const&)cause};
+    EXPECT_TRUE(toMove.cause());
+    Error e;
+    e = (Error&&)toMove;
+    EXPECT_FALSE(toMove.cause());
+    EXPECT_TRUE(e.cause());
+   }
+
+   //Move error without populated cause
+   {
+    Error toMove;
+    EXPECT_FALSE(toMove.cause());
+    Error e;
+    e = (Error&&)toMove;
+    EXPECT_FALSE(toMove.cause());
+    EXPECT_FALSE(e.cause());
+   }
+  }
+
+  TEST(Error, error_like_copy_assignment_operator_default_initalizes_cause) {
+   struct ErrorLike final {
+    constexpr char const * describe() const noexcept {
+     return "";
+    }
+   };
+   EXPECT_TRUE(IsError<ErrorLike>);
+   ErrorLike toCopy;
+   Error e;
+   e = (ErrorLike const&)toCopy;
+   EXPECT_FALSE(e.cause());
+  }
+ #else
+  //Tests when `CX_ERROR_TRACE` is disabled
+  TEST(Error, error_message_and_cause_constructor_has_no_effect_on_cause) {
+   struct ErrorLike final {
+    constexpr char const * describe() const noexcept {
+     return "";
+    }
+   };
+   EXPECT_TRUE(IsError<ErrorLike>);
+   ErrorLike cause;
+   Error e{"", (ErrorLike const&)cause};
+   EXPECT_FALSE(e.cause());
+  }
+
+  TEST(Error, error_copy_constructor_has_no_effect_on_cause) {
+   Error cause;
+   Error toCopy{"", (Error const&)cause};
+   EXPECT_FALSE(toCopy.cause());
+   Error e{(Error const&)toCopy};
+   EXPECT_FALSE(toCopy.cause());
+  }
+
+  TEST(Error, error_move_constructor_has_no_effect_on_cause) {
+   Error cause;
+   Error toMove{"", (Error&&)cause};
+   EXPECT_FALSE(toMove.cause());
+   Error e{(Error&&)toMove};
+   EXPECT_FALSE(e.cause());
+  }
+
+  TEST(Error, error_like_copy_constructor_has_no_effect_on_cause) {
+   struct ErrorLike final {
+    constexpr char const * describe() const noexcept {
+     return "";
+    }
+   };
+   EXPECT_TRUE(IsError<ErrorLike>);
+   ErrorLike toCopy;
+   Error e{(ErrorLike const&)toCopy};
+   EXPECT_FALSE(e.cause());
+  }
+
+  TEST(Error, error_copy_assignment_operator_has_no_effect_on_cause) {
+   Error cause;
+   Error toCopy{"", (Error const&)cause};
+   EXPECT_FALSE(toCopy.cause());
+   Error e;
+   e = (Error const&)toCopy;
+   EXPECT_FALSE(e.cause());
+  }
+
+  TEST(Error, error_move_assignment_operator_has_no_effect_on_cause) {
+   Error cause;
+   Error toMove{"", (Error const&)cause};
+   EXPECT_FALSE(toMove.cause());
+   Error e;
+   e = (Error&&)toMove;
+   EXPECT_FALSE(toMove.cause());
+   EXPECT_FALSE(e.cause());
+  }
+
+  TEST(Error, error_like_copy_assignment_operator_has_no_effect_on_cause) {
+   struct ErrorLike final {
+    constexpr char const * describe() const noexcept {
+     return "";
+    }
+   };
+   EXPECT_TRUE(IsError<ErrorLike>);
+   ErrorLike toCopy;
+   Error e;
+   e = (ErrorLike const&)toCopy;
+   EXPECT_FALSE(e.cause());
+  }
+ #endif //CX_ERROR_TRACE
 }

@@ -73,7 +73,7 @@ namespace CX::Testing {
    ([&] {
     l();
    }()),
-   CXError
+   Error
   );
  }
 
@@ -514,7 +514,7 @@ namespace CX::Testing {
    ([&] {
     l1(0);
    }()),
-   CXError
+   Error
   );
 
   //Copy construct lambda and ensure it was correctly initialized
@@ -524,7 +524,7 @@ namespace CX::Testing {
    ([&] {
     l2(0);
    }()),
-   CXError
+   Error
   );
 
   //Test with initialized lambda
@@ -615,7 +615,7 @@ namespace CX::Testing {
    ([&] {
     l1(0);
    }()),
-   CXError
+   Error
   );
 
   //Copy construct lambda and ensure it was correctly initialized
@@ -625,7 +625,7 @@ namespace CX::Testing {
    ([&] {
     l2(0);
    }()),
-   CXError
+   Error
   );
 
   //Test with initialized lambda
@@ -771,7 +771,7 @@ namespace CX::Testing {
    ([&] {
     l1();
    }()),
-   CXError
+   Error
   );
 
   //Move construct lambda and ensure it was correctly initialized
@@ -781,7 +781,7 @@ namespace CX::Testing {
    ([&] {
     l2();
    }()),
-   CXError
+   Error
   );
 
   //Ensure moved lambda is uninitialized
@@ -790,7 +790,7 @@ namespace CX::Testing {
    ([&] {
     l1();
    }()),
-   CXError
+   Error
   );
 
   //Test with initialized lambda
@@ -830,7 +830,7 @@ namespace CX::Testing {
    ([&] {
     l3(1254);
    }()),
-   CXError
+   Error
   );
   EXPECT_EQ(invoked, 2);
  }
@@ -919,7 +919,7 @@ namespace CX::Testing {
    ([&] {
     l1(0);
    }()),
-   CXError
+   Error
   );
 
   //Move construct lambda and ensure it was correctly initialized
@@ -929,7 +929,7 @@ namespace CX::Testing {
    ([&] {
     l2(0);
    }()),
-   CXError
+   Error
   );
 
   //Ensure moved lambda is uninitialized
@@ -938,7 +938,7 @@ namespace CX::Testing {
    ([&] {
     l1(0);
    }()),
-   CXError
+   Error
   );
 
   //Test with initialized lambda
@@ -1001,7 +1001,7 @@ namespace CX::Testing {
    ([&] {
     l3(0);
    }()),
-   CXError
+   Error
   );
  }
 
@@ -1513,7 +1513,7 @@ namespace CX::Testing {
    ([&] {
     l1(0);
    }()),
-   CXError
+   Error
   );
 
   //Copy assign to lambda and ensure it was correctly initialized
@@ -1523,7 +1523,7 @@ namespace CX::Testing {
    ([&] {
     l2(0);
    }()),
-   CXError
+   Error
   );
 
   //Test with initialized lambda
@@ -1614,7 +1614,7 @@ namespace CX::Testing {
    ([&] {
     l1(0);
    }()),
-   CXError
+   Error
   );
 
   //Copy assign to lambda and ensure it was correctly initialized
@@ -1624,7 +1624,7 @@ namespace CX::Testing {
    ([&] {
     l2(0);
    }()),
-   CXError
+   Error
   );
 
   //Test with initialized lambda
@@ -1770,7 +1770,7 @@ namespace CX::Testing {
    ([&] {
     l1();
    }()),
-   CXError
+   Error
   );
 
   //Move assign to lambda and ensure it was correctly initialized
@@ -1780,7 +1780,7 @@ namespace CX::Testing {
    ([&] {
     l2();
    }()),
-   CXError
+   Error
   );
 
   //Ensure moved lambda is uninitialized
@@ -1789,7 +1789,7 @@ namespace CX::Testing {
    ([&] {
     l1();
    }()),
-   CXError
+   Error
   );
 
   //Test with initialized lambda
@@ -1829,7 +1829,7 @@ namespace CX::Testing {
    ([&] {
     l3(1254);
    }()),
-   CXError
+   Error
   );
   EXPECT_EQ(invoked, 2);
  }
@@ -1918,7 +1918,7 @@ namespace CX::Testing {
    ([&] {
     l1(0);
    }()),
-   CXError
+   Error
   );
 
   //Move assign to lambda and ensure it was correctly initialized
@@ -1928,7 +1928,7 @@ namespace CX::Testing {
    ([&] {
     l2(0);
    }()),
-   CXError
+   Error
   );
 
   //Ensure moved lambda is uninitialized
@@ -1937,7 +1937,7 @@ namespace CX::Testing {
    ([&] {
     l1(0);
    }()),
-   CXError
+   Error
   );
 
   //Test with initialized lambda
@@ -2000,7 +2000,7 @@ namespace CX::Testing {
    ([&] {
     l3(0);
    }()),
-   CXError
+   Error
   );
  }
 
@@ -2115,7 +2115,7 @@ namespace CX::Testing {
     ([&] {
      l();
     }()),
-    CXError
+    Error
    );
   }
 
@@ -2522,7 +2522,7 @@ namespace CX::Testing {
     ([&] {
      l1(0);
     }()),
-    CXError
+    Error
    );
 
    //Copy construct lambda and ensure it was correctly initialized
@@ -2532,7 +2532,7 @@ namespace CX::Testing {
     ([&] {
      l2(0);
     }()),
-    CXError
+    Error
    );
 
    //Test with initialized lambda
@@ -2623,7 +2623,7 @@ namespace CX::Testing {
     ([&] {
      l1(0);
     }()),
-    CXError
+    Error
    );
 
    //Copy construct lambda and ensure it was correctly initialized
@@ -2633,7 +2633,7 @@ namespace CX::Testing {
     ([&] {
      l2(0);
     }()),
-    CXError
+    Error
    );
 
    //Test with initialized lambda
@@ -2779,7 +2779,7 @@ namespace CX::Testing {
     ([&] {
      l1();
     }()),
-    CXError
+    Error
    );
 
    //Move construct lambda and ensure it was correctly initialized
@@ -2789,7 +2789,7 @@ namespace CX::Testing {
     ([&] {
      l2();
     }()),
-    CXError
+    Error
    );
 
    //Ensure moved lambda is uninitialized
@@ -2798,7 +2798,7 @@ namespace CX::Testing {
     ([&] {
      l1();
     }()),
-    CXError
+    Error
    );
 
    //Test with initialized lambda
@@ -2838,7 +2838,7 @@ namespace CX::Testing {
     ([&] {
      l3(1254);
     }()),
-    CXError
+    Error
    );
    EXPECT_EQ(invoked, 2);
   }
@@ -2927,7 +2927,7 @@ namespace CX::Testing {
     ([&] {
      l1(0);
     }()),
-    CXError
+    Error
    );
 
    //Move construct lambda and ensure it was correctly initialized
@@ -2937,7 +2937,7 @@ namespace CX::Testing {
     ([&] {
      l2(0);
     }()),
-    CXError
+    Error
    );
 
    //Ensure moved lambda is uninitialized
@@ -2946,7 +2946,7 @@ namespace CX::Testing {
     ([&] {
      l1(0);
     }()),
-    CXError
+    Error
    );
 
    //Test with initialized lambda
@@ -3009,7 +3009,7 @@ namespace CX::Testing {
     ([&] {
      l3(0);
     }()),
-    CXError
+    Error
    );
   }
 
@@ -3521,7 +3521,7 @@ namespace CX::Testing {
     ([&] {
      l1(0);
     }()),
-    CXError
+    Error
    );
 
    //Copy assign to lambda and ensure it was correctly initialized
@@ -3531,7 +3531,7 @@ namespace CX::Testing {
     ([&] {
      l2(0);
     }()),
-    CXError
+    Error
    );
 
    //Test with initialized lambda
@@ -3622,7 +3622,7 @@ namespace CX::Testing {
     ([&] {
      l1(0);
     }()),
-    CXError
+    Error
    );
 
    //Copy assign to lambda and ensure it was correctly initialized
@@ -3632,7 +3632,7 @@ namespace CX::Testing {
     ([&] {
      l2(0);
     }()),
-    CXError
+    Error
    );
 
    //Test with initialized lambda
@@ -3778,7 +3778,7 @@ namespace CX::Testing {
     ([&] {
      l1();
     }()),
-    CXError
+    Error
    );
 
    //Move assign to lambda and ensure it was correctly initialized
@@ -3788,7 +3788,7 @@ namespace CX::Testing {
     ([&] {
      l2();
     }()),
-    CXError
+    Error
    );
 
    //Ensure moved lambda is uninitialized
@@ -3797,7 +3797,7 @@ namespace CX::Testing {
     ([&] {
      l1();
     }()),
-    CXError
+    Error
    );
 
    //Test with initialized lambda
@@ -3837,7 +3837,7 @@ namespace CX::Testing {
     ([&] {
      l3(1254);
     }()),
-    CXError
+    Error
    );
    EXPECT_EQ(invoked, 2);
   }
@@ -3926,7 +3926,7 @@ namespace CX::Testing {
     ([&] {
      l1(0);
     }()),
-    CXError
+    Error
    );
 
    //Move assign to lambda and ensure it was correctly initialized
@@ -3936,7 +3936,7 @@ namespace CX::Testing {
     ([&] {
      l2(0);
     }()),
-    CXError
+    Error
    );
 
    //Ensure moved lambda is uninitialized
@@ -3945,7 +3945,7 @@ namespace CX::Testing {
     ([&] {
      l1(0);
     }()),
-    CXError
+    Error
    );
 
    //Test with initialized lambda
@@ -4008,7 +4008,7 @@ namespace CX::Testing {
     ([&] {
      l3(0);
     }()),
-    CXError
+    Error
    );
   }
 

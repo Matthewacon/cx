@@ -207,4 +207,29 @@ namespace CX {
  //Unique internal type with no-linkage, used for template meta-functions
  template<auto...>
  struct ImpossibleValueTemplateType;
+
+ //Zero-sized utility type
+ struct Never {
+ private:
+  static constexpr auto size
+   #ifdef CX_COMPILER_CLANG_LIKE
+    //Note: There is an optimizer bug in clang > 10.0.1 that causes
+    //miscompilations of zla struct members.
+    //See here: https://bugs.llvm.org/show_bug.cgi?id=51120
+    = 1;
+   #else
+    = 0;
+   #endif
+  unsigned char _[size]{};
+  static_assert(&Never::_);
+
+ public:
+  constexpr Never() noexcept = default;
+  constexpr ~Never() noexcept = default;
+ };
+
+ //Returns `true` if invoked in a constant-evaluated expression
+ constexpr bool isConstexpr() noexcept {
+  return __builtin_is_constant_evaluated();
+ }
 }

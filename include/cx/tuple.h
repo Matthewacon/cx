@@ -88,7 +88,7 @@ namespace CX {
  requires (IsTuple<T>)
  constexpr auto const TupleSize = TupleMetaFunctions
   ::IsTuple<T>
-  ::Value;
+  ::Size;
 
  //Supporting tuple meta-functions and concepts
  namespace TupleMetaFunctions {
@@ -354,8 +354,10 @@ namespace CX {
 
  //Tuple deduction guides
  template<typename... Types>
+ requires (!(Array<Types> || ...))
  Tuple(Types...) -> Tuple<Types...>;
 
+ /*
  //TODO this may be problematic; test
  template<typename... Types>
  Tuple(Types&...) -> Tuple<Types&...>;
@@ -363,6 +365,7 @@ namespace CX {
  //TODO this may be problematic; test
  template<typename... Types>
  Tuple(Types&&...) -> Tuple<Types&&...>;
+ */
 
  Tuple() -> Tuple<>;
 

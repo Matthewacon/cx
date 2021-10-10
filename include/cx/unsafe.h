@@ -15,7 +15,7 @@ namespace CX {
   return u.r;
  }
 
- #if defined(CX_COMPILER_CLANG_LIKE) || defined(CX_COMPILER_GCC)
+ #if defined(CX_COMPILER_CLANG_LIKE)
   #pragma GCC diagnostic push
   #pragma GCC diagnostic ignored "-Wgnu-anonymous-struct"
   #pragma GCC diagnostic ignored "-Wnested-anon-types"
@@ -47,7 +47,7 @@ namespace CX {
    memberPtr((decltype(memberPtr))f)
   {}
  };
- #if defined(CX_COMPILER_CLANG_LIKE) || defined(CX_COMPILER_GCC)
+ #if defined(CX_COMPILER_CLANG_LIKE)
   #pragma GCC diagnostic pop
  #endif
 }

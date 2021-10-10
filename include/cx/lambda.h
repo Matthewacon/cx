@@ -4,6 +4,7 @@
 #include <cx/idioms.h>
 #include <cx/templates.h>
 #include <cx/error.h>
+#include <cx/exit.h>
 
 //Temporarily disable exception keyword shadowing to avoid breaking STL/libc
 //headers
@@ -76,15 +77,25 @@
 
 namespace CX {
  //Supporting exceptions
- struct UninitializedLambdaError : CXError {
-  UninitializedLambdaError() :
-   CXError{"Lambda is uninitialized"}
-  {}
+ struct UninitializedLambdaError final {
+  constexpr char const * describe() const noexcept {
+   return "Lambda is uninitialized";
+  }
  };
+ static_assert(IsError<UninitializedLambdaError>);
 
- struct IncompatibleLambdaError : CXError {
-  using CXError::CXError;
+ struct IncompatibleLambdaError final {
+  char const * message;
+
+  constexpr IncompatibleLambdaError(char const * message) noexcept :
+   message(message)
+  {}
+
+  constexpr char const * describe() const noexcept {
+   return message;
+  }
  };
+ static_assert(IsError<IncompatibleLambdaError>);
 
  //Non-allocating lambda
  template<typename>
@@ -211,7 +222,7 @@ namespace CX {
   ) {
    //Check that the receiving buffer is sized properly
    if (dstSize < srcSize) {
-    error(IncompatibleLambdaError{
+    exit(IncompatibleLambdaError{
      "Receiving lambda does not have a large enough buffer to contain "
      "the assigned lambda's buffer"
     });
@@ -219,7 +230,7 @@ namespace CX {
 
    //Check that the receiving buffer is aligned properly
    if (dstAlignment < srcAlignment) {
-    error(IncompatibleLambdaError{
+    exit(IncompatibleLambdaError{
      "Receiving lambda's buffer is not aligned properly to receive "
      "the assigned lambda's buffer"
     });
@@ -256,12 +267,12 @@ namespace CX {
 
    [[gnu::always_inline]]
    virtual R op(Args...) {
-    return error<R>(UninitializedLambdaError{});
+    exit(UninitializedLambdaError{});
    }
 
    [[gnu::always_inline]]
    virtual R noexceptOp(Args...) noexcept {
-    return error<R>(UninitializedLambdaError{});
+    exit(UninitializedLambdaError{});
    }
 
    virtual bool allocates() const noexcept = 0;
@@ -371,7 +382,7 @@ namespace CX {
    virtual ~LambdaBase() = default;
 
    virtual FptrWrapper get() {
-    return error<FptrWrapper>(UninitializedLambdaError{});
+    exit(UninitializedLambdaError{});
    }
 
    template<bool Noexcept, typename... Varargs>

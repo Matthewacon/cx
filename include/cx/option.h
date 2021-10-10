@@ -2,7 +2,7 @@
 
 #include <cx/common.h>
 #include <cx/idioms.h>
-#include <cx/error.h>
+#include <cx/exit.h>
 
 namespace CX {
  template<typename T>
@@ -46,13 +46,13 @@ namespace CX {
    "values."
   );
 
-  template<typename>
+  template<OptionParameter>
   friend struct Option;
 
  private:
   bool populated;
   union Storage {
-   unsigned char _ : 1;
+   unsigned char _[0];
    T value;
 
    constexpr Storage() noexcept :
@@ -125,6 +125,7 @@ namespace CX {
    const_cast<Option&>(*this).operator=((Option&&)other);
   }
 
+  //Constexpr destructor
   constexpr ~Option() noexcept(noexcept(reset())) {
    reset();
   }
@@ -221,7 +222,7 @@ namespace CX {
   }
 
   //Destructs storage value, if populated, and resets option
-  constexpr void reset() noexcept(storage.value.~T()) {
+  constexpr void reset() noexcept(noexcept(storage.value.~T())) {
    if constexpr (!TriviallyDestructible<T>) {
     if (populated) {
      storage.value.~T();
@@ -243,7 +244,7 @@ namespace CX {
 
   //"Value or lazyily evaluated result" operator
   constexpr auto operator|(FunctionOperator<T ()> auto generator) const
-   noexcept(generator())
+   noexcept/*(generator())*/
   {
    return populated ? storage.value : generator();
   }
@@ -253,6 +254,7 @@ namespace CX {
    if (populated) {
     return storage.value();
    }
+   //TODO appropriate error
    exit();
   }
 

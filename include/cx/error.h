@@ -3,233 +3,452 @@
 #include <cx/common.h>
 #include <cx/idioms.h>
 
-//Temporarily disable exception keyword shadowing to avoid breaking STL/libc
-//headers
-#ifndef CX_NO_BELLIGERENT_ERRORS
- #undef throw
- #undef try
- #undef catch
- #undef finally
-#endif
+//Flags to configure error message bahaviour
+#ifdef CX_ERROR_MSG
+ //Configure default error message behaviour based on STL support
+ #if !defined(CX_ERROR_MSG_ALLOC) && !defined(CX_ERROR_MSG_BUF)
+  #ifdef CX_STL_SUPPORT
+   //Enable message allocation if building with STL support
+   #define CX_ERROR_MSG_ALLOC
+  #else
+   //Enable message buffers if building without STL support
+   #define CX_ERROR_MSG_BUF 1024
+  #endif //CX_STL_SUPPORT
+ #endif //!defined(CX_ERROR_MSG_ALLOC) && !defined(CX_ERROR_MSG_BUF)
 
-//Conditional STL/libc dependencies
-#ifdef CX_STL_SUPPORT
- //Conditional STL dependencies
- #include <exception>
- #include <cstdio>
-#elif defined(CX_LIBC_SUPPORT)
- //Conditional libc dependencies
- #include <cstdlib>
- #include <cstdio>
-#endif
+ //Sanitize error message behaviour flags
+ #if defined(CX_ERROR_MSG_ALLOC) && defined(CX_ERROR_MSG_BUF)
+  #error \
+   Only one of `CX_ERROR_MSG_ALLOC` or `CX_ERROR_MSG_BUF` may be enabled\
+   at one time.
+ #endif //defined(CX_ERROR_MSG_ALLOC) && defined(CX_ERROR_MSG_BUF)
 
-//Re-enable exception keyword shadowing
-#ifndef CX_NO_BELLIGERENT_ERRORS
- //Disable clang warnings about macros shadowing keywords
- #ifdef CX_COMPILER_CLANG_LIKE
-  #pragma GCC diagnostic push
-  #pragma GCC diagnostic ignored "-Wkeyword-macro"
- #endif
+ //Sanitize `CX_ERROR_MSG_BUF` flag
+ #ifdef CX_ERROR_MSG_BUF
+  //Error if not a positive integer
+  #if CX_ERROR_MSG_BUF < 0
+   #error `CX_ERROR_MSG_BUF` must be >= 0
+  #endif //CX_ERROR_MSG_BUF < 0
 
- //Re-define macros to shadow keywords related to exception handling
- #define throw CX_ERROR_EXCEPTIONS_ARE_BAD
- #define try CX_ERROR_EXCEPTIONS_ARE_BAD
- #define catch CX_ERROR_EXCEPTIONS_ARE_BAD
- #define finally CX_ERROR_EXCEPTIONS_ARE_BAD
+  //Warning if buffer uses excessive space
+  #if CX_ERROR_MSG_BUF > 1024
+   CX_DEBUG_MSG((
+    "CX_ERROR_MSG_BUF" is recommended to be in the range
+    "0 <= CX_ERROR_MSG_BUF <= 1024". Using values larger than 1024 may incur
+    significant overhead, or even stack buffer overflows. Consider using a
+    smaller value.
+   ));
+  #endif //CX_ERROR_MSG_BUF > 1024
+ #endif //CX_ERROR_MSG_BUF
+#endif //CX_ERROR_MSG
 
- //Pop diagnostic context
- #ifdef CX_COMPILER_CLANG_LIKE
-  #pragma GCC diagnostic pop
- #endif
-#endif
-
-//Conditional support for `constinit` statements.
-//GCC does not support this yet
-//TODO test with MSVC and Intel
-#ifdef CX_COMPILER_CLANG_LIKE
- #define CX_CONSTINIT constinit
-#else
- #define CX_CONSTINIT
-#endif
+//Flags to configure error tracing behaviour
+#ifdef CX_ERROR_TRACE
+ //Sanitize `CX_ERROR_TRACE` flag
+ #ifndef CX_STL_SUPPORT
+  #error `CX_ERROR_TRACE` requires STL support.
+ #endif //CX_STL_SUPPORT
+#endif //CX_ERROR_TRACE
 
 namespace CX {
- //CX error base
- struct CXError CX_STL_SUPPORT_EXPR(: std::exception) {
-  char const * message;
+ //Forward `CX::Error` for use with error meta-functions
+ struct Error;
 
-  CXError(char const * message = "") :
-   message(message)
-  {}
+ //Supporting meta-functions
+ namespace ErrorMetaFunctions {
+  template<SizeType N>
+  void expect(char const(&)[N]) noexcept;
+ }
 
-  virtual char const * what() const noexcept CX_STL_SUPPORT_EXPR(override) {
-   return message;
+ //Error identity concept
+ template<typename MaybeError>
+ concept IsError =
+  requires (char const * (MaybeError::*f)() const noexcept) {
+   f = &MaybeError::describe;
+  }
+  || requires (MaybeError m) {
+   ErrorMetaFunctions::expect(m.describe());
   };
 
-  virtual ~CXError() = default;
- };
-
- //Utilities for universal exit function (see below)
  namespace Internal {
-  #if defined(CX_STL_SUPPORT) || defined(CX_LIBC_SUPPORT)
-   inline void printError(char const * funcName, CXError const &err) {
-    char const
-     * msg = err.what(),
-     * fmt;
-    #ifdef CX_COMPILER_MSVC
-     #pragma warning(push)
-     #pragma warning(disable : 4774)
-    #endif
-    if (!msg) {
-     fmt = "\"CX::%s(...)\" invoked without an error\n";
-    } else {
-     fmt = "\"CX::%s(...)\" invoked with error:\n%s\n";
+  //Constexpr-compatible error message container
+  //TODO Optimize string copying to make it trivial for the optimizer
+  struct ErrorMessage final {
+  private:
+   //Constexpr cstring copy
+   static constexpr void cstrcpy(char * dst, char const * src, SizeType dstMax)
+    noexcept
+   {
+    SizeType i = 0;
+    for (; i < dstMax && i[src]; i++) {
+     dst[i] = src[i];
     }
-    fprintf(stderr, fmt, funcName, msg);
-    #ifdef CX_COMPILER_MSVC
-     #pragma warning(pop)
-    #endif
+    dst[i] = '\00';
    }
-  #endif
- }
 
- //User-defined exit; for platforms that do not have
- //STL or libc support, a user-defined exit function is
- //required to handle runtime errors
- void userDefinedExit(CXError const&);
-
- //Returns the default exit handler
- inline constexpr auto defaultExitHandler() noexcept {
-  #ifdef CX_STL_SUPPORT
-   //STL exit handler
-   CX_DEBUG_MSG("CX_STL_SUPPORT" enabled; using STL exit handler)
-   return +[](CXError const &err) {
-    Internal::printError("exit", err);
-    std::terminate();
-   };
-  #elif defined(CX_LIBC_SUPPORT)
-   //libc exit handler
-   CX_DEBUG_MSG("CX_LIBC_SUPPORT" enabled; using libc exit handler)
-   return +[](CXError const &err) {
-    Internal::printError("exit", err);
-    abort();
-   };
-  #else
-   //User-defined exit handler
-   CX_DEBUG_MSG((
-    Neither "CX_STL_SUPPORT" nor "CX_LIBC_SUPPORT" are enabled; \
-    using user-defined exit handler. Note: If you have not defined \
-    an implementation of `void CX::userDefinedExit(CXError const&)`, \
-    you will encounter linker errors.
-   ))
-   return userDefinedExit;
-  #endif
- }
-
- //Returns the current CX exit handler function
- inline auto& getExitHandler() noexcept {
-  //The CX exit handler
-  static CX_CONSTINIT thread_local void (*handler)(CXError const&) = defaultExitHandler();
-  return handler;
- }
-
- //Sets the CX exit handler function
- void setExitHandler(StaticFunction<void, CXError const&> auto f) noexcept {
-  getExitHandler() = f;
- }
-
- //Universal exit function
- template<typename Error = NullptrType>
- [[noreturn]]
- void exit(Error err = nullptr) noexcept {
-  auto const exitFunc = getExitHandler();
-  while (true) {
-   if constexpr (HasBase<decltype(err), CXError>) {
-    //Propagate user-provided error
-    exitFunc(err);
-   } else {
-    //Exit with default error
-    CXError abruptExit{nullptr};
-    exitFunc(abruptExit);
+   //Constexpr cstring length
+   static constexpr SizeType cstrlen(char const * str) noexcept {
+    SizeType len = 0;
+    while (str[len]) len++;
+    return len;
    }
+
+   constexpr ErrorMessage& mut() const noexcept {
+    return const_cast<ErrorMessage&>(*this);
+   }
+
+  public:
+   SizeType size;
+   #ifdef CX_ERROR_MSG_ALLOC
+    //Constexpr-compatible allocating message impl
+    char * message;
+
+    //Default constructor
+    constexpr ErrorMessage() noexcept :
+     size{0},
+     message{nullptr}
+    {}
+
+    //Constexpr cstring copy constructor
+    template<SizeType N>
+    constexpr ErrorMessage(char const(&message)[N]) noexcept :
+     size{N},
+     message{new char[N + 1]{0}}
+    {
+     //Copy message contents
+     cstrcpy(this->message, &message[0], N);
+    }
+
+    //Constexpr copy constructor
+    constexpr ErrorMessage(ErrorMessage const& other) noexcept :
+     size{0},
+     message{nullptr}
+    {
+     mut().operator=((ErrorMessage const&)other);
+    }
+
+    //Constexpr move constructor
+    constexpr ErrorMessage(ErrorMessage&& other) noexcept :
+     size{0},
+     message{nullptr}
+    {
+     mut().operator=((ErrorMessage&&)other);
+    }
+
+    //Constexpr destructor
+    constexpr ~ErrorMessage() noexcept {
+     delete[] message;
+    }
+
+    //Constexpr copy-assignment operator
+    constexpr ErrorMessage& operator=(ErrorMessage const& other) noexcept {
+     //Reallocate buffer if it is not large enough
+     if (other.size > size || !message) {
+      delete[] message;
+      size = other.size;
+      //Note: `+1` for null terminator
+      message = new char[size + 1];
+     }
+     //Copy message contents
+     cstrcpy(message, other.message, size);
+     return *this;
+    }
+
+    //Constexpr move-assignment operator
+    constexpr ErrorMessage& operator=(ErrorMessage&& other) noexcept {
+     size = other.size;
+     message = other.message;
+     other.size = 0;
+     other.message = nullptr;
+     return *this;
+    }
+
+    //Resets stored message
+    constexpr void reset() noexcept {
+     //Note: All messages will allocate at least enough for a null terminator
+     //so this will always be in-bounds
+     if (message) {
+      message[0] = '\00';
+     }
+    }
+
+    //Copies cstring
+    constexpr ErrorMessage& from(char const * str) noexcept {
+     auto len = cstrlen(str);
+     //Reallocate buffer if it is not large enough
+     if (len > size || !message) {
+      delete[] message;
+      message = new char[len + 1];
+      size = len;
+     }
+     //Copy message contents
+     cstrcpy(message, str, len);
+     return *this;
+    }
+   #elif defined(CX_ERROR_MSG_BUF)
+    //Constexpr-compatible non-allocating message impl
+    char message[CX_ERROR_MSG_BUF];
+
+    //Default constructor
+    constexpr ErrorMessage() noexcept :
+     size{0},
+     message{0}
+    {}
+
+    //Constexpr cstring copy constructor
+    template<SizeType N>
+    constexpr ErrorMessage(char const(&message)[N]) noexcept :
+     size{N},
+     message{0}
+    {
+     //Copy message contents
+     cstrcpy(this->message, message, CX_ERROR_MSG_BUF);
+    }
+
+    //Constexpr copy constructor
+    constexpr ErrorMessage(ErrorMessage const& other) noexcept :
+     size{0},
+     message{0}
+    {
+     mut().operator=((ErrorMessage const&)other);
+    }
+
+    //Constexpr move constructor
+    constexpr ErrorMessage(ErrorMessage&& other) noexcept :
+     size{0},
+     message{0}
+    {
+     mut().operator=((ErrorMessage&&)other);
+    }
+
+    //Constexpr default destructor
+    constexpr ~ErrorMessage() noexcept = default;
+
+    //Constexpr copy-assignment operator
+    constexpr ErrorMessage& operator=(ErrorMessage const& other) noexcept {
+     size = other.size;
+     cstrcpy(message, other.message, CX_ERROR_MSG_BUF - 1);
+     return *this;
+    }
+
+    //Constexpr move-assignment operator
+    constexpr ErrorMessage& operator=(ErrorMessage&& other) noexcept {
+     operator=((ErrorMessage const&)other);
+     other.reset();
+     return *this;
+    }
+
+    //Resets stored message
+    constexpr void reset() noexcept {
+     if constexpr (CX_ERROR_MSG_BUF > 0) {
+      message[0] = '\00';
+     }
+    }
+
+    //Copies cstring
+    constexpr ErrorMessage& from(char const * str) noexcept {
+     auto len = cstrlen(str);
+     if (len > CX_ERROR_MSG_BUF - 1) {
+      len = CX_ERROR_MSG_BUF - 1;
+     }
+     cstrcpy(message, str, len);
+     return *this;
+    }
+   #else
+    //Catch-all nop constructor
+    constexpr ErrorMessage(auto) noexcept {}
+
+    //Default nop constructor
+    constexpr ErrorMessage() noexcept = default;
+
+    //nop stub
+    constexpr ErrorMessage& from(char const *) noexcept {
+     return *this;
+    }
+   #endif //CX_ERROR_MSG_ALLOC
+
+   //Returns cstring message
+   constexpr char const * get() const noexcept {
+    #if defined(CX_ERROR_MSG_BUF)
+     if (CX_ERROR_MSG_BUF > 0 && message[0]) {
+      return message;
+     }
+    #elif defined(CX_ERROR_MSG_ALLOC)
+     return message;
+    #endif //defined(CX_ERROR_MSG_BUF)
+    return nullptr;
+   }
+  };
+ }
+
+ //Flag for `CX::Error` constructor initializer lists
+ #if defined(CX_ERROR_MSG) || defined(CX_ERROR_TRACE)
+  #define CX_ERROR_CTOR_INIT_LIST
+ #endif //defined(CX_ERROR_MSG) || defined(CX_ERROR_TRACE)
+
+ //CX error base
+ struct Error final {
+ private:
+  using Message = Internal::ErrorMessage;
+
+  #ifdef CX_ERROR_MSG
+   Message message{};
+  #endif //CX_ERROR_MSG
+  #ifdef CX_ERROR_TRACE
+   Error * prev = nullptr;
+  #endif //CX_ERROR_TRACE
+
+  //Causes `sizeof(Error) == 0` when compiling without error messages or
+  //tracing
+  unsigned char unused[0]{};
+
+  constexpr Error& mut() const noexcept {
+   return const_cast<Error&>(*this);
   }
- }
 
- //TODO switch to error-as-a-value model
- //Returns the default error handler
- inline auto defaultErrorHandler() noexcept {
-  #if defined(CX_STL_SUPPORT) && defined(__cpp_exceptions)
-   //STL error handler
-   CX_DEBUG_MSG("CX_STL_SUPPORT" enabled; using STL error handler)
-   //Temporarily disable exception keyword shadowing
-   #undef throw
-   return +[](CXError const &err) {
-    throw err;
-   };
-   //Silence compiler errors from shadowing keywords
-   #ifdef CX_COMPILER_CLANG_LIKE
-    #pragma GCC diagnostic push
-    #pragma GCC diagnostic ignored "-Wkeyword-macro"
+  //Constructor to create an error from a user-defined error-like object
+  constexpr Error(Message&& message) noexcept {
+   (void)message;
+   #ifdef CX_ERROR_MSG
+    mut().message = message;
    #endif
-   //Re-define throw keyword shadow
-   #define throw CX_ERROR_EXCEPTIONS_ARE_BAD
-   //Pop diagnostic context
-   #ifdef CX_COMPILER_CLANG_LIKE
-    #pragma GCC diagnostic pop
+  }
+
+ public:
+  //Default constructor
+  constexpr Error() noexcept = default;
+
+  //User supplied message constructor
+  template<SizeType N>
+  constexpr Error(char const(&message)[N]) noexcept {
+   (void)message;
+   #ifdef CX_ERROR_MSG
+    mut().message = message;
    #endif
-  #elif defined(CX_LIBC_SUPPORT)
-   //libc error handler
-   CX_DEBUG_MSG(
-    "CX_LIBC_SUPPORT" enabled or "__cpp_exceptions" disabled; using \
-    LIBC error handler
-   )
-   return +[](CXError const &err) noexcept {
-    Internal::printError("error", err);
-    abort();
-   };
-  #else
-   //If neither `CX_STL_SUPPORT` nor `CX_LIBC_SUPPORT` are
-   //enabled, use exit
-   CX_DEBUG_MSG(
-    Neither "CX_STL_SUPPORT" nor "CX_LIBC_SUPPORT" are enabled; \
-    using exit handler instead. Note: You can change this behaviour \
-    by setting the error handler for the current thread with \
-    `CX::setErrorHandler(...)`
-   )
-   return getExitHandler();
-  #endif
- }
+  }
 
- //Return the current CX error handler
- inline auto& getErrorHandler() noexcept {
-  static thread_local void (*handler)(CXError const&) = defaultErrorHandler();
-  return handler;
- }
+  //User supplied message and cause constructor
+  template<SizeType N>
+  constexpr Error(char const(&message)[N], IsError auto const& error) noexcept
+  {
+   auto& ref = mut();
+   //Silence `unused` errors when compiling without messages or tracing
+   (void)message;
+   (void)error;
+   (void)ref;
+   #ifdef CX_ERROR_MSG
+    ref.message = message;
+   #endif //CX_ERROR_MSG
+   #ifdef CX_ERROR_TRACE
+    using EType = Unqualified<decltype(error)>;
+    if constexpr (SameType<Error, EType>) {
+     //Copy construct error
+     ref.prev = new Error{(EType const&)error};
+    } else {
+     //Create error from error-like object
+     //TODO check for `error.describe()` prototype and prefer
+     //`ErrorMessage::ErrorMessage(char const(&)[N])` constructor over
+     //`ErrorMessage::from(char const *)` to optimize error message
+     //initialization
+     ref.prev = new Error{Message{}.from(error.describe())};
+    }
+   #endif //CX_ERROR_TRACE
+  }
 
- //Set the CX error handler
- void setErrorHandler(StaticFunction<void, CXError const&> auto f) noexcept {
-  getErrorHandler() = f;
- }
+  //User defined error copy constructor
+  constexpr Error(IsError auto const& error) noexcept {
+   mut().operator=((decltype(error) const&)error);
+  }
 
- //Universal error function
- //Note: Return type present to prevent compiler errors for
- //`error` invocations in non-returning contexts
- #if defined(CX_COMPILER_CLANG_LIKE) || defined(CX_COMPILER_GCC)
-  #pragma GCC diagnostic push
-  #pragma GCC diagnostic ignored "-Wreturn-type"
- #elif defined(CX_COMPILER_MSVC)
-  #pragma warning(push)
-  #pragma warning(disable : 4716)
- #endif
- template<typename R = void>
- R error(auto err) {
-  getErrorHandler()(err);
- }
- #if defined(CX_COMPILER_CLANG_LIKE) || defined(CX_COMPILER_GCC)
-  #pragma GCC diagnostic pop
- #elif defined(CX_COMPILER_MSVC)
-  #pragma warning(pop)
- #endif
+  //Error copy constructor
+  //Note: Does not support user defined errors
+  constexpr Error(Error const& error) noexcept {
+   mut().operator=((Error const&)error);
+  }
+
+  //Error move constructor
+  //Note: Does not support user defined errors
+  constexpr Error(Error&& error) noexcept {
+   mut().operator=((Error&&)error);
+  }
+
+  constexpr ~Error() noexcept {
+   //Suppress "private member is unused" errors
+   (void)unused;
+   #ifdef CX_ERROR_TRACE
+    delete prev;
+   #endif //CX_ERROR_TRACE
+  }
+
+  //Error copy-assignment operator
+  //Note: Supports user defined errors
+  constexpr Error& operator=(IsError auto const& error) noexcept {
+   using EType = Unqualified<decltype(error)>;
+   if constexpr (SameType<Error, EType>) {
+    operator=((Error const&)error);
+   } else {
+    //Copy user error message
+    //TODO check for `error.describe()` prototype and prefer
+    //`ErrorMessage::ErrorMessage(char const(&)[N])` constructor over
+    //`ErrorMessage::from(char const *)` to optimize error message
+    //initialization
+    #ifdef CX_ERROR_MSG
+     message.from(error.describe());
+    #endif //CX_ERROR_MSG
+   }
+   return *this;
+  }
+
+  //Error copy-assignment operator
+  constexpr Error& operator=(Error const& error) noexcept {
+   //Silence `unused` errors when compiling without messages or tracing
+   (void)error;
+   //Copy error message
+   #ifdef CX_ERROR_MSG
+    message = (Message const&)error.message;
+   #endif //CX_ERROR_MSG
+   //Copy error cause, if present
+   #ifdef CX_ERROR_TRACE
+    if (error.prev) {
+     prev = new Error{*error.prev};
+    }
+   #endif //CX_ERROR_TRACE
+   return *this;
+  }
+
+  //Error move-assignment operator
+  //Note: Does not support user defined errors
+  constexpr Error& operator=(Error&& error) noexcept {
+   //Silence `unused` errors when compiling without messages or tracing
+   (void)error;
+   //Move error message
+   #ifdef CX_ERROR_MSG
+    message = (Message&&)error.message;
+   #endif
+   //Move error cause
+   #ifdef CX_ERROR_TRACE
+    prev = error.prev;
+    error.prev = nullptr;
+   #endif
+   return *this;
+  }
+
+  //Returns the error message
+  //Note: When building without `CX_ERROR_MSG`, returns nullptr
+  constexpr char const * describe() const noexcept {
+   #ifdef CX_ERROR_MSG
+    return message.get();
+   #else
+    return nullptr;
+   #endif //CX_ERROR_MSG
+  }
+
+  constexpr Error * cause() const noexcept {
+   #ifdef CX_ERROR_TRACE
+    return prev;
+   #else
+    return nullptr;
+   #endif //CX_ERROR_TRACE
+  }
+ };
 }
-
-//Clean up internal macros
-#undef CX_CONSTINIT

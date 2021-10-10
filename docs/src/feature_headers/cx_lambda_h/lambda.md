@@ -38,7 +38,7 @@ A fast and general-purpose non-allocating function encapsulation abstraction.
    <area id="no-interactive-code"></area>
    ```c++
    typename
-   Prototype   
+   Prototype
    ```
 
   </td>

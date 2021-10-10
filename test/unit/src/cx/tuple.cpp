@@ -72,4 +72,15 @@ namespace CX::Testing {
  }
 
  //TODO remaining tuple tests
+ TEST(Tuple, ooga_booga) {
+  Tuple t{123, 1.23, "hello world"};
+  auto [v1, v2, v3] = t;
+  printf(
+   "%d %f '%s'\n",
+   v1,
+   v2,
+   v3
+  );
+  printf("%s\n", typeid(t).name());
+ }
 }

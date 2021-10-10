@@ -739,4 +739,78 @@ namespace CX {
    exec(op);
   }
  };
+
+ namespace Internal {
+  //Unravels an array and invokes a callback, passing l-value references to
+  //the array elements as function parameters to the callback
+  template<auto N, typename T, typename... Unraveled>
+  constexpr auto unravelAndInvokeImpl(
+   T (&arr)[N],
+   auto& op,
+   Unraveled&... unraveled
+  ) noexcept {
+   using ArrayType = T[N];
+   if constexpr (sizeof...(Unraveled) == N) {
+    return op.template operator()<Unraveled&...>((Unraveled&)unraveled...);
+   } else {
+    return unravelAndInvokeImpl(
+     (ArrayType&)arr,
+     op,
+     (Unraveled&)unraveled...,
+     (T&)arr[sizeof...(Unraveled)]
+    );
+   }
+  }
+
+  //Unravels an array and invokes a callback, passing r-value references to
+  //the array elements as function parameters to the callback
+  template<auto N, typename T, typename... Unraveled>
+  constexpr auto unravelAndInvokeImpl(
+   T (&&arr)[N],
+   auto& op,
+   Unraveled&&... unraveled
+  ) noexcept {
+   using ArrayType = T[N];
+   if constexpr (sizeof...(Unraveled) == N) {
+    return op.template operator()<Unraveled&&...>((Unraveled&&)unraveled...);
+   } else {
+    return unravelAndInvokeImpl(
+     (ArrayType&&)arr,
+     op,
+     (Unraveled&&)unraveled...,
+     (T&&)arr[sizeof...(Unraveled)]
+    );
+   }
+  }
+ }
+
+ //Shim to `Internal::unravelAndInvoke(T(&)[N], ...)`
+ template<auto N, typename T, typename... Unraveled>
+ constexpr auto unravelAndInvoke(
+  T (&arr)[N],
+  auto op,
+  Unraveled&... unraveled
+ ) noexcept {
+  using ArrayType = T[N];
+  return Internal::unravelAndInvokeImpl(
+   (ArrayType&)arr,
+   op,
+   (Unraveled&)unraveled...
+  );
+ }
+
+ //Shim to `Internal::unravelAndInvoke(T(&&)[N], ...)`
+ template<auto N, typename T, typename... Unraveled>
+ constexpr auto unravelAndInvoke(
+  T (&&arr)[N],
+  auto op,
+  Unraveled&&... unraveled
+ ) noexcept {
+  using ArrayType = T[N];
+  return Internal::unravelAndInvokeImpl(
+   (ArrayType&&)arr,
+   op,
+   (Unraveled&)unraveled...
+  );
+ }
 }

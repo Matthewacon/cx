@@ -544,6 +544,18 @@ namespace CX::Testing {
   EXPECT_TRUE((SameType<RValueReferenceDecayed<TypeC>, ExpectedTypeC>));
  }
 
+ TEST(Reference, lvalue_reference_types_satisfy_constraint) {
+  FAIL();
+ }
+
+ TEST(Reference, rvalue_reference_types_satisfy_constraint) {
+  FAIL();
+ }
+
+ TEST(Reference, non_reference_types_do_not_satisfy_constraint) {
+  FAIL();
+ }
+
  TEST(ReferenceDecayed, rvalue_reference_types_yield_the_reference_element_type) {
   EXPECT_TRUE((SameType<ReferenceDecayed<int&&>, int>));
   EXPECT_TRUE((SameType<ReferenceDecayed<void (* const&&)(...)>, void (* const)(...)>));
@@ -744,6 +756,34 @@ namespace CX::Testing {
   EXPECT_FALSE((Unsigned<A>));
  }
 
+ TEST(UnsignedIntegral, builtin_integral_sizes_yield_expected_types) {
+  FAIL();
+ }
+
+ #ifdef CX_COMPILER_CLANG_LIKE
+  TEST(UnsignedIntegral, positive_bit_sizes_yield_expected_types) {
+   FAIL();
+  }
+ #endif
+
+ TEST(SignedIntegral, builtin_integral_sizes_yield_expected_types) {
+  FAIL();
+ }
+
+ #ifdef CX_COMPILER_CLANG_LIKE
+  TEST(SignedIntegral, positive_bit_sizes_yield_expected_types) {
+   FAIL();
+  }
+ #endif
+
+ TEST(bitsForNDistinct, yields_expected_values) {
+  EXPECT_EQ(bitsForNDistinct(0), 0);
+  EXPECT_EQ(bitsForNDistinct(1), 1);
+  for (unsigned int i = 2; i < 102401; i++) {
+   EXPECT_EQ(bitsForNDistinct(i), (unsigned int)ceil(log2(i)));
+  }
+ }
+
  TEST(Scalar, scalar_types_satisfy_constraint) {
   EXPECT_TRUE((Arithmetic<bool>));
   EXPECT_TRUE((Arithmetic<char>));
@@ -816,6 +856,14 @@ namespace CX::Testing {
    virtual ~A() = default;
   };
   EXPECT_FALSE((TriviallyCopyable<A>));
+ }
+
+ TEST(HasBase, derived_types_satisfy_constraint) {
+  FAIL();
+ }
+
+ TEST(HasBase, unrelated_types_do_not_satisfy_constraint) {
+  FAIL();
  }
 
  struct S {

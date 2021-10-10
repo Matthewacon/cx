@@ -3,6 +3,7 @@
 #include <cx/common.h>
 #include <cx/idioms.h>
 #include <cx/error.h>
+#include <cx/exit.h>
 
 //Conditional stl dependencies if built with stl support
 #ifdef CX_STL_SUPPORT
@@ -56,17 +57,18 @@
 #endif
 
 namespace CX {
- struct InvalidPlatformVaListError CX_STL_SUPPORT_EXPR(: std::exception) {
+ struct InvalidPlatformVaListError final {
   char const * message;
 
   InvalidPlatformVaListError(char const * message) :
    message(message)
   {}
 
-  char const * what() const noexcept {
+  constexpr char const * describe() const noexcept {
    return message;
   }
  };
+ static_assert(IsError<InvalidPlatformVaListError>);
 
  namespace Internal {
   //Default type promotions for va_list argument types
@@ -109,8 +111,9 @@ namespace CX {
    );
 
    //Stub to prevent incomprehensible compiler backtraces
-   operator va_list&() {
-    return error<va_list&>(InvalidPlatformVaListError{
+   [[noreturn]]
+   operator va_list&() requires false {
+    exit(InvalidPlatformVaListError{
      "Unsupported platform"
     });
    }
@@ -166,7 +169,7 @@ namespace CX {
    VaListWrapper(PlatformListType list) :
     list([&] {
      if (!list) {
-      error(InvalidPlatformVaListError{
+      exit(InvalidPlatformVaListError{
        "Null platform va_list"
       });
      }

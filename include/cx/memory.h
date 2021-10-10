@@ -8,6 +8,19 @@
 #endif
 
 namespace CX {
+ struct DeferError final {
+  char const * message;
+
+  DeferError(char const * message) noexcept :
+   message(message)
+  {}
+
+  constexpr char const * describe() const noexcept {
+   return message;
+  }
+ };
+ static_assert(IsError<DeferError>);
+
  //Non-allocating deferral mechanism
  template<auto N>
  struct Defer final {
@@ -30,7 +43,7 @@ namespace CX {
   }
   Defer& operator+=(F f) noexcept {
    if (count >= N) {
-    error(CXError{
+    exit(DeferError{
      "Deferral mechanism is at capacity. Consider increasing the size of "
      "the deferral mechanism to accommodate your needs, or use the "
      "alternative `AllocDefer` mechanism, which does not have size "

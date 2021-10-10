@@ -1,6 +1,7 @@
 #include <cx/test/common/common.h>
 
-#include <cx/variant.h>
+//#include <cx/variant.h>
+#include <cx/new-variant2.h>
 
 namespace CX::Testing {
  //Variant meta-function and concept tests
@@ -24,6 +25,7 @@ namespace CX::Testing {
   EXPECT_TRUE((CompatibleVariant<Variant<double, char, float>, Variant<float, double, char, int[1234]>>));
  }
 
+ /*
  TEST(CompatibleVariant, superset_and_matched_set_with_mixed_const_variant_types_satisfy_constraint) {
   //Matched type set
   EXPECT_TRUE((CompatibleVariant<Variant<int const>, Variant<int>>));
@@ -33,6 +35,7 @@ namespace CX::Testing {
   EXPECT_TRUE((CompatibleVariant<Variant<int, float const>, Variant<int const, float, char const, double>>));
   EXPECT_TRUE((CompatibleVariant<Variant<char const, int, std::tuple<> const>, Variant<char, int const, std::tuple<>, void * const>>));
  }
+ */
 
  TEST(CompatibleVariant, subset_variant_types_do_not_satisfy_constraint) {
   EXPECT_FALSE((CompatibleVariant<Variant<float[123]>, Variant<>>));
@@ -333,7 +336,7 @@ namespace CX::Testing {
   EXPECT_FALSE((v1.has<ExpectedType>()));
   EXPECT_ERROR_BEHAVIOUR(
    ([&] { v1.get<ExpectedType>(); }()),
-   CXError 
+   Error
   );
 
   //Ensure second variant was correctly initialized
@@ -861,7 +864,7 @@ namespace CX::Testing {
    ([&] {
     v1.get<ExpectedType>();
    }()),
-   CXError
+   Error
   );
 
   //Ensure second variant was corretly initialized
@@ -1203,6 +1206,7 @@ namespace CX::Testing {
   }()));
  }
 
+ /*
  TEST(Variant, drain_returns_copy_of_stored_element_and_destructs_variant) {
   static bool copyConstructorInvoked;
   using ExpectedType = struct A {
@@ -1291,7 +1295,8 @@ namespace CX::Testing {
    EXPECT_FALSE((v.has<ExpectedType>()));
   }()));
  }
-
+ */
+ 
  //Tests for the empty variant specialization
  TEST(EmptyVariant, has_returns_false_for_all_element_types) {
   Variant<char[124], int, double> empty;

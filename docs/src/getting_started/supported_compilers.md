@@ -95,7 +95,9 @@ is for!
 ### GCC (patched)
 🟠 **<= 10.2.x**:
 
-GCC versions <= 10.2.x, with the patch to fix [the constraint complexity limit bug](#description-13-2) applied, only suffer from the [variadic concept bug](#description-13-1).
+GCC versions <= 10.2.x, with the patch to fix
+[the constraint complexity limit bug](#description-13-2) applied, only suffer
+from the [variadic concept bug](#description-13-1).
 
 ### Clang-like Compilers
 #### Clang
@@ -149,6 +151,50 @@ GCC versions <= 10.2.x, with the patch to fix [the constraint complexity limit b
   This does not immediately impact any CX facilities, however, you may
   experience compiler crashes if you invoke nested auto lambdas inside
   of a lambda passed to constructs within CX.
+
+ </td></tr>
+</table>
+
+🔵 **11.0.0**+:
+<table id="numbered-description-table">
+ <tr><td>
+
+  There is a known issue with copy-initialization of structs containing
+  zero-length-array members,
+  [see here](https://bugs.llvm.org/show_bug.cgi?id=51120).
+
+  **Note**: *Clang versions before **11.0.0** do not exhibit this bug.*
+
+  ---
+  **Affected Constructs**:
+
+  **__TODO: Add graph of affected constructs__**
+
+  This bug does not cause any behaviour changes. The only observable difference
+  being in types that utilize `CX::Never`, which will increase in size by
+  `sizeof(unsigned char)` due to the workaround:
+
+  <area id="no-interactive-code"></area>
+  ```c++
+  //Before workaround
+  struct Never final {
+   /*...*/
+  private:
+   unsigned char _[0];
+   /*...*/
+  };
+  static_assert(sizeof(Never) == 0);
+
+  //After workaroung
+  struct Never final {
+   /*...*/
+  private:
+   unsigned char _[1];
+   /*...*/
+  };
+  static_assert(sizeof(Never) == sizeof(unsigned char));
+  ```
+
 
  </td></tr>
 </table>

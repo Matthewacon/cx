@@ -4,6 +4,7 @@
 #include <cx/idioms.h>
 #include <cx/templates.h>
 #include <cx/error.h>
+#include <cx/exit.h>
 
 //Conditional dependency if CX was built with libc support enabled
 #ifdef CX_LIBC_SUPPORT
@@ -72,17 +73,19 @@ namespace CX {
   ::Value;
 
  //Supporting exceptions
- struct VariantTypeError : CXError {
-  VariantTypeError() :
-   CXError{"Variant type not present"}
-  {}
+ struct VariantTypeError final {
+  constexpr char const * describe() const noexcept {
+   return "Variant type not present";
+  }
  };
+ static_assert(IsError<VariantTypeError>);
 
- struct IncompatibleVariantError : CXError {
-  IncompatibleVariantError() :
-   CXError{"Variant types are not convertible"}
-  {}
+ struct IncompatibleVariantError final {
+  constexpr char const * describe() const noexcept {
+   return "Variant types are not convertible";
+  }
  };
+ static_assert(IsError<IncompatibleVariantError>);
 
  //Variant impl
  template<typename... Elements>
@@ -387,7 +390,7 @@ namespace CX {
    if (has<E>()) {
     return *(E *)&data;
    }
-   return error<E&>(VariantTypeError{});
+   exit(VariantTypeError{});
   }
 
   //Return encapsulated element and clear variant
@@ -404,7 +407,7 @@ namespace CX {
     } gc{*this};
     return *(E *)&data;
    }
-   return error<E>(VariantTypeError{});
+   exit(VariantTypeError{});
   }
 
   //Similar to `drain()`, however, instead of returning a value,
@@ -423,7 +426,7 @@ namespace CX {
     } gc{*this};
     e = (E&&)*(E *)&data;
    } else {
-    error(VariantTypeError{});
+    exit(VariantTypeError{});
    }
   }
 
@@ -494,7 +497,7 @@ namespace CX {
 
   template<typename E>
   void assign(E) {
-   error(IncompatibleVariantError{});
+   exit(IncompatibleVariantError{});
   }
 
  public:
@@ -522,8 +525,8 @@ namespace CX {
    tag(0),
    data{}
   {
-   error(VariantTypeError{});
-  };
+   exit(VariantTypeError{});
+  }
 
   //Element move constructor
   template<typename E>
@@ -532,7 +535,7 @@ namespace CX {
    tag(0),
    data{}
   {
-   error(VariantTypeError{});
+   exit(VariantTypeError{});
   };
 
   template<typename E>
@@ -543,19 +546,19 @@ namespace CX {
   template<typename E>
   requires false
   E& get() {
-   return error<E&>(VariantTypeError{});
+   exit(VariantTypeError{});
   }
 
   template<typename E>
   requires false
   E drain() {
-   return error<E>(VariantTypeError{});
+   exit(VariantTypeError{});
   }
 
   template<typename E>
   requires false
   void rdrain(E&) {
-   error(VariantTypeError{});
+   exit(VariantTypeError{});
   }
 
   //Copy assignment operator
@@ -572,14 +575,14 @@ namespace CX {
   template<typename E>
   requires false
   Variant& operator=(E const&) {
-   return error<Variant&>(VariantTypeError{});
+   exit(VariantTypeError{});
   }
 
   //Element move assignment operator
   template<typename E>
   requires false
   Variant& operator=(E&&) {
-   return error<Variant&>(VariantTypeError{});
+   exit(VariantTypeError{});
   }
  };
 

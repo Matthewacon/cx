@@ -856,21 +856,56 @@ namespace CX {
  template<typename T, typename... Args>
  concept Constructible = __is_constructible(T, Args...);
 
+ //l-value reference identity
+ template<typename T>
+ concept LValueReference = MetaFunctions
+  ::LValueReference<T>
+  ::Value;
+
+ //Yields the element type of a l-value refernece;
+ //ie. `T const& -> T const`
+ template<typename T>
+ using LValueReferenceDecayed = typename MetaFunctions
+  ::LValueReference<T>
+  ::ElementType;
+
+ //r-value reference identity
+ template<typename T>
+ concept RValueReference = MetaFunctions
+  ::RValueReference<T>
+  ::Value;
+
+ //Yields the element type of a r-value reference;
+ //ie. `T&& -> T`
+ template<typename T>
+ using RValueReferenceDecayed = typename MetaFunctions
+  ::RValueReference<T>
+  ::ElementType;
+
+ //l/r-value reference identity
+ template<typename T>
+ concept Reference = LValueReference<T> || RValueReference<T>;
+
+ //Strips all reference qualifiers
+ template<typename T>
+ using ReferenceDecayed = LValueReferenceDecayed<
+  RValueReferenceDecayed<T>
+ >;
+
  //True for types with a non-deleted destructor
  //Note: False for array types
  template<typename T>
- concept Destructible = requires (T t) {
-  { ((T)t).~T() } -> SameType<void>;
- };
+ concept Destructible = !Reference<T> &&
+  requires (T t) {
+   { ((T)t).~T() } -> SameType<void>;
+  };
 
  //Same as `std::is_trivially_destructible`. See here:
  //https://en.cppreference.com/w/cpp/types/is_destructible
  template<typename T>
  concept TriviallyDestructible = Destructible<T> &&
-  #if defined(CX_COMPILER_CLANG_LIKE)
+  #if defined(CX_COMPILER_CLANG_LIKE) || defined(CX_COMPILER_GCC)
    __has_trivial_destructor(T);
-  #elif defined(CX_COMPILER_GCC)
-   __is_trivially_destructible(T);
   #elif defined(CX_COMPILER_MSVC)
    __is_trivially_destructible(T);
   #endif
@@ -989,7 +1024,6 @@ namespace CX {
  //Yields the size of an array type
  //Note: For unsized arrays, yields `-1`
  template<typename T>
- requires (Array<T>)
  constexpr auto const ArraySize = MetaFunctions
   ::Array<T>
   ::Size;
@@ -1008,38 +1042,6 @@ namespace CX {
   || MetaFunctions
    ::MemberFunction<T>
    ::Value;
-
- //l-value reference identity
- template<typename T>
- concept LValueReference = MetaFunctions
-  ::LValueReference<T>
-  ::Value;
-
- //Yields the element type of a l-value refernece;
- //ie. `T const& -> T const`
- template<typename T>
- using LValueReferenceDecayed = typename MetaFunctions
-  ::LValueReference<T>
-  ::ElementType;
-
- //r-value reference identity
- template<typename T>
- concept RValueReference = MetaFunctions
-  ::RValueReference<T>
-  ::Value;
-
- //Yields the element type of a r-value reference;
- //ie. `T&& -> T`
- template<typename T>
- using RValueReferenceDecayed = typename MetaFunctions
-  ::RValueReference<T>
-  ::ElementType;
-
- //Strips all reference qualifiers
- template<typename T>
- using ReferenceDecayed = LValueReferenceDecayed<
-  RValueReferenceDecayed<T>
- >;
 
  //Produce unsigned type equivalent
  template<typename T>
@@ -1065,6 +1067,7 @@ namespace CX {
  template<typename T>
  concept Struct = __is_class(T);
 
+ //TODO Support extended compiler integral types and clang's `_ExtInt`
  //Integral identity
  //Defined by: https://en.cppreference.com/w/cpp/types/is_integral
  template<typename T>
@@ -1109,6 +1112,75 @@ namespace CX {
  concept Unsigned = (Arithmetic<T> && T(0) < T(-1))
   || SameType<Unqualified<T>, bool>;
 
+ //Supporting meta-functions for `UnsignedIntegral` and `SignedIntegral`
+ namespace MetaFunctions {
+  //Unsigned N-bit integral identity
+  template<CX::Unsigned auto N>
+  struct IntegralOfNBits final {
+   #ifdef CX_COMPILER_CLANG_LIKE
+    //Use clang `_ExtInt` extension
+    //Notes:
+    // - Yielded type is guaranteed to be exactly `N` bits
+    // - Maximum of `(1 << 24) - 1` bits
+    static_assert(
+     N <= ((1 << 24) - 1),
+     "_ExtInt has a maximum value of ((1 << 24) - 1)"
+    );
+    using Type = unsigned _ExtInt(N);
+   #else
+    //Use bit-shift hack to return builtin integral type with at least `N` bits
+    //Note: Yielded type is not guaranteed to be exactly `N` bits
+    using Type = CX::SignDecayed<decltype(1 << N)>;
+   #endif
+  };
+
+  //Signed N-bit integral identity
+  //Note: Signed integrals require at least 1 sign bit + N bits
+  template<CX::Unsigned auto N>
+  requires (N > 1)
+  struct SignedIntegralOfNBits final {
+   #ifdef CX_COMPILER_CLANG_LIKE
+    //Use clang `_ExtInt` extension
+    //Note: Yielded type is guaranteed to be exactly `N` bits
+    using Type = signed _ExtInt(N);
+   #else
+    using Type = CX::SignPromoted<typename IntegralOfNBits<N>::Type>;
+   #endif
+  };
+ }
+
+ //N-bit unsigned integral type meta-function
+ template<Unsigned auto N>
+ using UnsignedIntegral = typename MetaFunctions
+  ::IntegralOfNBits<N>
+  ::Type;
+
+ //N-bit signed integral type meta-function
+ template<Unsigned auto N>
+ using SignedIntegral = typename MetaFunctions
+  ::SignedIntegralOfNBits<N>
+  ::Type;
+
+ //TODO Runtime optimized version of this function
+ //Returns the number of bits required to represent `states` number of unique
+ //states
+ constexpr unsigned int bitsForNDistinct(Integral auto states) {
+  unsigned int bits = 0;
+  //states = states == 0 ? states : states - 1;
+  if (states == 0) {
+   return 0;
+  }
+  if (states == 1) {
+   return 1;
+  }
+  states -= 1;
+  while (states > 0) {
+   bits++;
+   states >>= 1;
+  }
+  return bits;
+ }
+
  //Scalar identity
  //Defined by: https://en.cppreference.com/w/cpp/types/is_scalar
  template<typename T>
@@ -1131,7 +1203,7 @@ namespace CX {
  //Inheritance identity
  //Defined by: https://en.cppreference.com/w/cpp/types/is_base_of
  template<typename Derived, typename Base>
- concept HasBase = __is_base_of(Derived, Base);
+ concept HasBase = __is_base_of(Base, Derived);
 
  //Function identity concepts
  //Member function identity
@@ -1421,4 +1493,39 @@ namespace CX {
   || requires (T t) {
    { t.operator C() } -> SameType<C>;
   };
+
+ //Copy promotion
+ template<typename T>
+ requires (!Array<T>)
+ constexpr T const& copy(T& t) noexcept {
+  return (T const&)t;
+ }
+
+ //Copy promotion for array types
+ template<typename T, auto N>
+ constexpr auto& copy(T (&arr)[N]) noexcept {
+  using ArrayType = T[N];
+  return (ArrayType const&)arr;
+ }
+
+ //Move promotion
+ template<typename T>
+ requires (!Array<T>)
+ constexpr T&& move(T& t) noexcept {
+  return (T&&)t;
+ }
+
+ //Move promotion for array types
+ template<typename T, auto N>
+ constexpr auto&& move(T (&arr)[N]) noexcept {
+  using ArrayType = T[N];
+  return (ArrayType&&)arr;
+ }
+
+ //Move passthrough for array types
+ template<typename T, auto N>
+ constexpr auto&& move(T (&&arr)[N]) noexcept {
+  using ArrayType = T[N];
+  return (ArrayType&&)arr;
+ }
 }

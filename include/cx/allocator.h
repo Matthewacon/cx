@@ -50,7 +50,7 @@
 #include <cx/exit.h>
 
 //Flags to configure default allocator behaviour
-#if defined(CX_ALLOC_IMPL_USER)
+#if defined(CX_ALLOC_USER_IMPL)
  #define CX_ALLOC_IMPL 0
  CX_DEBUG_MSG((<cx/allocator.h> using user-defined allocator as default))
 #elif defined(CX_STL_SUPPORT)
@@ -62,9 +62,8 @@
 #else
  #define CX_ALLOC_IMPL 3
  CX_DEBUG_MSG((<cx/allocator.h> disabling default allocator))
-#endif //defined(CX_ALLOC_IMPL_USER)
+#endif //defined(CX_ALLOC_USER_IMPL)
 
-//TODO See `std::allocator` named requirements
 namespace CX {
  //Supporting types for allocator concepts
  namespace Internal {
@@ -72,22 +71,16 @@ namespace CX {
  }
 
  //TODO Allocator identity concept
- template<typename MaybeAllocator>
- concept IsAllocator = false;
+ template<template<typename...> typename MaybeAllocator>
+ concept IsAllocator = true;
 
  //TODO Stateless allocator identity concept
- template<typename MaybeStatelessAllocator>
- concept IsStatelessAllocator = false;
+ template<template<typename...> typename MaybeStatelessAllocator>
+ concept IsStatelessAllocator = true;
 
  //TODO Stateful allocator identity concept
- template<typename MaybeStatefulAllocator>
- concept IsStatefulAllocator = false;
-
- /*
- //TODO Typed allocator identity concept
- template<typename MaybeTypedAllocator>
- concept IsTypedAllocator = false;
- */
+ template<template<typename...> typename MaybeStatefulAllocator>
+ concept IsStatefulAllocator = true;
 
  //Define default allocator backends,
  namespace Internal {
@@ -95,12 +88,14 @@ namespace CX {
   #ifdef CX_STL_SUPPORT
    template<typename T>
    struct StlAllocator final : Never {
+    static constexpr bool const Stateless = true;
+
     constexpr StlAllocator() noexcept = default;
     constexpr ~StlAllocator() noexcept = default;
 
     //TODO Convert to `CX::Result`
     [[nodiscard]]
-    constexpr T& allocate(SizeType const n = 1) noexcept {
+    static constexpr T& allocate(SizeType const n = 1) noexcept {
      auto val = std
       ::allocator<T>
       ::allocate(n);
@@ -113,25 +108,32 @@ namespace CX {
 
     //TODO Convert to return `Option<Error>` or `Result<void, Error>` and add
     //[[nodiscard]]
-    constexpr void deallocate(T const& t, SizeType const n = 1) noexcept {
+    static constexpr void deallocate(T const& t, SizeType const n = 1)
+     noexcept
+    {
      std
       ::allocator<T>
       ::deallocate(t, n);
     }
    };
+   static_assert(IsAllocator<StlAllocator>
+    && IsStatelessAllocator<StlAllocator>
+   );
   #endif
 
-  //TODO LIBC-backed allocator implementation
+  //LIBC-backed allocator implementation
   #ifdef CX_LIBC_SUPPORT
    //TODO Windows UCRT _aligned_malloc / _aligned_free support
    template<typename T>
    struct LibcAllocator final : Never {
+    static constexpr bool const Stateless = true;
+
     constexpr LibcAllocator() noexcept = default;
     constexpr ~LibcAllocator() noexcept = default;
 
     //TODO Convert to CX::Result
     [[nodiscard]]
-    constexpr T& allocate(SizeType const n = 1) noexcept {
+    static constexpr T& allocate(SizeType const n = 1) noexcept {
      if (isConstexpr()) {
       //Use constant-expression compatible logic for compile-time allocation
       auto ptr = std
@@ -155,7 +157,7 @@ namespace CX {
     }
 
     //TODO Convert to CX::Result
-    constexpr void deallocate(T const& t, SizeType const n) noexcept {
+    static constexpr void deallocate(T const& t, SizeType const n) noexcept {
      if (isConstexpr()) {
       //Use constant-expression compatible logic at compile-time
       std
@@ -167,12 +169,17 @@ namespace CX {
      }
     }
    };
+   static_assert(IsAllocator<LibcAllocator>
+    && IsStatelessAllocator<LibcAllocator>
+   );
   #endif
 
   //Select default allocator
   #if CX_ALLOC_IMPL == 0
    //TODO Use user-defined allocator implementation as default
    // - Check against `IsAllocator`
+   template<typename T>
+   using DefaultAllocator = CX_ALLOC_USER_IMPL<T>;
   #elif CX_ALLOC_IMPL == 1
    //Use stl-backed allocator implementation as default
    template<typename T>
@@ -190,32 +197,41 @@ namespace CX {
  template<typename T>
  using Allocator = Internal::DefaultAllocator<T>;
 
- //Example allocator
- /*
+ //Special allocator: stores instance internally and returns pointer to
+ //internal instance on `::allocate` invocations.
  template<typename T>
- struct UnionAllocator final {
+ struct SinglePlacementAllocator final : Never {
  private:
   union {
-   T inst;
-   T * constexprInst;
+   T t;
   };
 
  public:
-  constexpr UnionAllocator() noexcept = default;
+  static constexpr bool const Stateless = false;
 
-  //TODO doc
-  [[nodiscard]]
-  constexpr T * allocate(SizeType const n) const noexcept {
-   (void)n;
-   return nullptr;
-  }
+  constexpr SinglePlacementAllocator() noexcept {}
+  constexpr ~SinglePlacementAllocator() noexcept {}
 
-
-  constexpr void deallocate(T * inst) const noexcept {
-   if (isConstexpr()) {
-    delete constexprInst;
+  //TODO Convert to CX::Result
+  constexpr T& allocate(SizeType const n = 0) noexcept {
+   if (n != 1) {
+    //TODO Appropriate error
+    exit();
    }
+   return t;
   }
+
+  //TODO Convert to CX::Result
+  //Nop
+  constexpr void deallocate(T const&) noexcept {}
  };
- */
+ static_assert(IsAllocator<SinglePlacementAllocator>
+  && IsStatefulAllocator<SinglePlacementAllocator>
+ );
+
+ //Constant-evaluated placement new
+ template<typename T, typename... Args>
+ constexpr T& newInPlace(T& t, Args... args) noexcept {
+  return *std::construct_at(&t, (Args)args...);
+ }
 }

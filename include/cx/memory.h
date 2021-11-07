@@ -56,6 +56,7 @@ namespace CX {
   }
 
   inline void drain() {
+   //TODO Invoke in reverse order
    for (int i = 0; i < count; i++) {
     auto &deferred = deferrals[i];
     deferred();

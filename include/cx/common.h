@@ -71,6 +71,24 @@
  #define CX_DEBUG_MSG(...)
 #endif
 
+//Implementation defined size type; equivalent to `std::size_t`
+//Note: Must be defined before `std::align_val_t`
+namespace CX {
+ using SizeType = decltype(sizeof(0));
+}
+
+//Import or define `std::align_val_t` for differentiation of
+//alignment-overloaded memory management functions.
+//Note: Must include <new> before disabling exceptions, since STL
+//implementations depend on exceptions.
+#ifdef CX_STL_SUPPORT
+ #include <new>
+#else
+ namespace std {
+  enum struct align_val_t final : CX::SizeType {};
+ }
+#endif
+
 //Be as irritating as possible to strongly discourage the use of exceptions
 #ifndef CX_NO_BELLIGERENT_ERRORS
  #define CX_ERROR_EXCEPTIONS_ARE_BAD \
@@ -102,7 +120,7 @@
  #endif
 #else
  #ifndef CX_NO_BELLIGERENT_REMINDERS
-  //Repeatedly remind the developers that CX is incompatible with exceptions
+  //Repeatedly remind developers that CX is incompatible with exceptions
   CX_PRAGMA_MSG((
    CX is incompatible with exceptions and will ignore any and all exceptions
    thrown during the lifetime of your application!
@@ -152,11 +170,8 @@ namespace CX {
   static constexpr auto const Value = false;
  };
 
- //Implementation defined size type; equivalent to `std::size_t`
- using SizeType = decltype(sizeof(0));
-
  //Implementation defined alignment type
- using AlignType = decltype(alignof(int));
+ using AlignType = std::align_val_t;
 
  //Implementation defined nullptr type
  using NullptrType = decltype(nullptr);

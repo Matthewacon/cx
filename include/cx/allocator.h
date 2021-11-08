@@ -1,23 +1,22 @@
 //Dependencies for supporting the libc allocator implementation
+//Note: Included before any CX headers since STL headers depend on exceptions.
 #ifdef CX_LIBC_SUPPORT
  #include <cstdlib>
 #endif
 
-//Dependencies for supporting compile-time allocators
-#ifdef CX_STL_SUPPORT
- #include <memory>
-#else
- #include <cx/common.h>
+#include <cx/common.h>
 
+//Dependencies for supporting compile-time allocators
+#ifndef CX_STL_SUPPORT
  //Define `std::allocator<T>` and `std::construct_at`
  //Note: Neither definitions are standard compliant, they are simply defined as
  //to satisfy the dependencies of the allocators defined in this header.
  //`std::allocator` and `std::construct_at` have relaxed restrictions from
  //[expr.const] seemingly permitting the following:
- // - allocations of untyped, arbitrarily-sized memory regions
- // - placement-new invocations on untyped memory regions allocated by
- //   `std::allocator<T>::allocate`
- // - placement-new invocations on arbitrary, untyped or correctly-typed,
+ // - allocations of untyped, arbitrarily-sized memory regions (must be
+ //   implicitly or explicitly cast within the scope of the function to be
+ //   considered valid?)
+ // - placement-new invocations on, untyped or correctly-typed,
  //   pointers so long as they point to sufficiently sized and aligned memory
 
  namespace std {
@@ -34,12 +33,6 @@
    static constexpr void deallocate(T * p, SizeType) noexcept {
     constexpr std::nothrow_t no_throw;
     ::operator delete(p, no_throw);
-   }
-
-   template<typename T, typename... Args>
-   constexpr T* construct_at(T * p, Args... args) noexcept {
-    auto vp = const_cast<void *>(static_cast<const volatile void *>(p));
-    return ::new (vp) T{(Args)args...};
    }
   };
  }
@@ -70,17 +63,36 @@ namespace CX {
   struct AllocatorTestType final : Never {};
  }
 
- //TODO Allocator identity concept
+ //Stateless allocator identity concept
  template<template<typename...> typename MaybeAllocator>
- concept IsAllocator = true;
+ concept IsStatelessAllocator = MaybeAllocator<Internal::AllocatorTestType>::Stateless
+  && requires (
+   MaybeAllocator<Internal::AllocatorTestType>& a,
+   Internal::AllocatorTestType& (* allocate)(SizeType) noexcept,
+   void (* deallocate)(Internal::AllocatorTestType const&, SizeType) noexcept
+  ) {
+   a;
+   allocate = &MaybeAllocator<Internal::AllocatorTestType>::allocate;
+   deallocate = &MaybeAllocator<Internal::AllocatorTestType>::deallocate;
+  };
 
- //TODO Stateless allocator identity concept
- template<template<typename...> typename MaybeStatelessAllocator>
- concept IsStatelessAllocator = true;
+ //Stateful allocator identity concept
+ template<template<typename...> typename MaybeAllocator>
+ concept IsStatefulAllocator = !MaybeAllocator<Internal::AllocatorTestType>::Stateless
+  && requires (
+   MaybeAllocator<Internal::AllocatorTestType>& a,
+   Internal::AllocatorTestType& (MaybeAllocator<Internal::AllocatorTestType>::* allocate)(SizeType) noexcept,
+   void (MaybeAllocator<Internal::AllocatorTestType>::* deallocate)(Internal::AllocatorTestType const&, SizeType) noexcept
+  ) {
+   a;
+   allocate = &MaybeAllocator<Internal::AllocatorTestType>::allocate;
+   deallocate = &MaybeAllocator<Internal::AllocatorTestType>::deallocate;
+  };
 
- //TODO Stateful allocator identity concept
- template<template<typename...> typename MaybeStatefulAllocator>
- concept IsStatefulAllocator = true;
+ //Allocator identity concept
+ template<template<typename...> typename MaybeAllocator>
+ concept IsAllocator = IsStatefulAllocator<MaybeAllocator>
+  || IsStatelessAllocator<MaybeAllocator>;
 
  //Define default allocator backends,
  namespace Internal {
@@ -116,9 +128,7 @@ namespace CX {
       ::deallocate(t, n);
     }
    };
-   static_assert(IsAllocator<StlAllocator>
-    && IsStatelessAllocator<StlAllocator>
-   );
+   static_assert(IsStatelessAllocator<StlAllocator>);
   #endif
 
   //LIBC-backed allocator implementation
@@ -169,10 +179,11 @@ namespace CX {
      }
     }
    };
-   static_assert(IsAllocator<LibcAllocator>
-    && IsStatelessAllocator<LibcAllocator>
-   );
+   static_assert(IsStatelessAllocator<LibcAllocator>);
   #endif
+
+  //TODO Define `NoneAllocator` that returns errors on invocations to any
+  //memory management functions
 
   //Select default allocator
   #if CX_ALLOC_IMPL == 0
@@ -190,6 +201,8 @@ namespace CX {
    using DefaultAllocator = LibcAllocator<T>;
   #elif CX_ALLOC_IMPL == 3
    //TODO No default allocator impl, error on use
+   template<typename>
+   using DefaultAllocator = void;
   #endif
  }
 
@@ -197,6 +210,13 @@ namespace CX {
  template<typename T>
  using Allocator = Internal::DefaultAllocator<T>;
 
+ //Constant indicating if current CX instance has a default allocator
+ constexpr bool const HasDefaultAllocator = !SameType<
+  Allocator<Internal::AllocatorTestType>,
+  void
+ >;
+
+ //TODO Move to another header
  //Special allocator: stores instance internally and returns pointer to
  //internal instance on `::allocate` invocations.
  template<typename T>
@@ -223,11 +243,9 @@ namespace CX {
 
   //TODO Convert to CX::Result
   //Nop
-  constexpr void deallocate(T const&) noexcept {}
+  constexpr void deallocate(T const&, SizeType) noexcept {}
  };
- static_assert(IsAllocator<SinglePlacementAllocator>
-  && IsStatefulAllocator<SinglePlacementAllocator>
- );
+ static_assert(IsStatefulAllocator<SinglePlacementAllocator>);
 
  //Constant-evaluated placement new
  template<typename T, typename... Args>

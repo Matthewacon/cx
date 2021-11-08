@@ -7,8 +7,8 @@
  //nonstandard extension used: nameless struct/union
  #pragma warning(disable : 4201)
 
- //TODO remove this once all of the compiler-specific
- //attributes have been been normalized
+ //TODO remove this once all of the compiler-specific attributes have
+ //been normalized
  //attribute '...' is not recognized
  #pragma warning(disable : 5030)
 
@@ -79,13 +79,29 @@ namespace CX {
 
 //Import or define `std::align_val_t` for differentiation of
 //alignment-overloaded memory management functions.
-//Note: Must include <new> before disabling exceptions, since STL
-//implementations depend on exceptions.
+//Note: Must include <new> before disabling exceptions, since STL headers
+//depend on exceptions.
 #ifdef CX_STL_SUPPORT
  #include <new>
 #else
  namespace std {
-  enum struct align_val_t final : CX::SizeType {};
+  enum struct align_val_t : CX::SizeType {};
+ }
+#endif
+
+//Import or define `std::construct_at` for to enable use of placement new in
+//constant-evaluated contexts.
+//Note: Must include <memory> before disabling exceptions, since STL headers
+//depend on exceptions.
+#ifdef CX_STL_SUPPORT
+ #include <memory>
+#else
+ namespace std {
+  template<typename T, typename... Args>
+  constexpr T * construct_at(T * p, Args... args) noexcept {
+   auto vp = const_cast<void *>(static_cast<const volatile void *>(p));
+   return ::new (vp) T{(Args)args...};
+  }
  }
 #endif
 
@@ -171,7 +187,33 @@ namespace CX {
  };
 
  //Implementation defined alignment type
- using AlignType = std::align_val_t;
+ struct AlignType final {
+ private:
+  std::align_val_t value;
+
+ public:
+  constexpr AlignType() noexcept = default;
+  constexpr ~AlignType() noexcept = default;
+
+  //Accept any type that is convertible to `SizeType`
+  template<typename T>
+  requires (requires (T t) {
+   (SizeType)t;
+  })
+  constexpr AlignType(T t) noexcept :
+   value{(SizeType)t}
+  {}
+
+  //Implicit conversion to `SizeType`
+  constexpr operator SizeType() const noexcept {
+   return (SizeType)value;
+  }
+
+  //Explicit conversion to `std::align_val_t` for aligned-allocation overloads
+  explicit constexpr operator std::align_val_t() const noexcept {
+   return value;
+  }
+ };
 
  //Implementation defined nullptr type
  using NullptrType = decltype(nullptr);

@@ -233,6 +233,7 @@ namespace CX {
   using EnsureTestDoesNotExit = void;
  }
 
+ //Note: Only works on clang 13+
  //Constant evaluated equivalent to `EXPECT_NO_EXIT`; does nothing
  #define CX_GTEST__EXPECT_NO_EXIT(stmt) \
  []() constexpr noexcept -> Internal::EnsureTestDoesNotExit<\

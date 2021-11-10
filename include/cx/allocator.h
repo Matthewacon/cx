@@ -25,12 +25,12 @@
    constexpr allocator() noexcept = default;
    constexpr ~allocator() noexcept = default;
 
-   static constexpr T* allocate(SizeType const n) noexcept {
+   constexpr T* allocate(SizeType const n) noexcept {
     constexpr std::nothrow_t no_throw;
     return static_cast<T *>(::operator new(n * sizeof(T), no_throw));
    }
 
-   static constexpr void deallocate(T * p, SizeType) noexcept {
+   constexpr void deallocate(T * p, SizeType) noexcept {
     constexpr std::nothrow_t no_throw;
     ::operator delete(p, no_throw);
    }
@@ -58,35 +58,32 @@
 #endif //defined(CX_ALLOC_USER_IMPL)
 
 namespace CX {
- //Supporting types for allocator concepts
- namespace Internal {
-  struct AllocatorTestType final : Never {};
- }
-
  //Stateless allocator identity concept
  template<template<typename...> typename MaybeAllocator>
- concept IsStatelessAllocator = MaybeAllocator<Internal::AllocatorTestType>::Stateless
-  && requires (
-   MaybeAllocator<Internal::AllocatorTestType>& a,
-   Internal::AllocatorTestType& (* allocate)(SizeType) noexcept,
-   void (* deallocate)(Internal::AllocatorTestType const&, SizeType) noexcept
+ concept IsStatelessAllocator =
+  //MaybeAllocator<Dummy<>>::Stateless &&
+  requires (
+   MaybeAllocator<Dummy<>>& a,
+   Dummy<>& (* allocate)(SizeType) noexcept,
+   void (* deallocate)(Dummy<> const&, SizeType) noexcept
   ) {
    a;
-   allocate = &MaybeAllocator<Internal::AllocatorTestType>::allocate;
-   deallocate = &MaybeAllocator<Internal::AllocatorTestType>::deallocate;
+   allocate = &MaybeAllocator<Dummy<>>::allocate;
+   deallocate = &MaybeAllocator<Dummy<>>::deallocate;
   };
 
  //Stateful allocator identity concept
  template<template<typename...> typename MaybeAllocator>
- concept IsStatefulAllocator = !MaybeAllocator<Internal::AllocatorTestType>::Stateless
-  && requires (
-   MaybeAllocator<Internal::AllocatorTestType>& a,
-   Internal::AllocatorTestType& (MaybeAllocator<Internal::AllocatorTestType>::* allocate)(SizeType) noexcept,
-   void (MaybeAllocator<Internal::AllocatorTestType>::* deallocate)(Internal::AllocatorTestType const&, SizeType) noexcept
+ concept IsStatefulAllocator =
+  //!MaybeAllocator<Dummy<>>::Stateless &&
+  requires (
+   MaybeAllocator<Dummy<>>& a,
+   Dummy<>& (MaybeAllocator<Dummy<>>::* allocate)(SizeType) noexcept,
+   void (MaybeAllocator<Dummy<>>::* deallocate)(Dummy<> const&, SizeType) noexcept
   ) {
    a;
-   allocate = &MaybeAllocator<Internal::AllocatorTestType>::allocate;
-   deallocate = &MaybeAllocator<Internal::AllocatorTestType>::deallocate;
+   allocate = &MaybeAllocator<Dummy<>>::allocate;
+   deallocate = &MaybeAllocator<Dummy<>>::deallocate;
   };
 
  //Allocator identity concept
@@ -94,125 +91,178 @@ namespace CX {
  concept IsAllocator = IsStatefulAllocator<MaybeAllocator>
   || IsStatelessAllocator<MaybeAllocator>;
 
- //Define default allocator backends,
- namespace Internal {
-  //STL-backed allocator implementation
-  #ifdef CX_STL_SUPPORT
-   template<typename T>
-   struct StlAllocator final : Never {
-    static constexpr bool const Stateless = true;
+ //Error for `ConstexprAllocator`
+ struct NotInConstantEvaluatedContextError final {
+  constexpr auto& describe() const noexcept {
+   return
+    "ConstexprAllocator cannot be used outside of constant-evaluted contexts!";
+  }
+ };
 
-    constexpr StlAllocator() noexcept = default;
-    constexpr ~StlAllocator() noexcept = default;
+ //Constant-evaluated allocator implementation
+ //Note: Can only be used in constant-evaluated contexts
+ template<typename T>
+ struct ConstexprAllocator final : Never {
+ private:
+  //Abort if allocator use is attempted at runtime
+  static constexpr void assertInConstantEvaluatedContext() noexcept {
+   if (!isConstexpr()) {
+    exit(NotInConstantEvaluatedContextError{});
+   }
+  }
 
-    //TODO Convert to `CX::Result`
-    [[nodiscard]]
-    static constexpr T& allocate(SizeType const n = 1) noexcept {
-     auto val = std
-      ::allocator<T>
-      ::allocate(n);
-     if (!val) {
-      //TODO return error
+ public:
+  constexpr ConstexprAllocator() noexcept {
+   assertInConstantEvaluatedContext();
+  }
+
+  constexpr ~ConstexprAllocator() noexcept {
+   assertInConstantEvaluatedContext();
+  }
+
+  //TODO Convert to `CX::Result`
+  [[nodiscard]]
+  static constexpr T& allocate(SizeType const n = 1) noexcept {
+   assertInConstantEvaluatedContext();
+   auto val = std::allocator<T>{}
+    .allocate(n);
+   if (!val) {
+    //TODO return error
+    exit();
+   }
+   return *val;
+  }
+
+  //TODO Convert to `CX::Result`
+  static constexpr void deallocate(T const& t, SizeType const n = 1) noexcept {
+   assertInConstantEvaluatedContext();
+   std::allocator<T>{}
+    .deallocate(&const_cast<T&>(t), n);
+  }
+ };
+ static_assert(IsStatelessAllocator<ConstexprAllocator>);
+
+ //STL-backed allocator implementation
+ #ifdef CX_STL_SUPPORT
+  template<typename T>
+  struct StlAllocator final : Never {
+   constexpr StlAllocator() noexcept = default;
+   constexpr ~StlAllocator() noexcept = default;
+
+   //TODO Convert to `CX::Result`
+   [[nodiscard]]
+   static constexpr T& allocate(SizeType const n = 1) noexcept {
+    auto val = std
+     ::allocator<T>
+     ::allocate(n);
+    if (!val) {
+     //TODO return error
+     exit();
+    }
+    return *val;
+   }
+
+   //TODO Convert to return `Option<Error>` or `Result<void, Error>` and add
+   //[[nodiscard]]
+   static constexpr void deallocate(T const& t, SizeType const n = 1)
+    noexcept
+   {
+    std
+     ::allocator<T>
+     ::deallocate(t, n);
+   }
+  };
+  static_assert(IsStatelessAllocator<StlAllocator>);
+ #endif
+
+ //LIBC-backed allocator implementation
+ #ifdef CX_LIBC_SUPPORT
+  //TODO Windows UCRT _aligned_malloc / _aligned_free support
+  template<typename T>
+  struct LibcAllocator final : Never {
+   constexpr LibcAllocator() noexcept = default;
+   constexpr ~LibcAllocator() noexcept = default;
+
+   //TODO Convert to CX::Result
+   [[nodiscard]]
+   static constexpr T& allocate(SizeType const n = 1) noexcept {
+    if (isConstexpr()) {
+     //Use ConstexprAllocator for constant-evaluated allocations
+     return ConstexprAllocator<T>::allocate(n);
+    } else {
+     //Use libc memory management logic at runtime
+     T * ptr;
+     auto const err = posix_memalign(&ptr, alignof(T), n * sizeof(T));
+     if (err) {
+      //TODO Appropriate errors for EINVAL and ENOMEM
       exit();
      }
-     return *val;
+     return *ptr;
     }
+   }
 
-    //TODO Convert to return `Option<Error>` or `Result<void, Error>` and add
-    //[[nodiscard]]
-    static constexpr void deallocate(T const& t, SizeType const n = 1)
-     noexcept
-    {
-     std
-      ::allocator<T>
-      ::deallocate(t, n);
+   //TODO Convert to CX::Result
+   static constexpr void deallocate(T const& t, SizeType const n) noexcept {
+    if (isConstexpr()) {
+     //Use ConstexprAllocator for constant-evaluated deallocations
+     ConstexprAllocator<T>::deallocate(t, n);
+    } else {
+     //Use libc memory management logic at runtime
+     free(&t);
     }
-   };
-   static_assert(IsStatelessAllocator<StlAllocator>);
-  #endif
+   }
+  };
+  static_assert(IsStatelessAllocator<LibcAllocator>);
+ #endif
 
-  //LIBC-backed allocator implementation
-  #ifdef CX_LIBC_SUPPORT
-   //TODO Windows UCRT _aligned_malloc / _aligned_free support
-   template<typename T>
-   struct LibcAllocator final : Never {
-    static constexpr bool const Stateless = true;
+ //Error for `NoneAllocator`
+ struct NoneAllocatorError final {
+  constexpr auto& describe() const noexcept {
+   return
+    "NoneAllocator cannot allocate memory. Either enable STL/LIBC support to "
+    "inherit one of their allocator backends, or define your own using "
+    "CX_ALLOC_USER_IMPL.";
+  }
+ };
 
-    constexpr LibcAllocator() noexcept = default;
-    constexpr ~LibcAllocator() noexcept = default;
-
-    //TODO Convert to CX::Result
-    [[nodiscard]]
-    static constexpr T& allocate(SizeType const n = 1) noexcept {
-     if (isConstexpr()) {
-      //Use constant-expression compatible logic for compile-time allocation
-      auto ptr = std
-       ::allocator<T>
-       ::allocate(n);
-      if (!ptr) {
-       //TODO Appropriate error
-       exit();
-      }
-      return *ptr;
-     } else {
-      //Use libc memory management logic
-      T * ptr;
-      auto const err = posix_memalign(&ptr, alignof(T), n * sizeof(T));
-      if (err) {
-       //TODO Appropriate errors for EINVAL and ENOMEM
-       exit();
-      }
-      return *ptr;
-     }
-    }
-
-    //TODO Convert to CX::Result
-    static constexpr void deallocate(T const& t, SizeType const n) noexcept {
-     if (isConstexpr()) {
-      //Use constant-expression compatible logic at compile-time
-      std
-       ::allocator<T>
-       ::deallocate(&t, n);
-     } else {
-      //Use libc memory management logic at runtime
-      free(&t);
-     }
-    }
-   };
-   static_assert(IsStatelessAllocator<LibcAllocator>);
-  #endif
-
-  //TODO Define `NoneAllocator` that returns errors on invocations to any
-  //memory management functions
-
-  //Select default allocator
-  #if CX_ALLOC_IMPL == 0
-   //TODO Use user-defined allocator implementation as default
-   // - Check against `IsAllocator`
-   template<typename T>
-   using DefaultAllocator = CX_ALLOC_USER_IMPL<T>;
-  #elif CX_ALLOC_IMPL == 1
-   //Use stl-backed allocator implementation as default
-   template<typename T>
-   using DefaultAllocator = StlAllocator<T>;
-  #elif CX_ALLOC_IMPL == 2
-   //Use libc-backed allocator implementation as default
-   template<typename T>
-   using DefaultAllocator = LibcAllocator<T>;
-  #elif CX_ALLOC_IMPL == 3
-   //TODO No default allocator impl, error on use
-   template<typename>
-   using DefaultAllocator = void;
-  #endif
- }
-
- //Alias template for CX default typed-allocator
+ //Default allocator when no supporting libraries (stl / libc) are available to
+ //provide an allocator backend
  template<typename T>
- using Allocator = Internal::DefaultAllocator<T>;
+ struct NoneAllocator final : Never {
+  constexpr NoneAllocator() noexcept = default;
+  constexpr ~NoneAllocator() noexcept = default;
+
+  //TODO Convert to CX::Result
+  [[nodiscard]]
+  static constexpr T& allocate(SizeType) noexcept {
+   //TODO Return error instead
+   exit(NoneAllocatorError{});
+  }
+ };
+
+ //Alias template for CX default allocator
+ #if CX_ALLOC_IMPL == 0
+  //Use user-defined allocator implementation as default
+  template<typename T>
+  using Allocator = CX_ALLOC_USER_IMPL<T>;
+ #elif CX_ALLOC_IMPL == 1
+  //Use stl-backed allocator implementation as default
+  template<typename T>
+  using Allocator = StlAllocator<T>;
+ #elif CX_ALLOC_IMPL == 2
+  //Use libc-backed allocator implementation as default
+  template<typename T>
+  using Allocator = LibcAllocator<T>;
+ #elif CX_ALLOC_IMPL == 3
+  //No default allocator implementation, use `NoneAllocator`
+  template<typename>
+  using Allocator = NoneAllocator<T>;
+ #endif
+ static_assert(IsAllocator<Allocator>);
 
  //Constant indicating if current CX instance has a default allocator
  constexpr bool const HasDefaultAllocator = !SameType<
-  Allocator<Internal::AllocatorTestType>,
+  Allocator<Dummy<>>,
   void
  >;
 
@@ -227,8 +277,6 @@ namespace CX {
   };
 
  public:
-  static constexpr bool const Stateless = false;
-
   constexpr SinglePlacementAllocator() noexcept {}
   constexpr ~SinglePlacementAllocator() noexcept {}
 
@@ -246,10 +294,4 @@ namespace CX {
   constexpr void deallocate(T const&, SizeType) noexcept {}
  };
  static_assert(IsStatefulAllocator<SinglePlacementAllocator>);
-
- //Constant-evaluated placement new
- template<typename T, typename... Args>
- constexpr T& newInPlace(T& t, Args... args) noexcept {
-  return *std::construct_at(&t, (Args)args...);
- }
 }

@@ -243,25 +243,32 @@ namespace CX {
  using BufferTypeForNBits = decltype(BitsetMetaFunctions::bufferForNBits<N>());
 
  //Forward declare `CX::Bitset<N>`
+ /*
  template<typename T = SizeType, auto = T{}>
+ struct Bitset;
+ */
+ template<auto>
  struct Bitset;
 
  //TODO `CX::Bitset` identity concept
  template<typename T>
  concept IsBitset = false;
 
+ /*
  //TODO Bitset speciailzation for custom backends
  template<typename T, auto>
  struct Bitset final {
 
  };
+ */
 
  //TODO
  // - Iterator for each bit
  // - Support user-defined backends
  // - Create a runtime backend for bitsets of non-constexpr sizes
  template<auto N>
- struct Bitset<decltype(N), N> final : Never {
+ //struct Bitset<decltype(N), N> final : Never {
+ struct Bitset final : Never {
   //Bit index type alias
   using IndexType = ConstDecayed<decltype(N)>;
 
@@ -410,6 +417,7 @@ namespace CX {
    return operator=(copy(other));
   }
 
+  /*
   //Bit index operator
   constexpr BitReference operator[](IndexType bitIndex) noexcept {
    (void)bitIndex;
@@ -420,6 +428,7 @@ namespace CX {
   constexpr BitReference const operator[](IndexType bitIndex) const noexcept {
    return mut()[bitIndex];
   }
+  */
 
   //Zero-check implicit bool conversion
   constexpr operator bool() const noexcept {
@@ -429,6 +438,7 @@ namespace CX {
   //TODO all bitwise assignment operators
  };
 
+ /*
  //TODO Empty Bitset specialization
  template<>
  struct Bitset<SizeType, 0> final : Never {
@@ -438,4 +448,5 @@ namespace CX {
  //Deduction guides for `Bitset<N>`
  template<Integral I>
  Bitset(I) -> Bitset<I, sizeof(I) * 8>;
+ */
 };

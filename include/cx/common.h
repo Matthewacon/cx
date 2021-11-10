@@ -166,8 +166,8 @@ namespace CX {
  template<typename T>
  void expect(T) noexcept(true);
 
- //Type-pack `void` alias; useful for both SFINAE and concept
- //style meta-functions
+ //Type-pack `void` alias; useful for both SFINAE and concept style
+ //meta-functions
  template<typename...>
  using VoidT = void;
 
@@ -238,6 +238,8 @@ namespace CX {
   };
  }
 
+ //Converts CX-style type and value meta-functions to STL-style type and value
+ //meta-functions
  template<typename T>
  using AsStlCompatible = MetaFunctions::AsStlCompatible<T>;
 
@@ -288,5 +290,11 @@ namespace CX {
  //Returns `true` if invoked in a constant-evaluated expression
  constexpr bool isConstexpr() noexcept {
   return __builtin_is_constant_evaluated();
+ }
+
+ //Constant-evaluated placement new
+ template<typename T, typename... Args>
+ constexpr T& newInPlace(T& t, Args... args) noexcept {
+  return *std::construct_at(&t, (Args)args...);
  }
 }

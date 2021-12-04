@@ -468,14 +468,16 @@ endif()
 #Conditional library build type
 if(${CX_HEADER_ONLY})
  #Set up header-only build
- if(${CX_TOP_LEVEL})
-  set(CX_OPTION_SCOPE INTERFACE)
- else()
-  set(CX_OPTION_SCOPE PRIVATE)
- endif()
+ #if(${CX_TOP_LEVEL})
+ # set(CX_OPTION_SCOPE INTERFACE)
+ #else()
+ # set(CX_OPTION_SCOPE PRIVATE)
+ #endif()
  add_library(cx INTERFACE)
  target_include_directories(cx INTERFACE include)
- target_compile_options(cx ${CX_OPTION_SCOPE} ${CX_COMPILE_FLAGS})
+ #TODO Fix scope
+ #target_compile_options(cx ${CX_OPTION_SCOPE} ${CX_COMPILE_FLAGS})
+ target_compile_options(cx INTERFACE ${CX_COMPILE_FLAGS})
 else()
  #Collect sources
  file(

@@ -284,17 +284,13 @@ namespace CX {
 
  public:
   constexpr Never() noexcept = default;
+  template<typename... Args>
+  constexpr Never(Args...) noexcept {}
   constexpr ~Never() noexcept = default;
  };
 
  //Returns `true` if invoked in a constant-evaluated expression
  constexpr bool isConstexpr() noexcept {
   return __builtin_is_constant_evaluated();
- }
-
- //Constant-evaluated placement new
- template<typename T, typename... Args>
- constexpr T& newInPlace(T& t, Args... args) noexcept {
-  return *std::construct_at(&t, (Args)args...);
  }
 }

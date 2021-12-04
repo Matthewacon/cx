@@ -3,6 +3,8 @@
 #include <cx/common.h>
 #include <cx/idioms.h>
 
+//TODO Add a `cleanup` chain to the error hierarchy
+
 //Flags to configure error message bahaviour
 #ifdef CX_ERROR_MSG
  //Configure default error message behaviour based on STL support

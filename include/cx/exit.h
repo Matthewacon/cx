@@ -85,34 +85,49 @@
 #endif
 
 namespace CX {
- /*
  //Utilities for universal exit function (see below)
  namespace Internal {
-  #if defined(CX_STL_SUPPORT) || defined(CX_LIBC_SUPPORT)
-   inline void printError(char const * funcName, Error const &err) {
-    char const
-     * msg = err.what(),
-     * fmt;
-    #ifdef CX_COMPILER_MSVC
-     #pragma warning(push)
-     #pragma warning(disable : 4774)
-    #endif
-    if (!msg) {
-     fmt = "\"CX::%s(...)\" invoked without an error\n";
-    } else {
-     fmt = "\"CX::%s(...)\" invoked with error:\n%s\n";
+  //TODO refactor
+  inline void printError(char const * funcName, Error const &err) {
+   (void)funcName;
+   (void)err;
+   #if defined(CX_STL_SUPPORT) || defined(CX_LIBC_SUPPORT)
+    Error const * cause = &err;
+    while (cause) {
+     char const
+      * msg = cause->describe(),
+      * fmt;
+     #ifdef CX_COMPILER_MSVC
+      #pragma warning(push)
+      #pragma warning(disable : 4774)
+     #endif
+     if (cause == &err) {
+      //Handle formatting of first error
+      if (!msg) {
+       fmt = "\"CX::%s(...)\" invoked without an error\n";
+      } else {
+       fmt = "\"CX::%s(...)\" invoked with error:\n%s\n";
+      }
+     } else {
+      //Handle formatting of all causes
+      if (!msg) {
+       fmt = "Caused by: (no message)\n";
+      } else {
+       fmt = "Caused by: %s\n";
+      }
+     }
+     fprintf(stderr, fmt, funcName, msg);
+     #ifdef CX_COMPILER_MSVC
+      #pragma warning(pop)
+     #endif
+     cause = cause->cause();
     }
-    fprintf(stderr, fmt, funcName, msg);
-    #ifdef CX_COMPILER_MSVC
-     #pragma warning(pop)
-    #endif
-   }
-  #endif
+   #endif
+  }
  }
- */
 
  struct NoneExitError final {
-  constexpr char const * describe() const noexcept {
+  static constexpr auto& describe() noexcept {
    return "Exited without an error.";
   }
  };
@@ -129,7 +144,7 @@ namespace CX {
    //STL exit handler
    return +[](Error const &err) {
     (void)err;
-    //Internal::printError("exit", err);
+    Internal::printError("exit", err);
     std::terminate();
    };
   #elif defined(CX_LIBC_SUPPORT)
@@ -137,7 +152,7 @@ namespace CX {
    CX_DEBUG_MSG("CX_LIBC_SUPPORT" enabled; using libc exit handler)
    return +[](Error const &err) {
     (void)err;
-    //Internal::printError("exit", err);
+    Internal::printError("exit", err);
     abort();
    };
   #else

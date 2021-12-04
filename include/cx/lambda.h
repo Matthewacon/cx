@@ -765,8 +765,8 @@ namespace CX {
      ** l1BufPtr,
      ** l2BufPtr;
     SizeType
-     l1Size,
-     l2Size;
+     l1Size;
+     //l2Size;
     AlignType
      l1Alignment,
      l2Alignment;
@@ -793,7 +793,7 @@ namespace CX {
       auto &l2Base = **(LambdaBase<SpecializationPrototype> **)l2BufPtr;
 
       //Fetch `l2` size and alignment
-      l2Size = l2Base.bufferSize();
+      //l2Size = l2Base.bufferSize();
       l2Alignment = l2Base.bufferAlignment();
 
       //Copy `l2` buffer to `l1` buffer

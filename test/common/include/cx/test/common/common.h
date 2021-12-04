@@ -90,7 +90,7 @@ namespace CX {
  public:
   using VariantType = SelectType<
    (sizeof...(ConstructorArguments) > 0),
-   std::variant<ConstructorArguments...>,
+   std::variant<std::remove_reference_t<ConstructorArguments>...>,
    CX::Dummy<>
   >;
 
@@ -109,9 +109,9 @@ namespace CX {
   constexpr CustomType& operator=(CustomType&&) = delete;
 
   //Default constructor
-  constexpr CustomType(ConstructorArguments&&... args) noexcept :
+  constexpr CustomType(ConstructorArguments... args) noexcept :
    defaultConstructed(true),
-   constructorArguments{args...}
+   constructorArguments{(ConstructorArguments)args...}
   {}
 
   //Copy constructor
@@ -217,13 +217,13 @@ namespace CX {
 
  //Constant evaluated equivalent to gtest's `EXPECT_TRUE`
  #define CX_GTEST__EXPECT_TRUE(cond) \
- if (!(bool)cond) {\
+ if (!(bool)(cond)) {\
   exit(ConstantEvaluatedTestFailure{});\
  }
 
  //Constant evaluated equivalent to gtest's `EXPECT_FALSE`
  #define CX_GTEST__EXPECT_FALSE(cond) \
- if ((bool)cond) {\
+ if ((bool)(cond)) {\
   exit(ConstantEvaluatedTestFailure{});\
  }
  

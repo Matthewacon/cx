@@ -729,22 +729,117 @@ namespace CX {
    using FunctionPrototype = R (Args...);
    template<typename T = Dummy<>>
    using MemberFunctionPrototype = R (T::*)(Args...);
+   template<typename T, template<typename...> typename Receiver>
+   using QualifiedMemberFunctionPrototypes = Receiver<
+    R (T::*)(Args...),
+    R (T::*)(Args...) &,
+    R (T::*)(Args...) &&,
+    R (T::*)(Args...) const,
+    R (T::*)(Args...) const &,
+    R (T::*)(Args...) const &&,
+    R (T::*)(Args...) noexcept,
+    R (T::*)(Args...) & noexcept,
+    R (T::*)(Args...) && noexcept,
+    R (T::*)(Args...) volatile,
+    R (T::*)(Args...) volatile &,
+    R (T::*)(Args...) volatile &&,
+    R (T::*)(Args...) const noexcept,
+    R (T::*)(Args...) const & noexcept,
+    R (T::*)(Args...) const && noexcept,
+    R (T::*)(Args...) const volatile,
+    R (T::*)(Args...) const volatile &,
+    R (T::*)(Args...) const volatile &&,
+    R (T::*)(Args...) volatile noexcept,
+    R (T::*)(Args...) volatile & noexcept,
+    R (T::*)(Args...) volatile && noexcept,
+    R (T::*)(Args...) const volatile noexcept,
+    R (T::*)(Args...) const volatile & noexcept,
+    R (T::*)(Args...) const volatile && noexcept
+   >;
    static constexpr auto const Value = true;
   };
 
-  #define DEFINE_STATIC_FUNCTION_IDIOM_CASE(field, prototype, memberPrototype, base) \
+  #define DEFINE_STATIC_FUNCTION_IDIOM_CASE(field, prototype, memberPrototype, base, ...) \
   template<typename R, typename... Args>\
   struct StaticFunction<prototype> : base {\
    using FunctionPrototype = prototype;\
    template<typename T = Dummy<>>\
    using MemberFunctionPrototype = memberPrototype;\
+   template<typename T, template<typename...> typename Receiver>\
+   using QualifiedMemberFunctionPrototypes = Receiver<__VA_ARGS__>;\
    static constexpr auto const field = true;\
   }
 
   //All qualifiers and qualifier combinations
-  DEFINE_STATIC_FUNCTION_IDIOM_CASE(Noexcept, R (Args...) noexcept,      R (T::*)(Args...) noexcept,      StaticFunction<R (Args...)>);
-  DEFINE_STATIC_FUNCTION_IDIOM_CASE(Variadic, R (Args..., ...),          R (T::*)(Args..., ...),          StaticFunction<R (Args...)>);
-  DEFINE_STATIC_FUNCTION_IDIOM_CASE(Noexcept, R (Args..., ...) noexcept, R (T::*)(Args..., ...) noexcept, StaticFunction<R (Args..., ...)>);
+  DEFINE_STATIC_FUNCTION_IDIOM_CASE(
+   Noexcept,
+   R (Args...) noexcept,
+   R (T::*)(Args...) noexcept,
+   StaticFunction<R (Args...)>,
+   //All possible qualified member function prototype equivalents
+   R (T::*)(Args...) noexcept,
+   R (T::*)(Args...) & noexcept,
+   R (T::*)(Args...) && noexcept,
+   R (T::*)(Args...) const noexcept,
+   R (T::*)(Args...) const & noexcept,
+   R (T::*)(Args...) const && noexcept,
+   R (T::*)(Args...) volatile noexcept,
+   R (T::*)(Args...) volatile & noexcept,
+   R (T::*)(Args...) volatile && noexcept,
+   R (T::*)(Args...) const volatile noexcept,
+   R (T::*)(Args...) const volatile & noexcept,
+   R (T::*)(Args...) const volatile && noexcept
+  );
+  DEFINE_STATIC_FUNCTION_IDIOM_CASE(
+   Variadic,
+   R (Args..., ...),
+   R (T::*)(Args..., ...),
+   StaticFunction<R (Args...)>,
+   //All possible qualified member function prototype equivalents
+   R (T::*)(Args..., ...),
+   R (T::*)(Args..., ...) &,
+   R (T::*)(Args..., ...) &&,
+   R (T::*)(Args..., ...) const,
+   R (T::*)(Args..., ...) const &,
+   R (T::*)(Args..., ...) const &&,
+   R (T::*)(Args..., ...) noexcept,
+   R (T::*)(Args..., ...) & noexcept,
+   R (T::*)(Args..., ...) && noexcept,
+   R (T::*)(Args..., ...) volatile,
+   R (T::*)(Args..., ...) volatile &,
+   R (T::*)(Args..., ...) volatile &&,
+   R (T::*)(Args..., ...) const noexcept,
+   R (T::*)(Args..., ...) const & noexcept,
+   R (T::*)(Args..., ...) const && noexcept,
+   R (T::*)(Args..., ...) const volatile,
+   R (T::*)(Args..., ...) const volatile &,
+   R (T::*)(Args..., ...) const volatile &&,
+   R (T::*)(Args..., ...) volatile noexcept,
+   R (T::*)(Args..., ...) volatile & noexcept,
+   R (T::*)(Args..., ...) volatile && noexcept,
+   R (T::*)(Args..., ...) const volatile noexcept,
+   R (T::*)(Args..., ...) const volatile & noexcept,
+   R (T::*)(Args..., ...) const volatile && noexcept
+  );
+  DEFINE_STATIC_FUNCTION_IDIOM_CASE(
+   Noexcept,
+   R (Args..., ...) noexcept,
+   R (T::*)(Args..., ...) noexcept,
+   StaticFunction<R (Args..., ...)>,
+   //All possible qualified member function prototype equivalents
+   R (T::*)(Args..., ...) noexcept,
+   R (T::*)(Args..., ...) & noexcept,
+   R (T::*)(Args..., ...) && noexcept,
+   R (T::*)(Args..., ...) const noexcept,
+   R (T::*)(Args..., ...) const & noexcept,
+   R (T::*)(Args..., ...) const && noexcept,
+   R (T::*)(Args..., ...) volatile noexcept,
+   R (T::*)(Args..., ...) volatile & noexcept,
+   R (T::*)(Args..., ...) volatile && noexcept,
+   R (T::*)(Args..., ...) const volatile noexcept,
+   R (T::*)(Args..., ...) const volatile & noexcept,
+   R (T::*)(Args..., ...) const volatile && noexcept
+  );
 
   #undef DEFINE_STATIC_FUNCTION_IDIOM_CASE
 
@@ -1288,16 +1383,61 @@ namespace CX {
    Prototype
   > {};
 
+  //Supporting meta-functions for `FunctionWithPrototype`
+  namespace Internal {
+   //Type meta-function that yields `Prototype` if the specified prototype
+   //matches an existing overload, otherwise `void`
+   template<typename S, typename Prototype>
+   struct ResolveOverloadedFunctionOperator final {
+    using Type = void;
+   };
+
+   template<typename S, typename Prototype>
+   requires requires {
+    static_cast<Prototype>(&S::operator());
+   }
+   struct ResolveOverloadedFunctionOperator<S, Prototype> final {
+    using Type = typename MemberFunction<Prototype>
+     ::FunctionPrototype;
+   };
+
+   //Note: Compares `S::operator()` to all possible qualified member function
+   //prototpes for a given static function prototype, restricted by the
+   //qualifications of the statuc function prototype. Accounts for overloaded
+   //member function operators by explicitly casting the reference, thereby
+   //resolving to a specific overload.
+   template<typename S, typename Prototype>
+   struct FwpStaticReceiver final {
+    template<typename... QualifiedPrototypes>
+    struct Receiver : FalseType {};
+   };
+
+   template<typename S, typename Prototype>
+   template<typename... QualifiedPrototypes>
+   requires (
+    CX::SameType<
+     Prototype,
+     typename ResolveOverloadedFunctionOperator<S, QualifiedPrototypes>::Type
+    > || ...
+   )
+   struct FwpStaticReceiver<S, Prototype>
+    ::Receiver<QualifiedPrototypes...> : TrueType {};
+  }
+
   //Function operator specialization; `<struct, static>`
-  //Note: Not all member function qualifiers are applicable
-  //to static functions so the deduction capabilities of this
-  //partial specialization are limited.
   template<typename F, typename Prototype>
   requires (CX::StaticFunction<Prototype>
    && CX::Struct<F>
-   && requires (typename StaticFunction<Prototype>::template MemberFunctionPrototype<F> func) {
-    func = &CX::ConstDecayed<F>::operator();
-   }
+   && StaticFunction<Prototype>
+    ::template QualifiedMemberFunctionPrototypes<
+     F,
+     Internal
+      ::FwpStaticReceiver<F, Prototype>
+      ::template Receiver
+    >
+    //TODO Removing the `::Value` lookup causes a segfault in the clang parser,
+    // try to reduce the case and report the bug
+    ::Value
   )
   struct FunctionWithPrototype<F, Prototype> : TrueType {};
 
@@ -1494,6 +1634,8 @@ namespace CX {
    { t.operator C() } -> SameType<C>;
   };
 
+
+ //TODO Move copy and move to `cx/utility.h
  //Copy promotion
  template<typename T>
  requires (!Array<T>)

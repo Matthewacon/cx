@@ -57,7 +57,7 @@ namespace CX {
   EXPECT_FALSE((IsAllocator<Dummy>));
  }
 
- //TODO Tests for the constant-evaluated only allocator
+ //Tests for the constant-evaluated only allocator
  TEST(ConstexprAllocator, allocator_is_default_constructible_and_destructible) {
   using T = Dummy<>;
   EXPECT_TRUE((Constructible<ConstexprAllocator<T>>));
@@ -89,7 +89,7 @@ namespace CX {
 
  TEST(ConstexprAllocator, constant_evaluated_memory_management_does_not_yield_an_error) {
   constexpr auto const r = []() constexpr noexcept {
-   auto p = ConstexprAllocator<int>::allocate(20);
+   auto& p = ConstexprAllocator<int>::allocate(20);
    ConstexprAllocator<int>::deallocate(p, 20);
    return 0;
   }();

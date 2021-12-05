@@ -44,8 +44,7 @@
 #else
  //Unknown compiler, emit error
  #error \
-  "CX_PRAGMA_IMPL" and "CX_PRAGMA_MSG" are not implemented for \
-  this compiler.
+  "CX_PRAGMA_IMPL" and "CX_PRAGMA_MSG" are not implemented for this compiler.
 #endif
 
 //Define a macro to emit debug messages during compile time

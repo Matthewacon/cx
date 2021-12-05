@@ -468,16 +468,26 @@ endif()
 #Conditional library build type
 if(${CX_HEADER_ONLY})
  #Set up header-only build
- #if(${CX_TOP_LEVEL})
- # set(CX_OPTION_SCOPE INTERFACE)
- #else()
- # set(CX_OPTION_SCOPE PRIVATE)
- #endif()
  add_library(cx INTERFACE)
  target_include_directories(cx INTERFACE include)
- #TODO Fix scope
- #target_compile_options(cx ${CX_OPTION_SCOPE} ${CX_COMPILE_FLAGS})
  target_compile_options(cx INTERFACE ${CX_COMPILE_FLAGS})
+
+ #Set up all preprocessor definitions
+ #Note: Platform-specific preprocessor define options are removed from flags
+ # prior to setting with `target_compile_definitions`
+ string(LENGTH "-D" CX_UNIX_DEFINE_PREFIX_LEN)
+ string(LENGTH "/D" CX_DOS_DEFINE_PREFIX_LEN)
+ foreach(flag CX_COMPILE_FLAGS)
+  if(flag MATCHES "^-D")
+   #Unix-style defines
+   string(SUBSTRING "${flag}" ${CX_UNIX_DEFINE_PREFIX_LEN} -1 flag)
+   target_compile_definitions(cx INTERFACE ${flag})
+  elseif(flag MATCHES "^\/D")
+   #DOS-style defines
+   string(SUBSTRING "${flag}" ${CX_DOS_DEFINE_PREFIX_LEN} -1 flag)
+   target_compile_definitions(cx INTERFACE ${flag})
+  endif()
+ endforeach()
 else()
  #Collect sources
  file(
@@ -497,7 +507,11 @@ else()
  target_include_directories(cx PUBLIC include)
  target_compile_options(cx ${CX_OPTION_SCOPE} ${CX_COMPILE_FLAGS})
  target_link_options(cx ${CX_OPTION_SCOPE} ${CX_LINK_FLAGS})
+
+ #TODO Set up all preprocessor defines
 endif()
+
+#TODO Set up installation rules
 
 #Testing
 if(${CX_UNIT_TESTS} OR ${CX_BENCHMARKS})

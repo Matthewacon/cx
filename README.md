@@ -1,2 +1,2 @@
 # CX
-A collection of conxtexpr tools for diverting non-operating boilerplate abstractions to compile-time
+A freestanding, portable and fully compile-time compatible development library.

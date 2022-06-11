@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.19)
 
-include(util.cmake)
+include(${CMAKE_CURRENT_LIST_DIR}/util.cmake)
 
 #[[
  Detect the compiler and validate it against a user-supplied list of supported

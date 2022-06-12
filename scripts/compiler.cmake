@@ -5,6 +5,7 @@ include_guard(GLOBAL)
 include(${CMAKE_CURRENT_LIST_DIR}/util.cmake)
 
 #[[TODO:
+ - Set up global cache variable for prefixing all definitions in this library
  - Add unique name assertions to all function declarations
  - Remove internal `print_help` variants in favour of manual `message`
    invocations

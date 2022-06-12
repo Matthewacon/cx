@@ -108,6 +108,7 @@ add_build_flag(
  DESCRIPTION "Enable building with test coverage"
 )
 
+#TODO EDG support, pick up QNX support again
 #Detect compiler and set up compiler-specific flags for build
 include(scripts/compiler.cmake)
 detect_compiler(

@@ -8,7 +8,7 @@ project(
 )
 
 #Use cmake-fetch to grab test dependencies
-include(scripts/cmake-utils/cmake-fetch.cmake)
+#include(scripts/cmake-utils/cmake-fetch.cmake)
 
 #Required defaults
 set(CMAKE_CXX_STANDARD 20)
@@ -121,6 +121,7 @@ detect_compiler(
   IntelLLVM
   MSVC
 )
+
 add_fixed_build_flag(
  CX_DETECTED_COMPILER_ID
  VALUE "${CX_DETECTED_COMPILER_ID}"

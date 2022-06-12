@@ -1,47 +1,60 @@
 cmake_minimum_required(VERSION 3.19)
 
+include_guard(GLOBAL)
+
 include(${CMAKE_CURRENT_LIST_DIR}/util.cmake)
+
+#[[TODO:
+ - Add unique name assertions to all function declarations
+ - Remove internal `print_help` variants in favour of manual `message`
+   invocations
+ - Add help messages to all functions
+]]
 
 #[[
  Generates a variable name to store build flags in for the current `project()`
  scope and places it in a destination variable
 ]]
 function(get_project_flags_variable gpfv_DESTINATION_VARIABLE)
- #Validate destination variable name
- is_empty(gpfv_DESTINATION_VARIABLE_EMPTY "${gpfv_DESTINATION_VARIABLE}")
- if(gpfv_DESTINATION_VARIABLE_EMPTY)
-  message(
-   FATAL_ERROR
-   "get_project_flags_variable: Destination variable name cannot be empty!"
-  )
- endif()
- unset(gpfv_DESTINATION_VARIABLE_EMPTY)
+ ##Validate destination variable name
+ #is_empty(gpfv_DESTINATION_VARIABLE_EMPTY "${gpfv_DESTINATION_VARIABLE}")
+ #if(gpfv_DESTINATION_VARIABLE_EMPTY)
+ # message(
+ #  FATAL_ERROR
+ #  "get_project_flags_variable: Destination variable name cannot be empty!"
+ # )
+ #endif()
+ #unset(gpfv_DESTINATION_VARIABLE_EMPTY)
 
- #Emit warning if build flags are being added in a non-project scope
- if(NOT DEFINED CMAKE_PROJECT_NAME)
-  #Use `NO_PROJECT` if not in project scope
-  set(gpfv_PROJECT_NAME "NO_PROJECT")
+ ##Emit warning if build flags are being added in a non-project scope
+ #if(NOT DEFINED CMAKE_PROJECT_NAME)
+ # #Use `NO_PROJECT` if not in project scope
+ # set(gpfv_PROJECT_NAME "NO_PROJECT")
 
-  #Do not spam with warnings for every invocation, just on first
-  set(gpfv_DIAGNOSTIC_VARIABLE "${gpfv_PROJECT_NAME}_DIAGNOSTIC")
-  if(NOT DEFINED "${gpfv_DIAGNOSTIC_VARIABLE}")
-   message(
-    WARNING
-    "get_project_flags_variable: Not in a `project()` scope, using 'NO_PROJECT'"
-   )
-   set("${gpfv_DIAGNOSTIC_VARIABLE}" "" CACHE INTERNAL "")
-  endif()
-  unset(gpfv_DIAGNOSTIC_VARIABLE)
- else()
-  #Use `${CMAKE_PROJECT_NAME}` if in `project()` scope
-  set(gpfv_PROJECT_NAME "${CMAKE_PROJECT_NAME}")
- endif()
+ # #Do not spam with warnings for every invocation, just on first
+ # set(gpfv_DIAGNOSTIC_VARIABLE "${gpfv_PROJECT_NAME}_DIAGNOSTIC")
+ # if(NOT DEFINED "${gpfv_DIAGNOSTIC_VARIABLE}")
+ #  message(
+ #   WARNING
+ #   "get_project_flags_variable: Not in a `project()` scope, using 'NO_PROJECT'"
+ #  )
+ #  set("${gpfv_DIAGNOSTIC_VARIABLE}" "" CACHE INTERNAL "")
+ # endif()
+ # unset(gpfv_DIAGNOSTIC_VARIABLE)
+ #else()
+ # #Use `${CMAKE_PROJECT_NAME}` if in `project()` scope
+ # set(gpfv_PROJECT_NAME "${CMAKE_PROJECT_NAME}")
+ #endif()
 
- #Set up project build flag list variable name
- string(TOUPPER "${gpfv_PROJECT_NAME}" "${gpfv_DESTINATION_VARIABLE}")
+ ##Set up project build flag list variable name
+ #string(TOUPPER "${gpfv_PROJECT_NAME}" "${gpfv_DESTINATION_VARIABLE}")
+ #Get project prefix
+ get_project_prefix("${gpfv_DESTINATION_VARIABLE}")
+
+ #Create unique variable name for storing build flags
  string(APPEND "${gpfv_DESTINATION_VARIABLE}" "_BUILD_FLAGS")
 
- #Set destination variable
+ #Set destination variable in parent scope
  set(
   "${gpfv_DESTINATION_VARIABLE}" "${${gpfv_DESTINATION_VARIABLE}}"
   PARENT_SCOPE
@@ -117,7 +130,7 @@ function(add_build_flag abf_FLAG)
  unset(abf_FLAG_EXISTS)
 
  #Help message utility function
- function(print_help abf_ph_LEVEL)
+ function(abf_print_help abf_ph_LEVEL)
   #Print help
   message(
    "'add_build_flag' takes the following arguments:"
@@ -157,7 +170,7 @@ function(add_build_flag abf_FLAG)
 
  #Sanitize arguments
  if(abf_FORCE AND NOT DEFINED abf_CACHE)
-  print_help(FATAL_ERROR "'FORCE' can only be set alongside 'CACHE'!")
+  abf_print_help(FATAL_ERROR "'FORCE' can only be set alongside 'CACHE'!")
  endif()
 
  #Set up `abf_FORCE` for set call

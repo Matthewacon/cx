@@ -1,14 +1,14 @@
 cmake_minimum_required(VERSION 3.19)
 
+#Ensure we generate `compile_commands.json` when configuring builds
+set(ENV{CMAKE_EXPORT_COMPILE_COMMANDS} ON)
+
 project(
  cx
  VERSION 0.1.0
  LANGUAGES CXX
  DESCRIPTION "TBD"
 )
-
-#Use cmake-fetch to grab test dependencies
-#include(scripts/cmake-utils/cmake-fetch.cmake)
 
 #Required defaults
 set(CMAKE_CXX_STANDARD 20)
@@ -23,7 +23,7 @@ if("${PROJECT_SOURCE_DIR}" STREQUAL "${PROJECT_BINARY_DIR}")
 endif()
 
 #Set up build flags
-include(scripts/flags.cmake)
+include(scripts/cakemake/src/flags.cmake)
 add_build_flag(
  CX_ALLOW_UNSUPPORTED_COMPILER
  VALUE FALSE
@@ -110,7 +110,7 @@ add_build_flag(
 
 #TODO EDG support, pick up QNX support again
 #Detect compiler and set up compiler-specific flags for build
-include(scripts/compiler.cmake)
+include(scripts/cakemake/src/compiler.cmake)
 detect_compiler(
  CX_DETECTED_COMPILER_ID
  COMPILER_ID CMAKE_CXX_COMPILER_ID

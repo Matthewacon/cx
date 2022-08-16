@@ -34,3 +34,12 @@
 # Other build artifacts
 build/
 compile_commands.json
+
+# ccls
+.ccls-cache/
+
+# clangd
+.cache/
+
+# prototyping new features
+prototyping/

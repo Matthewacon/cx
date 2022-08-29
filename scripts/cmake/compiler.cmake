@@ -8,18 +8,22 @@ include_guard(GLOBAL)
 
 include(${CMAKE_CURRENT_LIST_DIR}/flags.cmake)
 include(${CMAKE_CURRENT_LIST_DIR}/../cakemake/src/compiler.cmake)
+include(${CMAKE_CURRENT_LIST_DIR}/../cakemake/src/compiler-defaults.cmake)
 
 #[[Detect compiler and set fixed build flags]]
 
 #[[TODO
  - EDG support, pick up QNX support again
  - Add `ALLOW_UNSUPPORTED` flag if `CX_ALLOW_UNSUPPORTED_COMPILER` is specified
+   Note: When this is specified, the user must also specify which compiler
+   argument formatter to use, otherwise we will not know how to build the
+   project
 ]]
 #Detect compiler
 detect_compiler(
  CX_DETECTED_COMPILER_ID
  COMPILER_ID CMAKE_CXX_COMPILER_ID
- SUPPORTED_COMPILERS NOT_A_COMPILER
+ SUPPORTED_COMPILERS
   Clang
   AppleClang
   GNU
@@ -35,37 +39,30 @@ add_fixed_build_flag(
  DESCRIPTION "The detected cx compiler"
 )
 
-#Generate inline namespace version and add fixed build flag
-generate_inline_namespace(_CX_INLINE_NAMESPACE_VERSION)
-add_fixed_build_flag(
- CX_INLINE_NAMESPACE_VERSION
- VALUE "${_CX_INLINE_NAMESPACE_VERSION}"
- DESCRIPTION "The inline namespace string for this build of cx"
-)
-unset(_CX_INLINE_NAMESPACE_VERSION)
-
-#Generate guard symbol and add fixed build flag
-generate_guard_symbol(
- _CX_GUARD_SYMBOL
- ABI_BREAKING_FLAGS
-  CX_ABI_SAFE
-  CX_STL_SUPPORT
-  CX_LIBC_SUPPORT
-  CX_ERROR_MSG
-  CX_ERROR_TRACE
-)
-add_fixed_build_flag(
- CX_GUARD_SYMBOL
- VALUE "${_CX_GUARD_SYMBOL}"
- DESCRIPTION
-  "The name of the guard symbol to prevent users from linking against "
-  "ABI-incompatibile builds of cx"
-)
-unset(_CX_GUARD_SYMBOL)
-
 #[[Emit diagnostic build information]]
 get_build_flags_pretty(CX_PRETTY_BUILD_FLAGS)
 message(STATUS "${CX_PRETTY_BUILD_FLAGS}")
 unset(CX_PRETTY_BUILD_FLAGS)
 
 #[[TODO Add all compiler/linker flags for all feature flags]]
+get_supported_compilers(_CX_SUPPORTED_COMPILERS)
+if(NOT CX_DETECTED_COMPILER_ID IN_LIST _CX_SUPPORTED_COMPILERS)
+ message(
+  FATAL_ERROR
+  "Compiler '${CX_DETECTED_COMPILER_ID}' is a supported compiler!"
+ )
+endif()
+unset(_CX_SUPPORTED_COMPILERS)
+
+#Include the compiler backend file, for the current compiler
+if(CX_DETECTED_COMPILER_ID STREQUAL "Clang")
+ include(${CMAKE_CURRENT_LIST_DIR}/compiler/clang.cmake)
+else()
+ message(
+  FATAL_ERROR
+  "No CMake compiler backend exists for the compiler "
+  "'${CX_DETECTED_COMPILER_ID}', cannot build compiler arguments list! You "
+  "must either add support for this compiler or specify a compiler backend "
+  "with the `CX_ALLOW_UNSUPPORTED_COMPILER` flag!"
+ )
+endif()

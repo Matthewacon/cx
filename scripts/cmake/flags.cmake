@@ -3,6 +3,7 @@
 include_guard(GLOBAL)
 
 include(${CMAKE_CURRENT_LIST_DIR}/../cakemake/src/flags.cmake)
+include(${CMAKE_CURRENT_LIST_DIR}/../cakemake/src/compiler.cmake)
 
 #[[Danger zone]]
 add_build_flag(
@@ -11,6 +12,7 @@ add_build_flag(
  CACHE BOOL
  DESCRIPTION "Allow builds with unsupported compilers"
 )
+mark_build_flag_as_processed(CX_ALLOW_UNSUPPORTED_COMPILER)
 
 add_build_flag(
  CX_PRE_COMPILED_HEADERS
@@ -105,6 +107,35 @@ add_build_flag(
  CACHE BOOL
  DESCRIPTION "Enable building with test coverage"
 )
+
+#[[Fixed build flags]]
+#Generate inline namespace version and add fixed build flag
+generate_inline_namespace(_CX_INLINE_NAMESPACE_VERSION)
+add_fixed_build_flag(
+ CX_INLINE_NAMESPACE_VERSION
+ VALUE "${_CX_INLINE_NAMESPACE_VERSION}"
+ DESCRIPTION "The inline namespace string for this build of cx"
+)
+unset(_CX_INLINE_NAMESPACE_VERSION)
+
+#Generate guard symbol and add fixed build flag
+generate_guard_symbol(
+ _CX_GUARD_SYMBOL
+ ABI_BREAKING_FLAGS
+  CX_ABI_SAFE
+  CX_STL_SUPPORT
+  CX_LIBC_SUPPORT
+  CX_ERROR_MSG
+  CX_ERROR_TRACE
+)
+add_fixed_build_flag(
+ CX_GUARD_SYMBOL
+ VALUE "${_CX_GUARD_SYMBOL}"
+ DESCRIPTION
+  "The name of the guard symbol to prevent users from linking against "
+  "ABI-incompatibile builds of cx"
+)
+unset(_CX_GUARD_SYMBOL)
 
 #[[Flag validation]]
 if(CX_STL_SUPPORT AND NOT CX_LIBC_SUPPORT)
